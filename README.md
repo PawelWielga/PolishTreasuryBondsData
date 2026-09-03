@@ -146,10 +146,22 @@ The source updater never pushes financial data directly to `main` and never depl
 
 ## Local validation
 
+`requirements.txt` is the reproducible CI lock for CPython 3.12.12 on GitHub-hosted Ubuntu x86_64. To reproduce the production validation environment on Linux/WSL, use Python 3.12.12 and the same fail-closed install command as CI:
+
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+python -m pip install --require-hashes --only-binary=:all: -r requirements.txt
+python -m unittest discover -s tests -v
+python scripts/update.py --offline --check
+```
+
+For portable local development on Windows or macOS, install the reviewed direct dependencies from `requirements.in`; the protected GitHub Actions run remains the authoritative reproducibility check:
+
+```text
+python -m venv .venv
+# activate .venv using your shell/platform
+python -m pip install -r requirements.in
 python -m unittest discover -s tests -v
 python scripts/update.py --offline --check
 ```
