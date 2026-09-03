@@ -1,0 +1,28 @@
+{
+  "seriesCode": "EDO0332",
+  "productType": "EDO",
+  "productDefinition": "EDO-rules-1",
+  "isin": "PL0000114518",
+  "saleFrom": "2022-03-01",
+  "saleTo": "2022-03-31",
+  "currency": "PLN",
+  "faceValueMinorUnits": 10000,
+  "issuePriceMinorUnits": 10000,
+  "exchangePriceMinorUnits": 9990,
+  "firstPeriodAnnualRatePercent": "2.20",
+  "marginPercent": "1.25",
+  "fixedMaturityInterestMinorUnits": null,
+  "termsRevision": 1,
+  "provenance": {
+    "primary": {
+      "publisher": "Ministry of Finance",
+      "url": "https://www.gov.pl/attachment/f69d7165-7300-4377-be6a-13d0cafd778e",
+      "sha256": "080ca1e805f08854b0bf213f2937bd2055d193ec34beb1cefd0e00a98750cacb",
+      "sheet": "EDO",
+      "row": 212
+    },
+    "crossCheck": null,
+    "verifiedAt": "2026-09-03"
+  },
+  "contentHash": "sha256:ac69f8399402dda967be7e693cf57c5036f73c426aca76cb0ffc4fb36797e5d4"
+}

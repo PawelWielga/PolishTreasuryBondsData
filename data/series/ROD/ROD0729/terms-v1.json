@@ -1,0 +1,28 @@
+{
+  "seriesCode": "ROD0729",
+  "productType": "ROD",
+  "productDefinition": "ROD-rules-1",
+  "isin": "PL0000110078",
+  "saleFrom": "2017-07-01",
+  "saleTo": "2017-07-31",
+  "currency": "PLN",
+  "faceValueMinorUnits": 10000,
+  "issuePriceMinorUnits": 10000,
+  "exchangePriceMinorUnits": null,
+  "firstPeriodAnnualRatePercent": "3.20",
+  "marginPercent": "2.00",
+  "fixedMaturityInterestMinorUnits": null,
+  "termsRevision": 1,
+  "provenance": {
+    "primary": {
+      "publisher": "Ministry of Finance",
+      "url": "https://www.gov.pl/attachment/f69d7165-7300-4377-be6a-13d0cafd778e",
+      "sha256": "080ca1e805f08854b0bf213f2937bd2055d193ec34beb1cefd0e00a98750cacb",
+      "sheet": "ROD",
+      "row": 12
+    },
+    "crossCheck": null,
+    "verifiedAt": "2026-09-03"
+  },
+  "contentHash": "sha256:f5ed23e56544d7853a48c14b3e3ad17abf60b00a575cd608953face3091e7d7b"
+}

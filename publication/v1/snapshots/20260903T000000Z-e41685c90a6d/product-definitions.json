@@ -1,0 +1,94 @@
+{
+  "schemaVersion": "2.0",
+  "generatedAt": "2026-09-03T00:00:00Z",
+  "productDefinitions": [
+    {
+      "id": "COI-rules-1",
+      "productType": "COI",
+      "rulesRevision": 1,
+      "maturityMonths": 48,
+      "interestPeriodMonths": 12,
+      "rateModel": "InflationPlusMargin",
+      "capitalizationRule": "None",
+      "interestPaymentRule": "AtPeriodEnd",
+      "accrualRule": "ActualPeriodProRata"
+    },
+    {
+      "id": "DOR-rules-1",
+      "productType": "DOR",
+      "rulesRevision": 1,
+      "maturityMonths": 24,
+      "interestPeriodMonths": 1,
+      "rateModel": "NbpReferencePlusMargin",
+      "capitalizationRule": "None",
+      "interestPaymentRule": "AtPeriodEnd",
+      "accrualRule": "ActualPeriodProRata"
+    },
+    {
+      "id": "EDO-rules-1",
+      "productType": "EDO",
+      "rulesRevision": 1,
+      "maturityMonths": 120,
+      "interestPeriodMonths": 12,
+      "rateModel": "InflationPlusMargin",
+      "capitalizationRule": "EndOfPeriod",
+      "interestPaymentRule": "AtMaturity",
+      "accrualRule": "ActualPeriodProRata"
+    },
+    {
+      "id": "OTS-rules-1",
+      "productType": "OTS",
+      "rulesRevision": 1,
+      "maturityMonths": 3,
+      "interestPeriodMonths": 3,
+      "rateModel": "Fixed",
+      "capitalizationRule": "None",
+      "interestPaymentRule": "AtMaturity",
+      "accrualRule": "FixedMaturityOnly"
+    },
+    {
+      "id": "ROD-rules-1",
+      "productType": "ROD",
+      "rulesRevision": 1,
+      "maturityMonths": 144,
+      "interestPeriodMonths": 12,
+      "rateModel": "InflationPlusMargin",
+      "capitalizationRule": "EndOfPeriod",
+      "interestPaymentRule": "AtMaturity",
+      "accrualRule": "ActualPeriodProRata"
+    },
+    {
+      "id": "ROR-rules-1",
+      "productType": "ROR",
+      "rulesRevision": 1,
+      "maturityMonths": 12,
+      "interestPeriodMonths": 1,
+      "rateModel": "NbpReferencePlusMargin",
+      "capitalizationRule": "None",
+      "interestPaymentRule": "AtPeriodEnd",
+      "accrualRule": "ActualPeriodProRata"
+    },
+    {
+      "id": "ROS-rules-1",
+      "productType": "ROS",
+      "rulesRevision": 1,
+      "maturityMonths": 72,
+      "interestPeriodMonths": 12,
+      "rateModel": "InflationPlusMargin",
+      "capitalizationRule": "EndOfPeriod",
+      "interestPaymentRule": "AtMaturity",
+      "accrualRule": "ActualPeriodProRata"
+    },
+    {
+      "id": "TOS-rules-1",
+      "productType": "TOS",
+      "rulesRevision": 1,
+      "maturityMonths": 36,
+      "interestPeriodMonths": 12,
+      "rateModel": "Fixed",
+      "capitalizationRule": "EndOfPeriod",
+      "interestPaymentRule": "AtMaturity",
+      "accrualRule": "ActualPeriodProRata"
+    }
+  ]
+}

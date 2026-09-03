@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pawelwielga.github.io/PolishTreasuryBondsData/schemas/snapshot-manifest-v1.schema.json",
+  "type": "object",
+  "required": ["schemaVersion", "datasetRevision", "generatedAt", "files", "provenance", "coverage"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "datasetRevision": { "type": "string", "pattern": "^[0-9]{8}T[0-9]{6}Z-[a-f0-9]{12}$" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "files": {
+      "type": "object",
+      "minProperties": 4,
+      "additionalProperties": {
+        "type": "object",
+        "required": ["path", "sha256", "schemaVersion", "count"],
+        "properties": {
+          "path": { "type": "string", "pattern": "^[a-z0-9-]+\\.json$" },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "schemaVersion": { "type": "string" },
+          "count": { "type": "integer", "minimum": 0 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "provenance": { "type": "object", "required": ["mf", "gus", "nbp"] },
+    "coverage": {
+      "type": "object",
+      "required": ["catalog", "gusCpi", "nbpReferenceRates"],
+      "properties": {
+        "catalog": { "type": "object" },
+        "gusCpi": { "$ref": "#/$defs/referenceCoverage" },
+        "nbpReferenceRates": {
+          "type": "object",
+          "required": ["fromEffectiveDate", "throughEffectiveDate", "observationCount"]
+        }
+      }
+    }
+  },
+  "$defs": {
+    "referenceCoverage": {
+      "type": "object",
+      "required": ["fromPeriod", "throughPeriod", "observationCount"]
+    }
+  }
+}

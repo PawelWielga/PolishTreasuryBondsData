@@ -1,0 +1,28 @@
+{
+  "seriesCode": "ROS1230",
+  "productType": "ROS",
+  "productDefinition": "ROS-rules-1",
+  "isin": "PL0000117529",
+  "saleFrom": "2024-12-01",
+  "saleTo": "2024-12-31",
+  "currency": "PLN",
+  "faceValueMinorUnits": 10000,
+  "issuePriceMinorUnits": 10000,
+  "exchangePriceMinorUnits": null,
+  "firstPeriodAnnualRatePercent": "6.50",
+  "marginPercent": "2.00",
+  "fixedMaturityInterestMinorUnits": null,
+  "termsRevision": 1,
+  "provenance": {
+    "primary": {
+      "publisher": "Ministry of Finance",
+      "url": "https://www.gov.pl/attachment/f69d7165-7300-4377-be6a-13d0cafd778e",
+      "sha256": "080ca1e805f08854b0bf213f2937bd2055d193ec34beb1cefd0e00a98750cacb",
+      "sheet": "ROS",
+      "row": 101
+    },
+    "crossCheck": null,
+    "verifiedAt": "2026-09-03"
+  },
+  "contentHash": "sha256:77a9f7cff089b16a6c3d7445b44c891f6d4ede1246f8f37680e59ce156913e1f"
+}

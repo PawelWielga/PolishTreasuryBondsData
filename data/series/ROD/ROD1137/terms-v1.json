@@ -1,0 +1,28 @@
+{
+  "seriesCode": "ROD1137",
+  "productType": "ROD",
+  "productDefinition": "ROD-rules-1",
+  "isin": "PL0000118592",
+  "saleFrom": "2025-11-01",
+  "saleTo": "2025-11-30",
+  "currency": "PLN",
+  "faceValueMinorUnits": 10000,
+  "issuePriceMinorUnits": 10000,
+  "exchangePriceMinorUnits": null,
+  "firstPeriodAnnualRatePercent": "6.00",
+  "marginPercent": "2.50",
+  "fixedMaturityInterestMinorUnits": null,
+  "termsRevision": 1,
+  "provenance": {
+    "primary": {
+      "publisher": "Ministry of Finance",
+      "url": "https://www.gov.pl/attachment/f69d7165-7300-4377-be6a-13d0cafd778e",
+      "sha256": "080ca1e805f08854b0bf213f2937bd2055d193ec34beb1cefd0e00a98750cacb",
+      "sheet": "ROD",
+      "row": 112
+    },
+    "crossCheck": null,
+    "verifiedAt": "2026-09-03"
+  },
+  "contentHash": "sha256:4548e0a9e1fa27e21ce83f6e49c66a20103bfecdd4368f7ad7308c2c795f1da4"
+}

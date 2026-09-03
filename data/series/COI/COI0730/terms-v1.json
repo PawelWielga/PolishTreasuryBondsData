@@ -1,0 +1,28 @@
+{
+  "seriesCode": "COI0730",
+  "productType": "COI",
+  "productDefinition": "COI-rules-1",
+  "isin": "PL0000119301",
+  "saleFrom": "2026-07-01",
+  "saleTo": "2026-07-31",
+  "currency": "PLN",
+  "faceValueMinorUnits": 10000,
+  "issuePriceMinorUnits": 10000,
+  "exchangePriceMinorUnits": 9990,
+  "firstPeriodAnnualRatePercent": "4.75",
+  "marginPercent": "1.50",
+  "fixedMaturityInterestMinorUnits": null,
+  "termsRevision": 1,
+  "provenance": {
+    "primary": {
+      "publisher": "Ministry of Finance",
+      "url": "https://www.gov.pl/attachment/f69d7165-7300-4377-be6a-13d0cafd778e",
+      "sha256": "080ca1e805f08854b0bf213f2937bd2055d193ec34beb1cefd0e00a98750cacb",
+      "sheet": "COI",
+      "row": 324
+    },
+    "crossCheck": null,
+    "verifiedAt": "2026-09-03"
+  },
+  "contentHash": "sha256:ab1eb262e8219d110e6bebd848c7e7bb53e8959241697e7fbbf2cc61f7df5206"
+}

@@ -1,0 +1,28 @@
+{
+  "seriesCode": "ROD0636",
+  "productType": "ROD",
+  "productDefinition": "ROD-rules-1",
+  "isin": "PL0000117016",
+  "saleFrom": "2024-06-01",
+  "saleTo": "2024-06-30",
+  "currency": "PLN",
+  "faceValueMinorUnits": 10000,
+  "issuePriceMinorUnits": 10000,
+  "exchangePriceMinorUnits": null,
+  "firstPeriodAnnualRatePercent": "7.05",
+  "marginPercent": "2.50",
+  "fixedMaturityInterestMinorUnits": null,
+  "termsRevision": 1,
+  "provenance": {
+    "primary": {
+      "publisher": "Ministry of Finance",
+      "url": "https://www.gov.pl/attachment/f69d7165-7300-4377-be6a-13d0cafd778e",
+      "sha256": "080ca1e805f08854b0bf213f2937bd2055d193ec34beb1cefd0e00a98750cacb",
+      "sheet": "ROD",
+      "row": 95
+    },
+    "crossCheck": null,
+    "verifiedAt": "2026-09-03"
+  },
+  "contentHash": "sha256:f56bdf5cc55b49029eb532ed0ea9ada3af763600ba2164b9c8d20e6a391ec968"
+}

@@ -1,0 +1,28 @@
+{
+  "seriesCode": "DOR0328",
+  "productType": "DOR",
+  "productDefinition": "DOR-rules-1",
+  "isin": "PL0000118923",
+  "saleFrom": "2026-03-01",
+  "saleTo": "2026-03-31",
+  "currency": "PLN",
+  "faceValueMinorUnits": 10000,
+  "issuePriceMinorUnits": 10000,
+  "exchangePriceMinorUnits": 9990,
+  "firstPeriodAnnualRatePercent": "4.40",
+  "marginPercent": "0.15",
+  "fixedMaturityInterestMinorUnits": null,
+  "termsRevision": 1,
+  "provenance": {
+    "primary": {
+      "publisher": "Ministry of Finance",
+      "url": "https://www.gov.pl/attachment/f69d7165-7300-4377-be6a-13d0cafd778e",
+      "sha256": "080ca1e805f08854b0bf213f2937bd2055d193ec34beb1cefd0e00a98750cacb",
+      "sheet": "DOR",
+      "row": 48
+    },
+    "crossCheck": null,
+    "verifiedAt": "2026-09-03"
+  },
+  "contentHash": "sha256:2be3b068364a484f6aa9a1ff1790404cb10c7b23baed0de5f19f3ef35315f2fc"
+}

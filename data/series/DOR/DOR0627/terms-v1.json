@@ -1,0 +1,28 @@
+{
+  "seriesCode": "DOR0627",
+  "productType": "DOR",
+  "productDefinition": "DOR-rules-1",
+  "isin": "PL0000118113",
+  "saleFrom": "2025-06-01",
+  "saleTo": "2025-06-30",
+  "currency": "PLN",
+  "faceValueMinorUnits": 10000,
+  "issuePriceMinorUnits": 10000,
+  "exchangePriceMinorUnits": 9990,
+  "firstPeriodAnnualRatePercent": "5.40",
+  "marginPercent": "0.15",
+  "fixedMaturityInterestMinorUnits": null,
+  "termsRevision": 1,
+  "provenance": {
+    "primary": {
+      "publisher": "Ministry of Finance",
+      "url": "https://www.gov.pl/attachment/f69d7165-7300-4377-be6a-13d0cafd778e",
+      "sha256": "080ca1e805f08854b0bf213f2937bd2055d193ec34beb1cefd0e00a98750cacb",
+      "sheet": "DOR",
+      "row": 39
+    },
+    "crossCheck": null,
+    "verifiedAt": "2026-09-03"
+  },
+  "contentHash": "sha256:c276a89c78f0fc9de09e432173bbf88eeff90301ac001a3c73779ceff7aa8d87"
+}

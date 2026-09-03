@@ -1,0 +1,28 @@
+{
+  "seriesCode": "EDO0530",
+  "productType": "EDO",
+  "productDefinition": "EDO-rules-1",
+  "isin": "PL0000112678",
+  "saleFrom": "2020-05-01",
+  "saleTo": "2020-05-31",
+  "currency": "PLN",
+  "faceValueMinorUnits": 10000,
+  "issuePriceMinorUnits": 10000,
+  "exchangePriceMinorUnits": 9990,
+  "firstPeriodAnnualRatePercent": "1.70",
+  "marginPercent": "1.00",
+  "fixedMaturityInterestMinorUnits": null,
+  "termsRevision": 1,
+  "provenance": {
+    "primary": {
+      "publisher": "Ministry of Finance",
+      "url": "https://www.gov.pl/attachment/f69d7165-7300-4377-be6a-13d0cafd778e",
+      "sha256": "080ca1e805f08854b0bf213f2937bd2055d193ec34beb1cefd0e00a98750cacb",
+      "sheet": "EDO",
+      "row": 190
+    },
+    "crossCheck": null,
+    "verifiedAt": "2026-09-03"
+  },
+  "contentHash": "sha256:6a074e4bc64ac81d5a336f9cd57d3884795738b7e39f6f960245885fff35988c"
+}

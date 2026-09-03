@@ -1,0 +1,28 @@
+{
+  "seriesCode": "TOS1126",
+  "productType": "TOS",
+  "productDefinition": "TOS-rules-1",
+  "isin": "PL0000116307",
+  "saleFrom": "2023-11-01",
+  "saleTo": "2023-11-30",
+  "currency": "PLN",
+  "faceValueMinorUnits": 10000,
+  "issuePriceMinorUnits": 10000,
+  "exchangePriceMinorUnits": 9990,
+  "firstPeriodAnnualRatePercent": "6.60",
+  "marginPercent": "0.00",
+  "fixedMaturityInterestMinorUnits": null,
+  "termsRevision": 1,
+  "provenance": {
+    "primary": {
+      "publisher": "Ministry of Finance",
+      "url": "https://www.gov.pl/attachment/f69d7165-7300-4377-be6a-13d0cafd778e",
+      "sha256": "080ca1e805f08854b0bf213f2937bd2055d193ec34beb1cefd0e00a98750cacb",
+      "sheet": "TOS",
+      "row": 17
+    },
+    "crossCheck": null,
+    "verifiedAt": "2026-09-03"
+  },
+  "contentHash": "sha256:c4d989cf220cafc76700be2a04e6a067883b80dea30b47246e94381cfd332050"
+}

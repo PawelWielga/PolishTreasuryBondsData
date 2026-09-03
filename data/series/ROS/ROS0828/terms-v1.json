@@ -1,0 +1,28 @@
+{
+  "seriesCode": "ROS0828",
+  "productType": "ROS",
+  "productDefinition": "ROS-rules-1",
+  "isin": "PL0000114922",
+  "saleFrom": "2022-08-01",
+  "saleTo": "2022-08-31",
+  "currency": "PLN",
+  "faceValueMinorUnits": 10000,
+  "issuePriceMinorUnits": 10000,
+  "exchangePriceMinorUnits": null,
+  "firstPeriodAnnualRatePercent": "6.70",
+  "marginPercent": "1.50",
+  "fixedMaturityInterestMinorUnits": null,
+  "termsRevision": 1,
+  "provenance": {
+    "primary": {
+      "publisher": "Ministry of Finance",
+      "url": "https://www.gov.pl/attachment/f69d7165-7300-4377-be6a-13d0cafd778e",
+      "sha256": "080ca1e805f08854b0bf213f2937bd2055d193ec34beb1cefd0e00a98750cacb",
+      "sheet": "ROS",
+      "row": 73
+    },
+    "crossCheck": null,
+    "verifiedAt": "2026-09-03"
+  },
+  "contentHash": "sha256:722404e0a5aa370be80dfe5682f9e0929388dd2dbe0de28540eb0d59723d5fa6"
+}

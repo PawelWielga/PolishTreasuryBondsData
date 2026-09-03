@@ -1,0 +1,28 @@
+{
+  "seriesCode": "EDO0434",
+  "productType": "EDO",
+  "productDefinition": "EDO-rules-1",
+  "isin": "PL0000116828",
+  "saleFrom": "2024-04-01",
+  "saleTo": "2024-04-30",
+  "currency": "PLN",
+  "faceValueMinorUnits": 10000,
+  "issuePriceMinorUnits": 10000,
+  "exchangePriceMinorUnits": 9990,
+  "firstPeriodAnnualRatePercent": "6.80",
+  "marginPercent": "1.50",
+  "fixedMaturityInterestMinorUnits": null,
+  "termsRevision": 1,
+  "provenance": {
+    "primary": {
+      "publisher": "Ministry of Finance",
+      "url": "https://www.gov.pl/attachment/f69d7165-7300-4377-be6a-13d0cafd778e",
+      "sha256": "080ca1e805f08854b0bf213f2937bd2055d193ec34beb1cefd0e00a98750cacb",
+      "sheet": "EDO",
+      "row": 237
+    },
+    "crossCheck": null,
+    "verifiedAt": "2026-09-03"
+  },
+  "contentHash": "sha256:dc7dd16976efd6688976cf072d1457ea9dc37edc4ad1fd7c478976d061f38b1f"
+}

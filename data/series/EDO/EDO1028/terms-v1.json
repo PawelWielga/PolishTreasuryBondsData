@@ -1,0 +1,28 @@
+{
+  "seriesCode": "EDO1028",
+  "productType": "EDO",
+  "productDefinition": "EDO-rules-1",
+  "isin": "PL0000111167",
+  "saleFrom": "2018-10-01",
+  "saleTo": "2018-10-31",
+  "currency": "PLN",
+  "faceValueMinorUnits": 10000,
+  "issuePriceMinorUnits": 10000,
+  "exchangePriceMinorUnits": 9950,
+  "firstPeriodAnnualRatePercent": "2.70",
+  "marginPercent": "1.50",
+  "fixedMaturityInterestMinorUnits": null,
+  "termsRevision": 1,
+  "provenance": {
+    "primary": {
+      "publisher": "Ministry of Finance",
+      "url": "https://www.gov.pl/attachment/f69d7165-7300-4377-be6a-13d0cafd778e",
+      "sha256": "080ca1e805f08854b0bf213f2937bd2055d193ec34beb1cefd0e00a98750cacb",
+      "sheet": "EDO",
+      "row": 171
+    },
+    "crossCheck": null,
+    "verifiedAt": "2026-09-03"
+  },
+  "contentHash": "sha256:05e1b9d9816dea40892b416c69e63f5d1550f76a0d1185527ad70521ecb5efe0"
+}

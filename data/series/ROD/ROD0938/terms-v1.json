@@ -1,0 +1,31 @@
+{
+  "seriesCode": "ROD0938",
+  "productType": "ROD",
+  "productDefinition": "ROD-rules-1",
+  "isin": "PL0000119509",
+  "saleFrom": "2026-09-01",
+  "saleTo": "2026-09-30",
+  "currency": "PLN",
+  "faceValueMinorUnits": 10000,
+  "issuePriceMinorUnits": 10000,
+  "exchangePriceMinorUnits": null,
+  "firstPeriodAnnualRatePercent": "5.60",
+  "marginPercent": "2.50",
+  "fixedMaturityInterestMinorUnits": null,
+  "termsRevision": 1,
+  "provenance": {
+    "primary": {
+      "publisher": "Ministry of Finance",
+      "url": "https://www.gov.pl/attachment/f69d7165-7300-4377-be6a-13d0cafd778e",
+      "sha256": "080ca1e805f08854b0bf213f2937bd2055d193ec34beb1cefd0e00a98750cacb",
+      "sheet": "ROD",
+      "row": 122
+    },
+    "crossCheck": {
+      "url": "https://www.obligacjeskarbowe.pl/oferta-obligacji/obligacje-12-letnie-rod/rod0938/",
+      "verifiedAt": "2026-09-03"
+    },
+    "verifiedAt": "2026-09-03"
+  },
+  "contentHash": "sha256:f63e77290fcb4dff52def3d6256d958a63a2b471b4cff57918ae9a2398139cf6"
+}

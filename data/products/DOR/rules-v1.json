@@ -1,0 +1,1 @@
+{"id":"DOR-rules-1","productType":"DOR","rulesRevision":1,"maturityMonths":24,"interestPeriodMonths":1,"rateModel":"NbpReferencePlusMargin","capitalizationRule":"None","interestPaymentRule":"AtPeriodEnd","accrualRule":"ActualPeriodProRata"}

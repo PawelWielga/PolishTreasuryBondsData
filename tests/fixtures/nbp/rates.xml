@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<stopy_procentowe_archiwum>
+  <pozycja id="ref" oprocentowanie="5,25" obowiazuje_od="2022-05-06" />
+  <pozycja id="ref" oprocentowanie="6,00" obowiazuje_od="2022-06-09" />
+  <pozycja id="ref" oprocentowanie="6,50" obowiazuje_od="2022-07-08" />
+  <pozycja id="ref" oprocentowanie="6,75" obowiazuje_od="2022-09-08" />
+  <pozycja id="ref" oprocentowanie="6,00" obowiazuje_od="2023-09-07" />
+  <pozycja id="ref" oprocentowanie="5,75" obowiazuje_od="2023-10-05" />
+  <pozycja id="ref" oprocentowanie="5,25" obowiazuje_od="2025-05-08" />
+  <pozycja id="ref" oprocentowanie="5,00" obowiazuje_od="2025-07-03" />
+  <pozycja id="ref" oprocentowanie="4,75" obowiazuje_od="2025-09-04" />
+  <pozycja id="ref" oprocentowanie="4,50" obowiazuje_od="2025-10-09" />
+  <pozycja id="ref" oprocentowanie="4,25" obowiazuje_od="2025-11-06" />
+  <pozycja id="ref" oprocentowanie="4,00" obowiazuje_od="2025-12-04" />
+  <pozycja id="ref" oprocentowanie="3,75" obowiazuje_od="2026-03-05" />
+</stopy_procentowe_archiwum>

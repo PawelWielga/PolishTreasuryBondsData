@@ -1,0 +1,28 @@
+{
+  "seriesCode": "COI0829",
+  "productType": "COI",
+  "productDefinition": "COI-rules-1",
+  "isin": "PL0000118311",
+  "saleFrom": "2025-08-01",
+  "saleTo": "2025-08-31",
+  "currency": "PLN",
+  "faceValueMinorUnits": 10000,
+  "issuePriceMinorUnits": 10000,
+  "exchangePriceMinorUnits": 9990,
+  "firstPeriodAnnualRatePercent": "5.75",
+  "marginPercent": "1.50",
+  "fixedMaturityInterestMinorUnits": null,
+  "termsRevision": 1,
+  "provenance": {
+    "primary": {
+      "publisher": "Ministry of Finance",
+      "url": "https://www.gov.pl/attachment/f69d7165-7300-4377-be6a-13d0cafd778e",
+      "sha256": "080ca1e805f08854b0bf213f2937bd2055d193ec34beb1cefd0e00a98750cacb",
+      "sheet": "COI",
+      "row": 313
+    },
+    "crossCheck": null,
+    "verifiedAt": "2026-09-03"
+  },
+  "contentHash": "sha256:afebf1b57fd3d9c641fd7b51efecc56cd2815d9bbac6d612b7fd2b406d9f3f2b"
+}

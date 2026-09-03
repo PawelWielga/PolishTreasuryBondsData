@@ -1,0 +1,1 @@
+{"id":"ROS-rules-1","productType":"ROS","rulesRevision":1,"maturityMonths":72,"interestPeriodMonths":12,"rateModel":"InflationPlusMargin","capitalizationRule":"EndOfPeriod","interestPaymentRule":"AtMaturity","accrualRule":"ActualPeriodProRata"}

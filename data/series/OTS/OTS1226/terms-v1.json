@@ -1,0 +1,31 @@
+{
+  "seriesCode": "OTS1226",
+  "productType": "OTS",
+  "productDefinition": "OTS-rules-1",
+  "isin": "PL0000119434",
+  "saleFrom": "2026-09-01",
+  "saleTo": "2026-09-30",
+  "currency": "PLN",
+  "faceValueMinorUnits": 10000,
+  "issuePriceMinorUnits": 10000,
+  "exchangePriceMinorUnits": 10000,
+  "firstPeriodAnnualRatePercent": "2.00",
+  "marginPercent": "0.00",
+  "fixedMaturityInterestMinorUnits": 50,
+  "termsRevision": 1,
+  "provenance": {
+    "primary": {
+      "publisher": "Ministry of Finance",
+      "url": "https://www.gov.pl/attachment/f69d7165-7300-4377-be6a-13d0cafd778e",
+      "sha256": "080ca1e805f08854b0bf213f2937bd2055d193ec34beb1cefd0e00a98750cacb",
+      "sheet": "OTS",
+      "row": 109
+    },
+    "crossCheck": {
+      "url": "https://www.obligacjeskarbowe.pl/oferta-obligacji/obligacje-3-miesieczne-ots/ots1226/",
+      "verifiedAt": "2026-09-03"
+    },
+    "verifiedAt": "2026-09-03"
+  },
+  "contentHash": "sha256:0a9746071a6ec8cf20adf777915e2c274a8709784f3d20490470505978ea1152"
+}

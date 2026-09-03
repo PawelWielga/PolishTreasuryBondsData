@@ -1,0 +1,1 @@
+{"id":"ROR-rules-1","productType":"ROR","rulesRevision":1,"maturityMonths":12,"interestPeriodMonths":1,"rateModel":"NbpReferencePlusMargin","capitalizationRule":"None","interestPaymentRule":"AtPeriodEnd","accrualRule":"ActualPeriodProRata"}

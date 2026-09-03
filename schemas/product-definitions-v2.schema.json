@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pawelwielga.github.io/PolishTreasuryBondsData/schemas/product-definitions-v2.schema.json",
+  "type": "object",
+  "required": ["schemaVersion", "generatedAt", "productDefinitions"],
+  "properties": {
+    "schemaVersion": { "const": "2.0" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "productDefinitions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "productType", "rulesRevision", "maturityMonths", "interestPeriodMonths", "rateModel", "capitalizationRule", "interestPaymentRule", "accrualRule"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[A-Z]{3}-rules-[1-9][0-9]*$" },
+          "productType": { "enum": ["OTS", "ROR", "DOR", "TOS", "COI", "EDO", "ROS", "ROD"] },
+          "rulesRevision": { "type": "integer", "minimum": 1 },
+          "maturityMonths": { "type": "integer", "minimum": 1 },
+          "interestPeriodMonths": { "type": "integer", "minimum": 1 },
+          "rateModel": { "enum": ["Fixed", "NbpReferencePlusMargin", "InflationPlusMargin"] },
+          "capitalizationRule": { "enum": ["None", "EndOfPeriod"] },
+          "interestPaymentRule": { "enum": ["AtMaturity", "AtPeriodEnd"] },
+          "accrualRule": { "enum": ["ActualPeriodProRata", "FixedMaturityOnly"] }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

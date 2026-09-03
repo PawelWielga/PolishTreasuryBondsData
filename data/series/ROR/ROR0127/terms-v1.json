@@ -1,0 +1,28 @@
+{
+  "seriesCode": "ROR0127",
+  "productType": "ROR",
+  "productDefinition": "ROR-rules-1",
+  "isin": "PL0000118709",
+  "saleFrom": "2026-01-01",
+  "saleTo": "2026-01-31",
+  "currency": "PLN",
+  "faceValueMinorUnits": 10000,
+  "issuePriceMinorUnits": 10000,
+  "exchangePriceMinorUnits": 9990,
+  "firstPeriodAnnualRatePercent": "4.25",
+  "marginPercent": "0.00",
+  "fixedMaturityInterestMinorUnits": null,
+  "termsRevision": 1,
+  "provenance": {
+    "primary": {
+      "publisher": "Ministry of Finance",
+      "url": "https://www.gov.pl/attachment/f69d7165-7300-4377-be6a-13d0cafd778e",
+      "sha256": "080ca1e805f08854b0bf213f2937bd2055d193ec34beb1cefd0e00a98750cacb",
+      "sheet": "ROR",
+      "row": 46
+    },
+    "crossCheck": null,
+    "verifiedAt": "2026-09-03"
+  },
+  "contentHash": "sha256:8f4cb2e0fc25082d48501b54bf47979cd28c319d4c41b4094ee7c540e34a0035"
+}
