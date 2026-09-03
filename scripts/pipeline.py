@@ -126,7 +126,6 @@ def build_dist() -> str:
     _validate_schema(status, load_json(SCHEMAS / "source-status-v1.schema.json"), "status.json")
     write_json(PUBLICATION / "latest.json", latest)
     write_json(PUBLICATION / "status.json", status)
-    write_json(DIST / "metadata.json", manifest)
     return dataset_revision
 
 
