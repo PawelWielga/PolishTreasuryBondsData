@@ -71,6 +71,44 @@ def fetch_json(
     return parse_json(fetch_bytes(session, url, attempts, retry_delay_seconds), url)
 
 
+def expected_revision_from_local_publication(publication_root: Path) -> str:
+    path = publication_root / "latest.json"
+    try:
+        latest = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise SmokeError(f"Could not read local expected publication pointer {path}: {exc}") from exc
+    revision = latest.get("datasetRevision") if isinstance(latest, dict) else None
+    if not isinstance(revision, str) or not revision:
+        raise SmokeError(f"Local publication pointer {path} has no datasetRevision")
+    return revision
+
+
+def fetch_expected_latest(
+    session: requests.Session,
+    latest_url: str,
+    expected_revision: str,
+    attempts: int,
+    retry_delay_seconds: float,
+) -> dict[str, Any]:
+    last_error: Exception | None = None
+    for attempt in range(1, attempts + 1):
+        try:
+            latest = fetch_json(session, latest_url, 1, retry_delay_seconds)
+            if latest.get("datasetRevision") == expected_revision:
+                return latest
+            last_error = SmokeError(
+                f"Pages still advertises datasetRevision {latest.get('datasetRevision')!r}; "
+                f"expected deployed revision {expected_revision!r}"
+            )
+        except SmokeError as exc:
+            last_error = exc
+
+        if attempt < attempts:
+            time.sleep(retry_delay_seconds * attempt)
+
+    raise SmokeError(f"Deployed latest.json did not converge at {latest_url}: {last_error}")
+
+
 def _document_count(document: dict[str, Any]) -> int | None:
     for key in ("series", "productDefinitions", "observations"):
         value = document.get(key)
@@ -154,9 +192,16 @@ def verify_public_contract(
 ) -> tuple[str, str | None]:
     normalized_base = base_url.rstrip("/") + "/"
     latest_url = urljoin(normalized_base, "v1/latest.json")
+    expected_revision = expected_revision_from_local_publication(publication_root)
 
     with requests.Session() as session:
-        latest = fetch_json(session, latest_url, attempts, retry_delay_seconds)
+        latest = fetch_expected_latest(
+            session,
+            latest_url,
+            expected_revision,
+            attempts,
+            retry_delay_seconds,
+        )
         if latest.get("schemaVersion") != "1.0":
             raise SmokeError(f"Unexpected latest.json schemaVersion at {latest_url}")
 
@@ -212,7 +257,7 @@ def main() -> int:
         "--publication-root",
         type=Path,
         default=DEFAULT_PUBLICATION_ROOT,
-        help="Local publication/v1 tree used only to discover a retained prior revision",
+        help="Local publication/v1 tree used to identify the expected and prior revisions",
     )
     parser.add_argument("--attempts", type=int, default=6)
     parser.add_argument("--retry-delay-seconds", type=float, default=2.0)
