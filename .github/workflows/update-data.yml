@@ -25,7 +25,8 @@ jobs:
           cache: pip
           cache-dependency-path: requirements.txt
       - name: Install hash-locked Python dependencies
-        run: python -m pip install --require-hashes --only-binary=:all: -r requirements.txt
+        run: >-
+          python -m pip install --require-hashes --only-binary=:all: -r requirements.txt
       - name: Fetch and cross-check MF, GUS and NBP
         run: python scripts/update.py
       - name: Run deterministic regression tests
