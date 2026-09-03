@@ -1,6 +1,36 @@
 # PolishTreasuryBondsData
 
+> **Status: PRODUCTION READY** — the public GitHub Pages data contract, update pipeline, validation gates, source-health monitoring and post-deployment smoke tests are approved for production consumer use as of 2026-09-03.
+
 Public, versioned and auditable facts for Polish retail Treasury Bonds. The repository acquires and normalizes official data; portfolio valuation and the selection of a CPI/NBP observation for an interest period belong to consuming applications such as Inspector Budget.
+
+## Production status
+
+The supported production entry point is:
+
+```text
+https://pawelwielga.github.io/PolishTreasuryBondsData/v1/latest.json
+```
+
+Operational source health is published at:
+
+```text
+https://pawelwielga.github.io/PolishTreasuryBondsData/v1/status.json
+```
+
+Production readiness means that:
+
+- `main` is the protected production branch and requires the `validate` GitHub Actions check before merge;
+- financial-data changes reach `main` only through reviewed pull requests;
+- official-source parser disagreement or incomplete required data fails closed;
+- published snapshots are immutable, versioned and SHA-256 verified;
+- historical GUS/NBP corrections are append-only revisions rather than destructive rewrites;
+- GitHub Pages deploys only reviewed repository state and runs an end-to-end public smoke test after deployment;
+- source freshness is derived independently so an upstream outage cannot silently leave stale data marked fresh;
+- Python dependencies and GitHub Actions are supply-chain pinned and updated through reviewable Dependabot pull requests;
+- the frozen legacy v1 artifacts remain byte-compatible for existing consumers.
+
+Production consumers must still implement the documented last-known-good cache behavior, verify manifest hashes/schema versions and treat `status.json` as operational health. This repository is not an official MF, NBP or GUS service and does not provide investment advice.
 
 ## Supported endpoint
 

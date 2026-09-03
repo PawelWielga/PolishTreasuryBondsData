@@ -2,6 +2,28 @@
 
 This repository publishes financial source data, so `main` is treated as the reviewed production branch.
 
+## Production readiness
+
+**Status: PRODUCTION READY as of 2026-09-03.**
+
+The production-readiness decision covers the public read-only data publication service consumed through GitHub Pages and the repository pipeline that acquires, validates, reviews and publishes that data. The decision is based on the following controls being active and verified on `main`:
+
+- all supported bond families are represented through versioned schemas and deterministic aggregates;
+- MF offer data is cross-checked against an independent official offer page and calculation-relevant parse failures stop publication;
+- GUS CPI and NBP reference-rate observations preserve historical corrections as append-only revisions;
+- immutable snapshots are content-addressed and protected by manifest SHA-256 hashes;
+- legacy v1 compatibility artifacts are frozen byte-for-byte by regression tests;
+- the public Pages consumer path is exercised after every deployment by an end-to-end smoke test;
+- source freshness is published independently from immutable financial snapshots and ages fail-closed;
+- `main` is protected and requires the `validate` check before merge;
+- update automation proposes pull requests instead of publishing financial changes directly;
+- Python dependencies are exact/hash-locked, external Actions are pinned to immutable commit SHAs and Dependabot supplies reviewable maintenance PRs;
+- network-sensitive workflows have bounded retries/timeouts and deterministic validation remains offline after dependency installation.
+
+Production readiness does not mean that this repository becomes an official MF, NBP or GUS service, nor does it move portfolio valuation logic into this repository. Consumers remain responsible for validating the manifest/schema contract, retaining a last-known-good local cache and applying bond-interest rules correctly.
+
+A future change that breaks a supported schema, removes fail-closed validation, bypasses protected `main`, weakens immutable snapshot guarantees or disables public post-deployment verification should be treated as a production-readiness regression and must not be merged without an explicit replacement control.
+
 ## Main branch protection
 
 `main` is protected with the following policy:
