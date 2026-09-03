@@ -18,7 +18,7 @@ The consumer flow is:
 4. validate schema versions and every SHA-256 hash;
 5. atomically replace the local last-known-good cache only after the complete snapshot validates.
 
-Opening an existing portfolio must never require GitHub Pages to be available. The old `raw.githubusercontent.com/.../dist/catalog-v1.json` and `reference-data-v1.json` files are frozen compatibility artifacts, not the supported update endpoint.
+Opening an existing portfolio must never require GitHub Pages to be available. The old `raw.githubusercontent.com/.../dist/catalog-v1.json`, `reference-data-v1.json` and `metadata.json` files are frozen compatibility artifacts, not the supported update endpoint.
 
 ## Snapshot layout
 
@@ -60,6 +60,12 @@ Money uses integer PLN minor units (`10000` means PLN 100.00). Rates and margins
 | free-form `termsVersion` | integer `termsRevision` + `contentHash` |
 
 Consumers that only implement v1 must reject schema `2.0` or ignore the v2 endpoint as a whole. They must not interpret ROS/ROD as another family.
+
+### Frozen v1 compatibility contract
+
+The legacy files `dist/catalog-v1.json`, `dist/reference-data-v1.json` and `dist/metadata.json` are frozen byte-for-byte. The v2 builder does not generate or modify them. In particular, `dist/metadata.json` keeps its original v1 shape with `catalog` and `referenceData` entries and must never be replaced by a v2 snapshot manifest while advertising `schemaVersion: "1.0"`.
+
+CI pins the exact Git blob hashes of all three v1 artifacts and also verifies that a complete v2 build leaves them unchanged. Any intentional future change to the v1 compatibility contract requires an explicit compatibility decision and corresponding golden-hash update; normal data refreshes must use the versioned Pages snapshot contract instead.
 
 ## Official sources
 
