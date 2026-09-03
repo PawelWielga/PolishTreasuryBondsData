@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "1.0",
+  "generatedAt": "2026-08-18T00:00:00Z",
+  "referenceRates": [
+    {
+      "value": 0.0375,
+      "referenceDate": "2026-08-18",
+      "appliesToInterestPeriodStartMonth": "2026-09-01",
+      "publishedAt": null,
+      "source": "https://nbp.pl/polityka-pieniezna/decyzje-rpp/podstawowe-stopy-procentowe-nbp/"
+    }
+  ],
+  "inflation": [
+    {
+      "value": 0.029,
+      "referenceDate": "2025-09-01",
+      "appliesToInterestPeriodStartMonth": "2025-11-01",
+      "publishedAt": "2025-10-15T10:00:00+02:00",
+      "source": "https://stat.gov.pl/obszary-tematyczne/ceny-handel/wskazniki-cen/wskazniki-cen-towarow-i-uslug-konsumpcyjnych-we-wrzesniu-2025-roku,2,167.html"
+    }
+  ]
+}
