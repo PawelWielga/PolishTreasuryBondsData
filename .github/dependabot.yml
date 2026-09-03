@@ -8,8 +8,6 @@ updates:
       time: '05:00'
       timezone: Europe/Warsaw
     open-pull-requests-limit: 5
-    labels:
-      - dependencies
     groups:
       actions-minor-patch:
         patterns:
@@ -26,8 +24,6 @@ updates:
       time: '05:20'
       timezone: Europe/Warsaw
     open-pull-requests-limit: 5
-    labels:
-      - dependencies
     groups:
       python-minor-patch:
         patterns:
