@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "1.0",
+  "generatedAt": "2026-09-03T00:00:00Z",
+  "catalog": {
+    "path": "catalog-v1.json",
+    "seriesCount": 15
+  },
+  "referenceData": {
+    "path": "reference-data-v1.json",
+    "referenceRateCount": 1,
+    "inflationCount": 1
+  }
+}
