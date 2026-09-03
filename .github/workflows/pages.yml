@@ -48,3 +48,7 @@ jobs:
       - name: Deploy reviewed immutable snapshot and runtime health
         id: deployment
         uses: actions/deploy-pages@v4
+      - name: Smoke-test the deployed consumer contract
+        env:
+          PAGES_URL: ${{ steps.deployment.outputs.page_url }}
+        run: python scripts/smoke_pages.py --base-url "$PAGES_URL"

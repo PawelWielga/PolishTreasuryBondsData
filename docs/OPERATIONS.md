@@ -32,3 +32,19 @@ This keeps the two responsibilities separate:
 
 1. financial data changes require a validated pull request into protected `main`;
 2. operational freshness can age independently without selecting an unreviewed dataset revision.
+
+## Post-deployment smoke test
+
+Every successful Pages deployment is followed by a network smoke test against the public Pages URL. `scripts/smoke_pages.py` follows the same retrieval chain expected from Inspector Budget:
+
+1. fetch `v1/latest.json`;
+2. resolve its relative manifest path;
+3. require the manifest `datasetRevision` to match `latest.json`;
+4. fetch every file declared in the manifest;
+5. verify SHA-256 against the bytes returned by Pages;
+6. parse every file as JSON and verify its declared `schemaVersion`;
+7. verify manifest counts when the document has a known collection field.
+
+The smoke tester retries public reads to tolerate short Pages propagation delays, but persistent missing files, broken paths, invalid JSON, revision disagreement or hash mismatch fail the workflow visibly and do not modify repository data.
+
+When at least two real snapshot revisions are retained locally, the same deployment smoke test also fetches and fully verifies the newest prior immutable snapshot. Until the first actual data revision change occurs, the repository has only one genuine snapshot and the workflow reports that fact rather than fabricating historical data for the test.
