@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/PawelWielga/PolishTreasuryBondsData/main/schemas/catalog-v1.schema.json",
+  "title": "Polish Treasury Bonds catalog v1",
+  "type": "object",
+  "required": ["schemaVersion", "generatedAt", "series"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "series": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["seriesCode", "type", "saleFrom", "saleTo", "nominalValue", "currency", "maturityMonths", "interestPeriodMonths", "interestPaymentsPerYear", "firstPeriodAnnualRate", "rateRule", "capitalizationRule", "interestPaymentRule", "accrualRule", "termsVersion", "source", "verifiedAt"],
+        "properties": {
+          "seriesCode": { "type": "string", "pattern": "^[A-Z]{3}[0-9]{4}$" },
+          "type": { "enum": ["Ots", "Ror", "Dor", "Tos", "Coi", "Edo"] },
+          "saleFrom": { "type": "string", "format": "date" },
+          "saleTo": { "type": "string", "format": "date" },
+          "nominalValue": { "type": "number", "exclusiveMinimum": 0 },
+          "currency": { "const": "PLN" },
+          "maturityMonths": { "type": "integer", "minimum": 1 },
+          "interestPeriodMonths": { "type": "integer", "minimum": 1 },
+          "interestPaymentsPerYear": { "type": "integer", "minimum": 1 },
+          "firstPeriodAnnualRate": { "type": "number", "minimum": 0 },
+          "rateRule": {
+            "type": "object",
+            "required": ["kind", "margin"],
+            "properties": {
+              "kind": { "enum": ["Fixed", "NbpReferencePlusMargin", "InflationPlusMargin"] },
+              "margin": { "type": "number", "minimum": 0 }
+            },
+            "additionalProperties": false
+          },
+          "capitalizationRule": { "enum": ["None", "EndOfPeriod"] },
+          "interestPaymentRule": { "enum": ["AtMaturity", "AtPeriodEnd"] },
+          "accrualRule": { "enum": ["ActualPeriodProRata", "FixedMaturityOnly"] },
+          "fixedMaturityInterestPerBond": { "type": ["number", "null"], "minimum": 0 },
+          "termsVersion": { "type": "string", "minLength": 1 },
+          "source": { "type": "string", "format": "uri" },
+          "verifiedAt": { "type": "string", "format": "date" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
