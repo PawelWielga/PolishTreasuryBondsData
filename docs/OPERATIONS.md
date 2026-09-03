@@ -48,3 +48,18 @@ Every successful Pages deployment is followed by a network smoke test against th
 The smoke tester retries public reads to tolerate short Pages propagation delays, but persistent missing files, broken paths, invalid JSON, revision disagreement or hash mismatch fail the workflow visibly and do not modify repository data.
 
 When at least two real snapshot revisions are retained locally, the same deployment smoke test also fetches and fully verifies the newest prior immutable snapshot. Until the first actual data revision change occurs, the repository has only one genuine snapshot and the workflow reports that fact rather than fabricating historical data for the test.
+
+## Dependency and workflow supply chain
+
+Runtime Python dependencies are split into two files:
+
+- `requirements.in` is the small human-reviewed list of direct dependencies;
+- `requirements.txt` is the CI lock for CPython 3.12.12 on GitHub-hosted Ubuntu x86_64 and contains every direct and transitive package at an exact version with a SHA-256 hash for the wheel used by CI.
+
+CI, Pages publication and the scheduled updater install with `--require-hashes --only-binary=:all:`. That makes package resolution fail closed if a pinned artifact changes, disappears, or no longer matches the reviewed hash. The normal offline validation remains network-independent after the install step.
+
+All external GitHub Actions in `.github/workflows` are pinned to immutable 40-character commit SHAs. The adjacent version comments record the reviewed upstream release that each SHA represents. `tests/test_supply_chain.py` prevents floating action tags or an unlocked direct dependency from being reintroduced accidentally.
+
+Dependabot checks both the `github-actions` and `pip` ecosystems every Monday and proposes dependency changes as ordinary reviewable pull requests. Minor and patch updates are grouped; major updates remain separate so breaking changes are explicit. Dependency PRs are subject to the same protected-`main` validation gate as other changes.
+
+Network-sensitive jobs have explicit workflow timeouts: Pages deployment is capped at 15 minutes and the official-source updater at 20 minutes. Validation itself is capped at 10 minutes. These limits bound failures without changing any public dataset contract.
