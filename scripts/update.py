@@ -16,6 +16,7 @@ from scripts.pipeline import DATA, ROOT, build_dist, load_json, load_series, wri
 from scripts.sources import (
     MF_PAGE_URL,
     NBP_RATES_URL,
+    PRODUCT_RULES,
     SourceError,
     cross_check_series,
     default_session,
@@ -28,6 +29,31 @@ from scripts.sources import (
     sha256_bytes,
     utc_now,
 )
+
+COMMON_REQUIRED_CROSS_CHECK_FIELDS = (
+    "seriesCode",
+    "saleFrom",
+    "saleTo",
+    "issuePriceMinorUnits",
+    "firstPeriodAnnualRatePercent",
+)
+
+
+def required_cross_check_fields(series: dict[str, Any]) -> tuple[str, ...]:
+    rules = PRODUCT_RULES[series["productType"]]
+    if rules.rate_model in {"NbpReferencePlusMargin", "InflationPlusMargin"}:
+        return (*COMMON_REQUIRED_CROSS_CHECK_FIELDS, "marginPercent")
+    return COMMON_REQUIRED_CROSS_CHECK_FIELDS
+
+
+def validate_cross_check_facts(
+    series: dict[str, Any], html_facts: dict[str, Any], source_url: str
+) -> None:
+    for field in required_cross_check_fields(series):
+        if html_facts.get(field) is None:
+            raise SourceError(
+                f"{series['seriesCode']}: required cross-check field {field} could not be parsed from {source_url}"
+            )
 
 
 def sync_series(parsed: list[dict[str, Any]]) -> tuple[int, int]:
@@ -128,7 +154,9 @@ def sync_mf(session: Any, verified_date: str, workbook_path: Path | None = None,
             if not cross_source:
                 continue
             html = fetch(session, cross_source["url"], "text/html,application/xhtml+xml").decode("utf-8")
-            cross_check_series(series, parse_series_html(html))
+            html_facts = parse_series_html(html)
+            validate_cross_check_facts(series, html_facts, cross_source["url"])
+            cross_check_series(series, html_facts)
             cross_source["verifiedAt"] = verified_date
 
     added, corrected = sync_series(parsed)
