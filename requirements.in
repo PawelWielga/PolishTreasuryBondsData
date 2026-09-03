@@ -1,4 +1,4 @@
-beautifulsoup4==4.12.3
-jsonschema==4.23.0
-requests==2.32.3
-xlrd==2.0.1
+beautifulsoup4==4.15.0
+jsonschema==4.26.0
+requests==2.34.2
+xlrd==2.0.2
