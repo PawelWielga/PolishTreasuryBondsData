@@ -23,3 +23,5 @@ jobs:
         run: python -m unittest discover -s tests -v
       - name: Rebuild and validate distributions
         run: python scripts/update.py --offline
+      - name: Require committed public datasets to be reproducible
+        run: git diff --exit-code -- dist/catalog-v1.json dist/reference-data-v1.json
