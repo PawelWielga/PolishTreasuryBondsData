@@ -85,6 +85,14 @@ CPI rows are source observations only. There is deliberately no `appliesToIntere
 
 The official NBP archive page provides the reference-rate change timeline. The parser reads the embedded `stopy_procentowe_archiwum` and current `interest_rates` XML sections and publishes exact effective dates and percentage strings. It does not choose a rate for any ROR/DOR period.
 
+### Reference observation revisions
+
+Official historical corrections from GUS or NBP are append-only. If multiple rows have the same GUS `period` or NBP `effectiveFrom`, they are separate revisions of the same observation identity. The row with the highest integer `revision` is the current official observation for that identity; lower revisions remain published for provenance and reproducibility.
+
+Consumers must first select the highest revision for each observation identity and only then apply their own bond interest-period selection logic. They must not treat multiple revisions as multiple months or rate changes. Manifest `coverage.*.observationCount` counts distinct observation identities, not revision rows.
+
+A correction creates a new dataset snapshot. Earlier snapshot directories remain byte-identical and therefore continue to reproduce the data that was available before the correction.
+
 ## Freshness and failures
 
 The immutable manifest records the sources and coverage used for that snapshot. `status.json` separately reports MF, GUS and NBP as `FRESH`, `STALE`, `PARTIAL` or `UNAVAILABLE`, including the last attempt and last successful verification.
