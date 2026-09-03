@@ -134,7 +134,7 @@ A correction creates a new dataset snapshot. Earlier snapshot directories remain
 The immutable manifest records the sources and coverage used for the selected financial snapshot. Public `status.json` is deliberately separate operational state. Its `status` value is derived independently for MF, GUS and NBP from durable `lastSuccessAt` plus `staleAfterHours` at Pages deployment time.
 
 - MF and GUS become `STALE` 744 hours after their last successful verification because their meaningful cadence is monthly.
-- NBP becomes `STALE` 168 hours after their last successful verification because a rate decision can take effect between monthly catalog updates.
+- NBP becomes `STALE` 168 hours after its last successful verification because a rate decision can take effect between monthly catalog updates.
 - a source with no successful verification is `UNAVAILABLE`;
 - a durable `PARTIAL` coverage state remains `PARTIAL` while fresh and becomes `STALE` when its freshness window expires;
 - a failed refresh never advances `lastSuccessAt`, never selects another `datasetRevision` and never rewrites an immutable snapshot;
