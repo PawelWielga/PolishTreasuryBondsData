@@ -101,15 +101,18 @@ A correction creates a new dataset snapshot. Earlier snapshot directories remain
 
 ## Freshness and failures
 
-The immutable manifest records the sources and coverage used for that snapshot. `status.json` separately reports MF, GUS and NBP as `FRESH`, `STALE`, `PARTIAL` or `UNAVAILABLE`, including the last attempt and last successful verification.
+The immutable manifest records the sources and coverage used for the selected financial snapshot. Public `status.json` is deliberately separate operational state. Its `status` value is derived independently for MF, GUS and NBP from durable `lastSuccessAt` plus `staleAfterHours` at Pages deployment time.
 
-- MF and GUS become stale after 744 hours because their meaningful cadence is monthly.
-- NBP becomes stale after 168 hours because a rate decision can take effect between monthly catalog updates.
-- a failed attempt never advances `lastSuccessAt` or changes the selected financial snapshot;
-- `STALE` can still point to a fully usable last-known-good snapshot;
-- `PARTIAL` means the advertised source coverage is incomplete and must not be presented as fully current.
+- MF and GUS become `STALE` 744 hours after their last successful verification because their meaningful cadence is monthly.
+- NBP becomes `STALE` 168 hours after its last successful verification because a rate decision can take effect between monthly catalog updates.
+- a source with no successful verification is `UNAVAILABLE`;
+- a durable `PARTIAL` coverage state remains `PARTIAL` while fresh and becomes `STALE` when its freshness window expires;
+- a failed refresh never advances `lastSuccessAt`, never selects another `datasetRevision` and never rewrites an immutable snapshot;
+- `STALE` can therefore still point to a fully usable last-known-good financial snapshot.
 
-The publisher records operational state. Consumers may additionally compute staleness from timestamps and `staleAfterHours` while offline.
+Pages is redeployed on a six-hour schedule even when `main` has not changed. Immediately before upload, `scripts/status.py` recalculates only `publication/v1/status.json`; `latest.json` and snapshot files are left untouched. This means prolonged upstream failures cannot leave public health indefinitely `FRESH` merely because the failed updater never created a data PR.
+
+`lastAttemptAt`, `lastAttemptStatus` and `message` describe the last durable attempt recorded in reviewed repository state. They are not guaranteed to include every transient CI failure. For freshness decisions, `lastSuccessAt`, `staleAfterHours` and the derived public `status` are authoritative. Offline consumers can perform the same age calculation locally.
 
 ## Repository layout
 
@@ -130,12 +133,16 @@ One series correction changes one small source file. Public clients still downlo
 ## Update and review flow
 
 ```text
-schedule/manual run -> official sources -> cross-checks -> schemas/tests
+scheduled source updater -> official sources -> cross-checks -> schemas/tests
 -> deterministic candidate snapshot -> bot/update-data pull request
--> manual review and merge -> Pages deploy from main
+-> manual review and merge -> immutable data available on main
+
+push/manual/6-hour Pages run -> validate reviewed main
+-> derive status.json from durable lastSuccessAt timestamps
+-> deploy same selected financial snapshot + current operational health
 ```
 
-The scheduled updater never pushes financial data directly to `main` and never deploys a candidate before review. Re-running updates the same bot PR.
+The source updater never pushes financial data directly to `main` and never deploys an unreviewed candidate. Re-running updates the same bot PR. The independent Pages health refresh does not fetch or accept new financial facts and cannot advance `latest.json`.
 
 ## Local validation
 
@@ -145,6 +152,12 @@ source .venv/bin/activate
 pip install -r requirements.txt
 python -m unittest discover -s tests -v
 python scripts/update.py --offline --check
+```
+
+Deterministic health rendering for inspection:
+
+```bash
+python scripts/status.py --as-of 2026-09-03T12:00:00Z
 ```
 
 Live canary/update:
