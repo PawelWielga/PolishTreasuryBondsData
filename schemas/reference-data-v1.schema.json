@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/PawelWielga/PolishTreasuryBondsData/main/schemas/reference-data-v1.schema.json",
+  "title": "Polish Treasury Bonds reference data v1",
+  "type": "object",
+  "required": ["schemaVersion", "generatedAt", "referenceRates", "inflation"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "referenceRates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["value", "referenceDate", "appliesToInterestPeriodStartMonth", "source"],
+        "properties": {
+          "value": { "type": "number", "minimum": 0 },
+          "referenceDate": { "type": "string", "format": "date" },
+          "appliesToInterestPeriodStartMonth": { "type": "string", "format": "date" },
+          "publishedAt": { "type": ["string", "null"], "format": "date-time" },
+          "source": { "type": "string", "format": "uri" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "inflation": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["value", "referenceDate", "appliesToInterestPeriodStartMonth", "source"],
+        "properties": {
+          "value": { "type": "number" },
+          "referenceDate": { "type": "string", "format": "date" },
+          "appliesToInterestPeriodStartMonth": { "type": "string", "format": "date" },
+          "publishedAt": { "type": ["string", "null"], "format": "date-time" },
+          "source": { "type": "string", "format": "uri" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
