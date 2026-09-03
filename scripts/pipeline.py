@@ -188,10 +188,32 @@ def _validate_series(series: list[dict[str, Any]], products: list[dict[str, Any]
             raise ValueError(f"{item['seriesCode']}: invalid contentHash")
 
 
+def _validate_revisioned_observations(
+    observations: list[dict[str, Any]], identity: str, label: str
+) -> None:
+    identities = [(item[identity], item["revision"]) for item in observations]
+    if identities != sorted(identities) or len(identities) != len(set(identities)):
+        raise ValueError(
+            f"{label} observations must be unique by ({identity}, revision) and canonically ordered"
+        )
+
+
+def _current_reference_observations(
+    observations: list[dict[str, Any]], identity: str
+) -> list[dict[str, Any]]:
+    current: dict[str, dict[str, Any]] = {}
+    for item in observations:
+        key = item[identity]
+        previous = current.get(key)
+        if previous is None or item["revision"] > previous["revision"]:
+            current[key] = item
+    return [current[key] for key in sorted(current)]
+
+
 def _validate_gus(gus: dict[str, Any]) -> None:
-    periods = [item["period"] for item in gus.get("observations", [])]
-    if periods != sorted(periods) or len(periods) != len(set(periods)):
-        raise ValueError("GUS observations must be unique and canonically ordered")
+    observations = gus.get("observations", [])
+    _validate_revisioned_observations(observations, "period", "GUS")
+    periods = [item["period"] for item in _current_reference_observations(observations, "period")]
     by_year: dict[str, list[str]] = defaultdict(list)
     for period in periods:
         by_year[period[:4]].append(period)
@@ -203,10 +225,10 @@ def _validate_gus(gus: dict[str, Any]) -> None:
 
 def _validate_nbp(nbp: dict[str, Any]) -> None:
     observations = nbp.get("observations", [])
-    dates = [item["effectiveFrom"] for item in observations]
-    if dates != sorted(dates) or len(dates) != len(set(dates)):
-        raise ValueError("NBP observations must be unique and canonically ordered")
-    if observations and dates[0] > "2022-06-01":
+    _validate_revisioned_observations(observations, "effectiveFrom", "NBP")
+    current = _current_reference_observations(observations, "effectiveFrom")
+    dates = [item["effectiveFrom"] for item in current]
+    if current and dates[0] > "2022-06-01":
         raise ValueError("NBP history does not cover the first ROR/DOR offering")
 
 
@@ -240,17 +262,19 @@ def _coverage(series: list[dict[str, Any]], gus: list[dict[str, Any]], nbp: list
         }
         for family, items in sorted(by_family.items())
     }
+    current_gus = _current_reference_observations(gus, "period")
+    current_nbp = _current_reference_observations(nbp, "effectiveFrom")
     return {
         "catalog": catalog,
         "gusCpi": {
-            "fromPeriod": gus[0]["period"] if gus else None,
-            "throughPeriod": gus[-1]["period"] if gus else None,
-            "observationCount": len(gus),
+            "fromPeriod": current_gus[0]["period"] if current_gus else None,
+            "throughPeriod": current_gus[-1]["period"] if current_gus else None,
+            "observationCount": len(current_gus),
         },
         "nbpReferenceRates": {
-            "fromEffectiveDate": nbp[0]["effectiveFrom"] if nbp else None,
-            "throughEffectiveDate": nbp[-1]["effectiveFrom"] if nbp else None,
-            "observationCount": len(nbp),
+            "fromEffectiveDate": current_nbp[0]["effectiveFrom"] if current_nbp else None,
+            "throughEffectiveDate": current_nbp[-1]["effectiveFrom"] if current_nbp else None,
+            "observationCount": len(current_nbp),
         },
     }
 
