@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pawelwielga.github.io/PolishTreasuryBondsData/schemas/source-status-v1.schema.json",
+  "type": "object",
+  "required": ["schemaVersion", "datasetRevision", "sources"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "datasetRevision": { "type": "string" },
+    "sources": {
+      "type": "object",
+      "required": ["mf", "gus", "nbp"],
+      "additionalProperties": {
+        "type": "object",
+        "required": ["status", "lastAttemptAt", "lastAttemptStatus", "lastSuccessAt", "staleAfterHours", "message"],
+        "properties": {
+          "status": { "enum": ["FRESH", "STALE", "PARTIAL", "UNAVAILABLE"] },
+          "lastAttemptAt": { "type": ["string", "null"], "format": "date-time" },
+          "lastAttemptStatus": { "enum": ["SUCCESS", "FAILED", "NEVER"] },
+          "lastSuccessAt": { "type": ["string", "null"], "format": "date-time" },
+          "staleAfterHours": { "type": "integer", "minimum": 1 },
+          "message": { "type": ["string", "null"] }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

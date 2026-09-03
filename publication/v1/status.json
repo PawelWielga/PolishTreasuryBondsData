@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "1.0",
+  "datasetRevision": "20260903T000000Z-e41685c90a6d",
+  "sources": {
+    "mf": {
+      "status": "FRESH",
+      "lastAttemptAt": "2026-09-03T09:37:52Z",
+      "lastAttemptStatus": "SUCCESS",
+      "lastSuccessAt": "2026-09-03T09:37:52Z",
+      "staleAfterHours": 744,
+      "message": "MF-only refresh succeeded"
+    },
+    "gus": {
+      "status": "FRESH",
+      "lastAttemptAt": "2026-09-03T00:00:00Z",
+      "lastAttemptStatus": "SUCCESS",
+      "lastSuccessAt": "2026-09-03T00:00:00Z",
+      "staleAfterHours": 744,
+      "message": "Official SDP bootstrap"
+    },
+    "nbp": {
+      "status": "FRESH",
+      "lastAttemptAt": "2026-09-03T00:00:00Z",
+      "lastAttemptStatus": "SUCCESS",
+      "lastSuccessAt": "2026-09-03T00:00:00Z",
+      "staleAfterHours": 168,
+      "message": "Official archive bootstrap"
+    }
+  }
+}

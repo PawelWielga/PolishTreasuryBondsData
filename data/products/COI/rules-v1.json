@@ -1,0 +1,1 @@
+{"id":"COI-rules-1","productType":"COI","rulesRevision":1,"maturityMonths":48,"interestPeriodMonths":12,"rateModel":"InflationPlusMargin","capitalizationRule":"None","interestPaymentRule":"AtPeriodEnd","accrualRule":"ActualPeriodProRata"}

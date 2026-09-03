@@ -1,103 +1,127 @@
 # PolishTreasuryBondsData
 
-Public, versioned data source for Polish retail Treasury Bonds (detaliczne obligacje Skarbu Państwa).
+Public, versioned and auditable facts for Polish retail Treasury Bonds. The repository acquires and normalizes official data; portfolio valuation and the selection of a CPI/NBP observation for an interest period belong to consuming applications such as Inspector Budget.
 
-The repository separates **financial facts** from applications that consume them. It is intended for Inspector Budget and can also be consumed by other software.
+## Supported endpoint
 
-## Public endpoints
-
-Stable v1 datasets are published as static JSON files:
-
-- `dist/catalog-v1.json` - immutable versions of Treasury Bond series terms,
-- `dist/reference-data-v1.json` - verified NBP reference-rate and GUS CPI observations,
-- `dist/metadata.json` - generated hashes and counts after the scheduled updater runs.
-
-Raw URL base:
+GitHub Pages is the supported delivery channel:
 
 ```text
-https://raw.githubusercontent.com/PawelWielga/PolishTreasuryBondsData/main/dist/
+https://pawelwielga.github.io/PolishTreasuryBondsData/v1/latest.json
 ```
 
-Consumers should cache the last successfully validated response locally and must not require GitHub availability to open an existing portfolio.
+The consumer flow is:
 
-## Supported product families
+1. read `v1/latest.json`;
+2. keep the local cache when `datasetRevision` has not changed;
+3. otherwise download its immutable manifest and snapshot files;
+4. validate schema versions and every SHA-256 hash;
+5. atomically replace the local last-known-good cache only after the complete snapshot validates.
 
-The v1 contract currently models:
+Opening an existing portfolio must never require GitHub Pages to be available. The old `raw.githubusercontent.com/.../dist/catalog-v1.json` and `reference-data-v1.json` files are frozen compatibility artifacts, not the supported update endpoint.
+
+## Snapshot layout
 
 ```text
-OTS
-ROR
-DOR
-TOS
-COI
-EDO
+/v1/latest.json
+/v1/status.json
+/v1/snapshots/<datasetRevision>/manifest.json
+/v1/snapshots/<datasetRevision>/catalog.json
+/v1/snapshots/<datasetRevision>/product-definitions.json
+/v1/snapshots/<datasetRevision>/nbp-reference-rates.json
+/v1/snapshots/<datasetRevision>/gus-cpi.json
 ```
 
-The application consuming the data owns calculation logic. This repository owns acquisition, normalization, provenance and publication of facts.
+Only `latest.json` and `status.json` are mutable. A snapshot directory is content-addressed, retained forever and must remain byte-identical. `datasetRevision` identifies a complete publication and is independent of a series `termsRevision`.
 
-## Sources
+## Catalog v2
 
-Primary sources are official Polish institutions only:
+The catalog supports OTS, ROR, DOR, TOS, COI, EDO, ROS and ROD. It separates:
 
-- Ministry of Finance / Obligacje Skarbowe: https://www.obligacjeskarbowe.pl/
-- NBP: https://nbp.pl/
-- GUS: https://stat.gov.pl/
+- reusable family rules in `product-definitions.json`;
+- concrete official offerings in `catalog.json`;
+- raw CPI and NBP observations in separate reference files;
+- immutable provenance in the snapshot manifest;
+- current source health in `status.json`.
 
-Every series and reference observation contains its source URL. Missing data is left missing; the pipeline never substitutes zero, the latest known value or a forecast.
+Money uses integer PLN minor units (`10000` means PLN 100.00). Rates and margins use exact decimal percentage strings (`"5.35"` means 5.35%), never JSON binary floating point. Each series uses a stable integer `termsRevision` and a deterministic SHA-256 `contentHash` over calculation-relevant facts. A financial correction creates another revision; a provenance-only change does not.
 
-## Update model
+### Migration from v1
 
-`update-data.yml` runs daily and:
+| v1 | v2 |
+|---|---|
+| `type` | `productType` |
+| duplicated family rules | `productDefinition` reference |
+| `nominalValue` number | `faceValueMinorUnits` integer |
+| implicit sale price | `issuePriceMinorUnits` |
+| no exchange price | `exchangePriceMinorUnits` |
+| decimal rate number | exact `firstPeriodAnnualRatePercent` string |
+| `rateRule.margin` | exact `marginPercent` string |
+| free-form `termsVersion` | integer `termsRevision` + `contentHash` |
 
-1. reads the current official Ministry of Finance offer,
-2. discovers the current OTS/ROR/DOR/TOS/COI/EDO series,
-3. fetches each official detail page,
-4. parses sale dates, rates, margins and product rules,
-5. compares the result with immutable versions already stored in the repository,
-6. adds a new `termsVersion` only when the financial terms changed,
-7. validates JSON Schema and semantic invariants,
-8. runs parser regression tests,
-9. commits only validated changes.
+Consumers that only implement v1 must reject schema `2.0` or ignore the v2 endpoint as a whole. They must not interpret ROS/ROD as another family.
 
-If an official page changes shape and cannot be parsed, the workflow fails and the last valid `dist` remains untouched.
+## Official sources
 
-NBP/GUS observations are kept in the same public contract. They are deliberately curated from official publications until a stable machine-readable provider is verified for the exact observations required by retail-bond calculations.
+### Ministry of Finance
 
-## Versioning
+The primary series source is the official `Dane dotyczące obligacji detalicznych.xls` attachment discovered on:
 
-A bond purchase must be pinned to `(seriesCode, termsVersion)`.
+```text
+https://www.gov.pl/web/finanse/obligacje-detaliczne1
+```
 
-Existing versions are immutable. If an official correction changes the financial parameters of the same series, a new version is added instead of overwriting the version used by historical purchases.
+The importer retains the workbook URL, SHA-256, sheet and row. Current offer facts are independently compared with the relevant `obligacjeskarbowe.pl` detail page. A disagreement in series code, sale window, price or first-period rate blocks the update. Checked-in, content-addressed workbooks make historical backfills reproducible offline.
 
-Breaking JSON changes require a new endpoint, e.g. `catalog-v2.json`. Existing v1 files remain compatible.
+The public catalog includes every series from the workbook that can still be outstanding on the dataset date. Once imported, matured series remain in later snapshots. Coverage and gaps are machine-readable in every manifest.
+
+### GUS CPI
+
+Monthly year-over-year CPI comes from the official public SDP API. Years through 2025 use indicator `1832`; 2026+ uses variable `305`, COICOP 2018 section `1698`, with complete pagination. The dataset preserves both the official previous-year-100 index and the derived exact percentage difference, including negative CPI.
+
+CPI rows are source observations only. There is deliberately no `appliesToInterestPeriodStartMonth`, inflation floor or latest-value fallback. A missing period remains missing and incomplete closed years fail validation.
+
+### NBP reference rate
+
+The official NBP archive page provides the reference-rate change timeline. The parser reads the embedded `stopy_procentowe_archiwum` and current `interest_rates` XML sections and publishes exact effective dates and percentage strings. It does not choose a rate for any ROR/DOR period.
+
+## Freshness and failures
+
+The immutable manifest records the sources and coverage used for that snapshot. `status.json` separately reports MF, GUS and NBP as `FRESH`, `STALE`, `PARTIAL` or `UNAVAILABLE`, including the last attempt and last successful verification.
+
+- MF and GUS become stale after 744 hours because their meaningful cadence is monthly.
+- NBP becomes stale after 168 hours because a rate decision can take effect between monthly catalog updates.
+- a failed attempt never advances `lastSuccessAt` or changes the selected financial snapshot;
+- `STALE` can still point to a fully usable last-known-good snapshot;
+- `PARTIAL` means the advertised source coverage is incomplete and must not be presented as fully current.
+
+The publisher records operational state. Consumers may additionally compute staleness from timestamps and `staleAfterHours` while offline.
 
 ## Repository layout
 
 ```text
-.github/workflows/
-  validate.yml
-  update-data.yml
-
-data/
-  series/catalog-source.json
-  reference/reference-source.json
-
-dist/
-  catalog-v1.json
-  reference-data-v1.json
-  metadata.json
-
-schemas/
-  catalog-v1.schema.json
-  reference-data-v1.schema.json
-
+data/products/<family>/rules-vN.json
+data/series/<family>/<series>/terms-vN.json
+data/reference/*.json
+data/sources/mf/<sha256>.xls
+schemas/*.json
+dist/                         # convenient generated aggregates, v1 frozen
+publication/v1/               # Pages pointers and immutable snapshots
 scripts/
-  pipeline.py
-  update.py
-
 tests/
-  test_pipeline.py
 ```
+
+One series correction changes one small source file. Public clients still download compact generated aggregates, never one request per series. Canonical sorting and CI make stale aggregates fail validation.
+
+## Update and review flow
+
+```text
+schedule/manual run -> official sources -> cross-checks -> schemas/tests
+-> deterministic candidate snapshot -> bot/update-data pull request
+-> manual review and merge -> Pages deploy from main
+```
+
+The scheduled updater never pushes financial data directly to `main` and never deploys a candidate before review. Re-running updates the same bot PR.
 
 ## Local validation
 
@@ -106,17 +130,17 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 python -m unittest discover -s tests -v
-python scripts/update.py --offline
+python scripts/update.py --offline --check
 ```
 
-To also query current official Ministry of Finance pages:
+Live canary/update:
 
 ```bash
 python scripts/update.py
 ```
 
-## Licensing and provenance
+Any source/network/parser disagreement stops before `latest.json` can advance, preserving the last-known-good snapshot.
 
-Repository code is MIT licensed. Official source data remains subject to the terms and legal framework applicable to the publishing institution. This repository does not claim ownership of Ministry of Finance, NBP or GUS source publications.
+## Licensing
 
-This project is not an official Ministry of Finance, NBP or GUS service and does not provide investment advice.
+Repository code is MIT licensed. Official source data remains subject to the legal framework of the publishing institution. This project is not an official MF, NBP or GUS service and does not provide investment advice.

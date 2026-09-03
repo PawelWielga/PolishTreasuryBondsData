@@ -1,0 +1,28 @@
+{
+  "seriesCode": "TOS1128",
+  "productType": "TOS",
+  "productDefinition": "TOS-rules-1",
+  "isin": "PL0000118550",
+  "saleFrom": "2025-11-01",
+  "saleTo": "2025-11-30",
+  "currency": "PLN",
+  "faceValueMinorUnits": 10000,
+  "issuePriceMinorUnits": 10000,
+  "exchangePriceMinorUnits": 9990,
+  "firstPeriodAnnualRatePercent": "4.90",
+  "marginPercent": "0.00",
+  "fixedMaturityInterestMinorUnits": null,
+  "termsRevision": 1,
+  "provenance": {
+    "primary": {
+      "publisher": "Ministry of Finance",
+      "url": "https://www.gov.pl/attachment/f69d7165-7300-4377-be6a-13d0cafd778e",
+      "sha256": "080ca1e805f08854b0bf213f2937bd2055d193ec34beb1cefd0e00a98750cacb",
+      "sheet": "TOS",
+      "row": 41
+    },
+    "crossCheck": null,
+    "verifiedAt": "2026-09-03"
+  },
+  "contentHash": "sha256:0d50087680f546551572d9de0fd79b24601cccfd7e890cee2297aea6bd0dda35"
+}

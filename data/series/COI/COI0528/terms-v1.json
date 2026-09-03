@@ -1,0 +1,28 @@
+{
+  "seriesCode": "COI0528",
+  "productType": "COI",
+  "productDefinition": "COI-rules-1",
+  "isin": "PL0000116901",
+  "saleFrom": "2024-05-01",
+  "saleTo": "2024-05-31",
+  "currency": "PLN",
+  "faceValueMinorUnits": 10000,
+  "issuePriceMinorUnits": 10000,
+  "exchangePriceMinorUnits": 9990,
+  "firstPeriodAnnualRatePercent": "6.55",
+  "marginPercent": "1.25",
+  "fixedMaturityInterestMinorUnits": null,
+  "termsRevision": 1,
+  "provenance": {
+    "primary": {
+      "publisher": "Ministry of Finance",
+      "url": "https://www.gov.pl/attachment/f69d7165-7300-4377-be6a-13d0cafd778e",
+      "sha256": "080ca1e805f08854b0bf213f2937bd2055d193ec34beb1cefd0e00a98750cacb",
+      "sheet": "COI",
+      "row": 298
+    },
+    "crossCheck": null,
+    "verifiedAt": "2026-09-03"
+  },
+  "contentHash": "sha256:21f948b07d46db2ae39eb9247ef713cbbdf7e3e451c0cc75061560ee88a442e7"
+}

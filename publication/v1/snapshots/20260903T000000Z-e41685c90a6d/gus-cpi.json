@@ -1,0 +1,1818 @@
+{
+  "schemaVersion": "2.0",
+  "generatedAt": "2026-09-03T00:00:00Z",
+  "observations": [
+    {
+      "period": "2014-01",
+      "indexPreviousYear100": "100.50",
+      "yearOverYearPercent": "0.50",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2014,
+        "periodId": 247
+      }
+    },
+    {
+      "period": "2014-02",
+      "indexPreviousYear100": "100.70",
+      "yearOverYearPercent": "0.70",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2014,
+        "periodId": 248
+      }
+    },
+    {
+      "period": "2014-03",
+      "indexPreviousYear100": "100.70",
+      "yearOverYearPercent": "0.70",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2014,
+        "periodId": 249
+      }
+    },
+    {
+      "period": "2014-04",
+      "indexPreviousYear100": "100.30",
+      "yearOverYearPercent": "0.30",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2014,
+        "periodId": 250
+      }
+    },
+    {
+      "period": "2014-05",
+      "indexPreviousYear100": "100.20",
+      "yearOverYearPercent": "0.20",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2014,
+        "periodId": 251
+      }
+    },
+    {
+      "period": "2014-06",
+      "indexPreviousYear100": "100.30",
+      "yearOverYearPercent": "0.30",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2014,
+        "periodId": 252
+      }
+    },
+    {
+      "period": "2014-07",
+      "indexPreviousYear100": "99.80",
+      "yearOverYearPercent": "-0.20",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2014,
+        "periodId": 253
+      }
+    },
+    {
+      "period": "2014-08",
+      "indexPreviousYear100": "99.70",
+      "yearOverYearPercent": "-0.30",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2014,
+        "periodId": 254
+      }
+    },
+    {
+      "period": "2014-09",
+      "indexPreviousYear100": "99.70",
+      "yearOverYearPercent": "-0.30",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2014,
+        "periodId": 255
+      }
+    },
+    {
+      "period": "2014-10",
+      "indexPreviousYear100": "99.40",
+      "yearOverYearPercent": "-0.60",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2014,
+        "periodId": 256
+      }
+    },
+    {
+      "period": "2014-11",
+      "indexPreviousYear100": "99.40",
+      "yearOverYearPercent": "-0.60",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2014,
+        "periodId": 257
+      }
+    },
+    {
+      "period": "2014-12",
+      "indexPreviousYear100": "99.00",
+      "yearOverYearPercent": "-1.00",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2014,
+        "periodId": 258
+      }
+    },
+    {
+      "period": "2015-01",
+      "indexPreviousYear100": "98.60",
+      "yearOverYearPercent": "-1.40",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2015,
+        "periodId": 247
+      }
+    },
+    {
+      "period": "2015-02",
+      "indexPreviousYear100": "98.40",
+      "yearOverYearPercent": "-1.60",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2015,
+        "periodId": 248
+      }
+    },
+    {
+      "period": "2015-03",
+      "indexPreviousYear100": "98.50",
+      "yearOverYearPercent": "-1.50",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2015,
+        "periodId": 249
+      }
+    },
+    {
+      "period": "2015-04",
+      "indexPreviousYear100": "98.90",
+      "yearOverYearPercent": "-1.10",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2015,
+        "periodId": 250
+      }
+    },
+    {
+      "period": "2015-05",
+      "indexPreviousYear100": "99.10",
+      "yearOverYearPercent": "-0.90",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2015,
+        "periodId": 251
+      }
+    },
+    {
+      "period": "2015-06",
+      "indexPreviousYear100": "99.20",
+      "yearOverYearPercent": "-0.80",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2015,
+        "periodId": 252
+      }
+    },
+    {
+      "period": "2015-07",
+      "indexPreviousYear100": "99.30",
+      "yearOverYearPercent": "-0.70",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2015,
+        "periodId": 253
+      }
+    },
+    {
+      "period": "2015-08",
+      "indexPreviousYear100": "99.40",
+      "yearOverYearPercent": "-0.60",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2015,
+        "periodId": 254
+      }
+    },
+    {
+      "period": "2015-09",
+      "indexPreviousYear100": "99.20",
+      "yearOverYearPercent": "-0.80",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2015,
+        "periodId": 255
+      }
+    },
+    {
+      "period": "2015-10",
+      "indexPreviousYear100": "99.30",
+      "yearOverYearPercent": "-0.70",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2015,
+        "periodId": 256
+      }
+    },
+    {
+      "period": "2015-11",
+      "indexPreviousYear100": "99.40",
+      "yearOverYearPercent": "-0.60",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2015,
+        "periodId": 257
+      }
+    },
+    {
+      "period": "2015-12",
+      "indexPreviousYear100": "99.50",
+      "yearOverYearPercent": "-0.50",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2015,
+        "periodId": 258
+      }
+    },
+    {
+      "period": "2016-01",
+      "indexPreviousYear100": "99.10",
+      "yearOverYearPercent": "-0.90",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2016,
+        "periodId": 247
+      }
+    },
+    {
+      "period": "2016-02",
+      "indexPreviousYear100": "99.20",
+      "yearOverYearPercent": "-0.80",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2016,
+        "periodId": 248
+      }
+    },
+    {
+      "period": "2016-03",
+      "indexPreviousYear100": "99.10",
+      "yearOverYearPercent": "-0.90",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2016,
+        "periodId": 249
+      }
+    },
+    {
+      "period": "2016-04",
+      "indexPreviousYear100": "98.90",
+      "yearOverYearPercent": "-1.10",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2016,
+        "periodId": 250
+      }
+    },
+    {
+      "period": "2016-05",
+      "indexPreviousYear100": "99.10",
+      "yearOverYearPercent": "-0.90",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2016,
+        "periodId": 251
+      }
+    },
+    {
+      "period": "2016-06",
+      "indexPreviousYear100": "99.20",
+      "yearOverYearPercent": "-0.80",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2016,
+        "periodId": 252
+      }
+    },
+    {
+      "period": "2016-07",
+      "indexPreviousYear100": "99.10",
+      "yearOverYearPercent": "-0.90",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2016,
+        "periodId": 253
+      }
+    },
+    {
+      "period": "2016-08",
+      "indexPreviousYear100": "99.20",
+      "yearOverYearPercent": "-0.80",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2016,
+        "periodId": 254
+      }
+    },
+    {
+      "period": "2016-09",
+      "indexPreviousYear100": "99.50",
+      "yearOverYearPercent": "-0.50",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2016,
+        "periodId": 255
+      }
+    },
+    {
+      "period": "2016-10",
+      "indexPreviousYear100": "99.80",
+      "yearOverYearPercent": "-0.20",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2016,
+        "periodId": 256
+      }
+    },
+    {
+      "period": "2016-11",
+      "indexPreviousYear100": "100.00",
+      "yearOverYearPercent": "0.00",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2016,
+        "periodId": 257
+      }
+    },
+    {
+      "period": "2016-12",
+      "indexPreviousYear100": "100.80",
+      "yearOverYearPercent": "0.80",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2016,
+        "periodId": 258
+      }
+    },
+    {
+      "period": "2017-01",
+      "indexPreviousYear100": "101.70",
+      "yearOverYearPercent": "1.70",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2017,
+        "periodId": 247
+      }
+    },
+    {
+      "period": "2017-02",
+      "indexPreviousYear100": "102.20",
+      "yearOverYearPercent": "2.20",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2017,
+        "periodId": 248
+      }
+    },
+    {
+      "period": "2017-03",
+      "indexPreviousYear100": "102.00",
+      "yearOverYearPercent": "2.00",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2017,
+        "periodId": 249
+      }
+    },
+    {
+      "period": "2017-04",
+      "indexPreviousYear100": "102.00",
+      "yearOverYearPercent": "2.00",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2017,
+        "periodId": 250
+      }
+    },
+    {
+      "period": "2017-05",
+      "indexPreviousYear100": "101.90",
+      "yearOverYearPercent": "1.90",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2017,
+        "periodId": 251
+      }
+    },
+    {
+      "period": "2017-06",
+      "indexPreviousYear100": "101.50",
+      "yearOverYearPercent": "1.50",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2017,
+        "periodId": 252
+      }
+    },
+    {
+      "period": "2017-07",
+      "indexPreviousYear100": "101.70",
+      "yearOverYearPercent": "1.70",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2017,
+        "periodId": 253
+      }
+    },
+    {
+      "period": "2017-08",
+      "indexPreviousYear100": "101.80",
+      "yearOverYearPercent": "1.80",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2017,
+        "periodId": 254
+      }
+    },
+    {
+      "period": "2017-09",
+      "indexPreviousYear100": "102.20",
+      "yearOverYearPercent": "2.20",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2017,
+        "periodId": 255
+      }
+    },
+    {
+      "period": "2017-10",
+      "indexPreviousYear100": "102.10",
+      "yearOverYearPercent": "2.10",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2017,
+        "periodId": 256
+      }
+    },
+    {
+      "period": "2017-11",
+      "indexPreviousYear100": "102.50",
+      "yearOverYearPercent": "2.50",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2017,
+        "periodId": 257
+      }
+    },
+    {
+      "period": "2017-12",
+      "indexPreviousYear100": "102.10",
+      "yearOverYearPercent": "2.10",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2017,
+        "periodId": 258
+      }
+    },
+    {
+      "period": "2018-01",
+      "indexPreviousYear100": "101.90",
+      "yearOverYearPercent": "1.90",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2018,
+        "periodId": 247
+      }
+    },
+    {
+      "period": "2018-02",
+      "indexPreviousYear100": "101.40",
+      "yearOverYearPercent": "1.40",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2018,
+        "periodId": 248
+      }
+    },
+    {
+      "period": "2018-03",
+      "indexPreviousYear100": "101.30",
+      "yearOverYearPercent": "1.30",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2018,
+        "periodId": 249
+      }
+    },
+    {
+      "period": "2018-04",
+      "indexPreviousYear100": "101.60",
+      "yearOverYearPercent": "1.60",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2018,
+        "periodId": 250
+      }
+    },
+    {
+      "period": "2018-05",
+      "indexPreviousYear100": "101.70",
+      "yearOverYearPercent": "1.70",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2018,
+        "periodId": 251
+      }
+    },
+    {
+      "period": "2018-06",
+      "indexPreviousYear100": "102.00",
+      "yearOverYearPercent": "2.00",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2018,
+        "periodId": 252
+      }
+    },
+    {
+      "period": "2018-07",
+      "indexPreviousYear100": "102.00",
+      "yearOverYearPercent": "2.00",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2018,
+        "periodId": 253
+      }
+    },
+    {
+      "period": "2018-08",
+      "indexPreviousYear100": "102.00",
+      "yearOverYearPercent": "2.00",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2018,
+        "periodId": 254
+      }
+    },
+    {
+      "period": "2018-09",
+      "indexPreviousYear100": "101.90",
+      "yearOverYearPercent": "1.90",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2018,
+        "periodId": 255
+      }
+    },
+    {
+      "period": "2018-10",
+      "indexPreviousYear100": "101.80",
+      "yearOverYearPercent": "1.80",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2018,
+        "periodId": 256
+      }
+    },
+    {
+      "period": "2018-11",
+      "indexPreviousYear100": "101.30",
+      "yearOverYearPercent": "1.30",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2018,
+        "periodId": 257
+      }
+    },
+    {
+      "period": "2018-12",
+      "indexPreviousYear100": "101.10",
+      "yearOverYearPercent": "1.10",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2018,
+        "periodId": 258
+      }
+    },
+    {
+      "period": "2019-01",
+      "indexPreviousYear100": "100.70",
+      "yearOverYearPercent": "0.70",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2019,
+        "periodId": 247
+      }
+    },
+    {
+      "period": "2019-02",
+      "indexPreviousYear100": "101.20",
+      "yearOverYearPercent": "1.20",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2019,
+        "periodId": 248
+      }
+    },
+    {
+      "period": "2019-03",
+      "indexPreviousYear100": "101.70",
+      "yearOverYearPercent": "1.70",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2019,
+        "periodId": 249
+      }
+    },
+    {
+      "period": "2019-04",
+      "indexPreviousYear100": "102.20",
+      "yearOverYearPercent": "2.20",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2019,
+        "periodId": 250
+      }
+    },
+    {
+      "period": "2019-05",
+      "indexPreviousYear100": "102.40",
+      "yearOverYearPercent": "2.40",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2019,
+        "periodId": 251
+      }
+    },
+    {
+      "period": "2019-06",
+      "indexPreviousYear100": "102.60",
+      "yearOverYearPercent": "2.60",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2019,
+        "periodId": 252
+      }
+    },
+    {
+      "period": "2019-07",
+      "indexPreviousYear100": "102.90",
+      "yearOverYearPercent": "2.90",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2019,
+        "periodId": 253
+      }
+    },
+    {
+      "period": "2019-08",
+      "indexPreviousYear100": "102.90",
+      "yearOverYearPercent": "2.90",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2019,
+        "periodId": 254
+      }
+    },
+    {
+      "period": "2019-09",
+      "indexPreviousYear100": "102.60",
+      "yearOverYearPercent": "2.60",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2019,
+        "periodId": 255
+      }
+    },
+    {
+      "period": "2019-10",
+      "indexPreviousYear100": "102.50",
+      "yearOverYearPercent": "2.50",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2019,
+        "periodId": 256
+      }
+    },
+    {
+      "period": "2019-11",
+      "indexPreviousYear100": "102.60",
+      "yearOverYearPercent": "2.60",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2019,
+        "periodId": 257
+      }
+    },
+    {
+      "period": "2019-12",
+      "indexPreviousYear100": "103.40",
+      "yearOverYearPercent": "3.40",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2019,
+        "periodId": 258
+      }
+    },
+    {
+      "period": "2020-01",
+      "indexPreviousYear100": "104.30",
+      "yearOverYearPercent": "4.30",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2020,
+        "periodId": 247
+      }
+    },
+    {
+      "period": "2020-02",
+      "indexPreviousYear100": "104.70",
+      "yearOverYearPercent": "4.70",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2020,
+        "periodId": 248
+      }
+    },
+    {
+      "period": "2020-03",
+      "indexPreviousYear100": "104.60",
+      "yearOverYearPercent": "4.60",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2020,
+        "periodId": 249
+      }
+    },
+    {
+      "period": "2020-04",
+      "indexPreviousYear100": "103.40",
+      "yearOverYearPercent": "3.40",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2020,
+        "periodId": 250
+      }
+    },
+    {
+      "period": "2020-05",
+      "indexPreviousYear100": "102.90",
+      "yearOverYearPercent": "2.90",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2020,
+        "periodId": 251
+      }
+    },
+    {
+      "period": "2020-06",
+      "indexPreviousYear100": "103.30",
+      "yearOverYearPercent": "3.30",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2020,
+        "periodId": 252
+      }
+    },
+    {
+      "period": "2020-07",
+      "indexPreviousYear100": "103.00",
+      "yearOverYearPercent": "3.00",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2020,
+        "periodId": 253
+      }
+    },
+    {
+      "period": "2020-08",
+      "indexPreviousYear100": "102.90",
+      "yearOverYearPercent": "2.90",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2020,
+        "periodId": 254
+      }
+    },
+    {
+      "period": "2020-09",
+      "indexPreviousYear100": "103.20",
+      "yearOverYearPercent": "3.20",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2020,
+        "periodId": 255
+      }
+    },
+    {
+      "period": "2020-10",
+      "indexPreviousYear100": "103.10",
+      "yearOverYearPercent": "3.10",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2020,
+        "periodId": 256
+      }
+    },
+    {
+      "period": "2020-11",
+      "indexPreviousYear100": "103.00",
+      "yearOverYearPercent": "3.00",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2020,
+        "periodId": 257
+      }
+    },
+    {
+      "period": "2020-12",
+      "indexPreviousYear100": "102.40",
+      "yearOverYearPercent": "2.40",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2020,
+        "periodId": 258
+      }
+    },
+    {
+      "period": "2021-01",
+      "indexPreviousYear100": "102.60",
+      "yearOverYearPercent": "2.60",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2021,
+        "periodId": 247
+      }
+    },
+    {
+      "period": "2021-02",
+      "indexPreviousYear100": "102.40",
+      "yearOverYearPercent": "2.40",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2021,
+        "periodId": 248
+      }
+    },
+    {
+      "period": "2021-03",
+      "indexPreviousYear100": "103.20",
+      "yearOverYearPercent": "3.20",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2021,
+        "periodId": 249
+      }
+    },
+    {
+      "period": "2021-04",
+      "indexPreviousYear100": "104.30",
+      "yearOverYearPercent": "4.30",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2021,
+        "periodId": 250
+      }
+    },
+    {
+      "period": "2021-05",
+      "indexPreviousYear100": "104.70",
+      "yearOverYearPercent": "4.70",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2021,
+        "periodId": 251
+      }
+    },
+    {
+      "period": "2021-06",
+      "indexPreviousYear100": "104.40",
+      "yearOverYearPercent": "4.40",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2021,
+        "periodId": 252
+      }
+    },
+    {
+      "period": "2021-07",
+      "indexPreviousYear100": "105.00",
+      "yearOverYearPercent": "5.00",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2021,
+        "periodId": 253
+      }
+    },
+    {
+      "period": "2021-08",
+      "indexPreviousYear100": "105.50",
+      "yearOverYearPercent": "5.50",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2021,
+        "periodId": 254
+      }
+    },
+    {
+      "period": "2021-09",
+      "indexPreviousYear100": "105.90",
+      "yearOverYearPercent": "5.90",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2021,
+        "periodId": 255
+      }
+    },
+    {
+      "period": "2021-10",
+      "indexPreviousYear100": "106.80",
+      "yearOverYearPercent": "6.80",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2021,
+        "periodId": 256
+      }
+    },
+    {
+      "period": "2021-11",
+      "indexPreviousYear100": "107.80",
+      "yearOverYearPercent": "7.80",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2021,
+        "periodId": 257
+      }
+    },
+    {
+      "period": "2021-12",
+      "indexPreviousYear100": "108.60",
+      "yearOverYearPercent": "8.60",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2021,
+        "periodId": 258
+      }
+    },
+    {
+      "period": "2022-01",
+      "indexPreviousYear100": "109.40",
+      "yearOverYearPercent": "9.40",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2022,
+        "periodId": 247
+      }
+    },
+    {
+      "period": "2022-02",
+      "indexPreviousYear100": "108.50",
+      "yearOverYearPercent": "8.50",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2022,
+        "periodId": 248
+      }
+    },
+    {
+      "period": "2022-03",
+      "indexPreviousYear100": "111.00",
+      "yearOverYearPercent": "11.00",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2022,
+        "periodId": 249
+      }
+    },
+    {
+      "period": "2022-04",
+      "indexPreviousYear100": "112.40",
+      "yearOverYearPercent": "12.40",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2022,
+        "periodId": 250
+      }
+    },
+    {
+      "period": "2022-05",
+      "indexPreviousYear100": "113.90",
+      "yearOverYearPercent": "13.90",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2022,
+        "periodId": 251
+      }
+    },
+    {
+      "period": "2022-06",
+      "indexPreviousYear100": "115.50",
+      "yearOverYearPercent": "15.50",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2022,
+        "periodId": 252
+      }
+    },
+    {
+      "period": "2022-07",
+      "indexPreviousYear100": "115.60",
+      "yearOverYearPercent": "15.60",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2022,
+        "periodId": 253
+      }
+    },
+    {
+      "period": "2022-08",
+      "indexPreviousYear100": "116.10",
+      "yearOverYearPercent": "16.10",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2022,
+        "periodId": 254
+      }
+    },
+    {
+      "period": "2022-09",
+      "indexPreviousYear100": "117.20",
+      "yearOverYearPercent": "17.20",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2022,
+        "periodId": 255
+      }
+    },
+    {
+      "period": "2022-10",
+      "indexPreviousYear100": "117.90",
+      "yearOverYearPercent": "17.90",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2022,
+        "periodId": 256
+      }
+    },
+    {
+      "period": "2022-11",
+      "indexPreviousYear100": "117.50",
+      "yearOverYearPercent": "17.50",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2022,
+        "periodId": 257
+      }
+    },
+    {
+      "period": "2022-12",
+      "indexPreviousYear100": "116.60",
+      "yearOverYearPercent": "16.60",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2022,
+        "periodId": 258
+      }
+    },
+    {
+      "period": "2023-01",
+      "indexPreviousYear100": "116.60",
+      "yearOverYearPercent": "16.60",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2023,
+        "periodId": 247
+      }
+    },
+    {
+      "period": "2023-02",
+      "indexPreviousYear100": "118.40",
+      "yearOverYearPercent": "18.40",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2023,
+        "periodId": 248
+      }
+    },
+    {
+      "period": "2023-03",
+      "indexPreviousYear100": "116.10",
+      "yearOverYearPercent": "16.10",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2023,
+        "periodId": 249
+      }
+    },
+    {
+      "period": "2023-04",
+      "indexPreviousYear100": "114.70",
+      "yearOverYearPercent": "14.70",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2023,
+        "periodId": 250
+      }
+    },
+    {
+      "period": "2023-05",
+      "indexPreviousYear100": "113.00",
+      "yearOverYearPercent": "13.00",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2023,
+        "periodId": 251
+      }
+    },
+    {
+      "period": "2023-06",
+      "indexPreviousYear100": "111.50",
+      "yearOverYearPercent": "11.50",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2023,
+        "periodId": 252
+      }
+    },
+    {
+      "period": "2023-07",
+      "indexPreviousYear100": "110.80",
+      "yearOverYearPercent": "10.80",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2023,
+        "periodId": 253
+      }
+    },
+    {
+      "period": "2023-08",
+      "indexPreviousYear100": "110.10",
+      "yearOverYearPercent": "10.10",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2023,
+        "periodId": 254
+      }
+    },
+    {
+      "period": "2023-09",
+      "indexPreviousYear100": "108.20",
+      "yearOverYearPercent": "8.20",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2023,
+        "periodId": 255
+      }
+    },
+    {
+      "period": "2023-10",
+      "indexPreviousYear100": "106.60",
+      "yearOverYearPercent": "6.60",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2023,
+        "periodId": 256
+      }
+    },
+    {
+      "period": "2023-11",
+      "indexPreviousYear100": "106.60",
+      "yearOverYearPercent": "6.60",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2023,
+        "periodId": 257
+      }
+    },
+    {
+      "period": "2023-12",
+      "indexPreviousYear100": "106.20",
+      "yearOverYearPercent": "6.20",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2023,
+        "periodId": 258
+      }
+    },
+    {
+      "period": "2024-01",
+      "indexPreviousYear100": "103.70",
+      "yearOverYearPercent": "3.70",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2024,
+        "periodId": 247
+      }
+    },
+    {
+      "period": "2024-02",
+      "indexPreviousYear100": "102.80",
+      "yearOverYearPercent": "2.80",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2024,
+        "periodId": 248
+      }
+    },
+    {
+      "period": "2024-03",
+      "indexPreviousYear100": "102.00",
+      "yearOverYearPercent": "2.00",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2024,
+        "periodId": 249
+      }
+    },
+    {
+      "period": "2024-04",
+      "indexPreviousYear100": "102.40",
+      "yearOverYearPercent": "2.40",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2024,
+        "periodId": 250
+      }
+    },
+    {
+      "period": "2024-05",
+      "indexPreviousYear100": "102.50",
+      "yearOverYearPercent": "2.50",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2024,
+        "periodId": 251
+      }
+    },
+    {
+      "period": "2024-06",
+      "indexPreviousYear100": "102.60",
+      "yearOverYearPercent": "2.60",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2024,
+        "periodId": 252
+      }
+    },
+    {
+      "period": "2024-07",
+      "indexPreviousYear100": "104.20",
+      "yearOverYearPercent": "4.20",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2024,
+        "periodId": 253
+      }
+    },
+    {
+      "period": "2024-08",
+      "indexPreviousYear100": "104.30",
+      "yearOverYearPercent": "4.30",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2024,
+        "periodId": 254
+      }
+    },
+    {
+      "period": "2024-09",
+      "indexPreviousYear100": "104.90",
+      "yearOverYearPercent": "4.90",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2024,
+        "periodId": 255
+      }
+    },
+    {
+      "period": "2024-10",
+      "indexPreviousYear100": "105.00",
+      "yearOverYearPercent": "5.00",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2024,
+        "periodId": 256
+      }
+    },
+    {
+      "period": "2024-11",
+      "indexPreviousYear100": "104.70",
+      "yearOverYearPercent": "4.70",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2024,
+        "periodId": 257
+      }
+    },
+    {
+      "period": "2024-12",
+      "indexPreviousYear100": "104.70",
+      "yearOverYearPercent": "4.70",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2024,
+        "periodId": 258
+      }
+    },
+    {
+      "period": "2025-01",
+      "indexPreviousYear100": "104.90",
+      "yearOverYearPercent": "4.90",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2025,
+        "periodId": 247
+      }
+    },
+    {
+      "period": "2025-02",
+      "indexPreviousYear100": "104.90",
+      "yearOverYearPercent": "4.90",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2025,
+        "periodId": 248
+      }
+    },
+    {
+      "period": "2025-03",
+      "indexPreviousYear100": "104.90",
+      "yearOverYearPercent": "4.90",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2025,
+        "periodId": 249
+      }
+    },
+    {
+      "period": "2025-04",
+      "indexPreviousYear100": "104.30",
+      "yearOverYearPercent": "4.30",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2025,
+        "periodId": 250
+      }
+    },
+    {
+      "period": "2025-05",
+      "indexPreviousYear100": "104.00",
+      "yearOverYearPercent": "4.00",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2025,
+        "periodId": 251
+      }
+    },
+    {
+      "period": "2025-06",
+      "indexPreviousYear100": "104.10",
+      "yearOverYearPercent": "4.10",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2025,
+        "periodId": 252
+      }
+    },
+    {
+      "period": "2025-07",
+      "indexPreviousYear100": "103.10",
+      "yearOverYearPercent": "3.10",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2025,
+        "periodId": 253
+      }
+    },
+    {
+      "period": "2025-08",
+      "indexPreviousYear100": "102.90",
+      "yearOverYearPercent": "2.90",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2025,
+        "periodId": 254
+      }
+    },
+    {
+      "period": "2025-09",
+      "indexPreviousYear100": "102.90",
+      "yearOverYearPercent": "2.90",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2025,
+        "periodId": 255
+      }
+    },
+    {
+      "period": "2025-10",
+      "indexPreviousYear100": "102.80",
+      "yearOverYearPercent": "2.80",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2025,
+        "periodId": 256
+      }
+    },
+    {
+      "period": "2025-11",
+      "indexPreviousYear100": "102.50",
+      "yearOverYearPercent": "2.50",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2025,
+        "periodId": 257
+      }
+    },
+    {
+      "period": "2025-12",
+      "indexPreviousYear100": "102.40",
+      "yearOverYearPercent": "2.40",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2025,
+        "periodId": 258
+      }
+    },
+    {
+      "period": "2026-01",
+      "indexPreviousYear100": "102.10",
+      "yearOverYearPercent": "2.10",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2026,
+        "periodId": 247
+      }
+    },
+    {
+      "period": "2026-02",
+      "indexPreviousYear100": "102.10",
+      "yearOverYearPercent": "2.10",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2026,
+        "periodId": 248
+      }
+    },
+    {
+      "period": "2026-03",
+      "indexPreviousYear100": "103.00",
+      "yearOverYearPercent": "3.00",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2026,
+        "periodId": 249
+      }
+    },
+    {
+      "period": "2026-04",
+      "indexPreviousYear100": "103.20",
+      "yearOverYearPercent": "3.20",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2026,
+        "periodId": 250
+      }
+    },
+    {
+      "period": "2026-05",
+      "indexPreviousYear100": "103.10",
+      "yearOverYearPercent": "3.10",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2026,
+        "periodId": 251
+      }
+    },
+    {
+      "period": "2026-06",
+      "indexPreviousYear100": "102.50",
+      "yearOverYearPercent": "2.50",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2026,
+        "periodId": 252
+      }
+    },
+    {
+      "period": "2026-07",
+      "indexPreviousYear100": "103.00",
+      "yearOverYearPercent": "3.00",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2026,
+        "periodId": 253
+      }
+    }
+  ]
+}

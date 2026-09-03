@@ -1,4 +1,4 @@
-name: Update official data
+name: Propose official data update
 
 on:
   schedule:
@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 concurrency:
   group: update-official-data
@@ -22,19 +23,22 @@ jobs:
           python-version: '3.12'
           cache: pip
       - run: pip install -r requirements.txt
-      - name: Update catalog from official Ministry of Finance pages
+      - name: Fetch and cross-check MF, GUS and NBP
         run: python scripts/update.py
-      - name: Run regression tests
+      - name: Run deterministic regression tests
         run: python -m unittest discover -s tests -v
-      - name: Commit verified changes
-        shell: bash
-        run: |
-          if git diff --quiet; then
-            echo "No verified data changes."
-            exit 0
-          fi
-          git config user.name "polish-treasury-bonds-data-bot"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/series/catalog-source.json dist/
-          git commit -m "Update verified Treasury Bond data"
-          git push
+      - name: Build pull request summary
+        run: python scripts/change_summary.py > /tmp/update-pr-body.md
+      - name: Create or update one reviewed data pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: bot/update-data
+          delete-branch: true
+          commit-message: Update verified official Treasury Bond data
+          title: Update verified official Treasury Bond data
+          body-path: /tmp/update-pr-body.md
+          labels: data-update
+          add-paths: |
+            data
+            dist
+            publication

@@ -1,0 +1,1 @@
+{"id":"TOS-rules-1","productType":"TOS","rulesRevision":1,"maturityMonths":36,"interestPeriodMonths":12,"rateModel":"Fixed","capitalizationRule":"EndOfPeriod","interestPaymentRule":"AtMaturity","accrualRule":"ActualPeriodProRata"}

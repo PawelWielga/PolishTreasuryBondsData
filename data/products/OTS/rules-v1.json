@@ -1,0 +1,1 @@
+{"id":"OTS-rules-1","productType":"OTS","rulesRevision":1,"maturityMonths":3,"interestPeriodMonths":3,"rateModel":"Fixed","capitalizationRule":"None","interestPaymentRule":"AtMaturity","accrualRule":"FixedMaturityOnly"}

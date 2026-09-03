@@ -1,0 +1,28 @@
+{
+  "seriesCode": "OTS1126",
+  "productType": "OTS",
+  "productDefinition": "OTS-rules-1",
+  "isin": "PL0000119343",
+  "saleFrom": "2026-08-01",
+  "saleTo": "2026-08-31",
+  "currency": "PLN",
+  "faceValueMinorUnits": 10000,
+  "issuePriceMinorUnits": 10000,
+  "exchangePriceMinorUnits": 10000,
+  "firstPeriodAnnualRatePercent": "2.00",
+  "marginPercent": "0.00",
+  "fixedMaturityInterestMinorUnits": 50,
+  "termsRevision": 1,
+  "provenance": {
+    "primary": {
+      "publisher": "Ministry of Finance",
+      "url": "https://www.gov.pl/attachment/f69d7165-7300-4377-be6a-13d0cafd778e",
+      "sha256": "080ca1e805f08854b0bf213f2937bd2055d193ec34beb1cefd0e00a98750cacb",
+      "sheet": "OTS",
+      "row": 108
+    },
+    "crossCheck": null,
+    "verifiedAt": "2026-09-03"
+  },
+  "contentHash": "sha256:0bead240af5fc29004538e4b06f3223e9eb0e379b86a743a6ef38b29bcb24dd7"
+}

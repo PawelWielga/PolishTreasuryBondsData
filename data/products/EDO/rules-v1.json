@@ -1,0 +1,1 @@
+{"id":"EDO-rules-1","productType":"EDO","rulesRevision":1,"maturityMonths":120,"interestPeriodMonths":12,"rateModel":"InflationPlusMargin","capitalizationRule":"EndOfPeriod","interestPaymentRule":"AtMaturity","accrualRule":"ActualPeriodProRata"}
