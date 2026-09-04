@@ -83,6 +83,57 @@ class ReferenceRevisionValidationTests(unittest.TestCase):
             [(item["period"], item["revision"], item["value"]) for item in current],
         )
 
+    def test_merge_revisions_records_reversion_to_older_value_as_new_revision(self):
+        existing = [
+            {"period": "2026-01", "revision": 1, "value": "A"},
+            {"period": "2026-01", "revision": 2, "value": "B"},
+        ]
+
+        merged = update._merge_revisions(
+            existing,
+            [{"period": "2026-01", "value": "A"}],
+            "period",
+            "value",
+        )
+
+        self.assertEqual(
+            [(1, "A"), (2, "B"), (3, "A")],
+            [(item["revision"], item["value"]) for item in merged],
+        )
+
+    def test_sync_series_records_reversion_to_older_terms_as_new_revision(self):
+        existing = [
+            {
+                "seriesCode": "RORTEST",
+                "productType": "ROR",
+                "termsRevision": 1,
+                "contentHash": "hash-a",
+            },
+            {
+                "seriesCode": "RORTEST",
+                "productType": "ROR",
+                "termsRevision": 2,
+                "contentHash": "hash-b",
+            },
+        ]
+        candidate = {
+            "seriesCode": "RORTEST",
+            "productType": "ROR",
+            "termsRevision": 1,
+            "contentHash": "hash-a",
+        }
+
+        with (
+            patch.object(update, "load_series", return_value=existing),
+            patch.object(update, "write_json") as write_mock,
+        ):
+            self.assertEqual((0, 1), update.sync_series([candidate]))
+
+        written_path, written = write_mock.call_args.args
+        self.assertEqual("terms-v3.json", written_path.name)
+        self.assertEqual(3, written["termsRevision"])
+        self.assertEqual("hash-a", written["contentHash"])
+
     def test_coverage_counts_distinct_observation_identities_not_revisions(self):
         coverage = pipeline._coverage(
             [],
