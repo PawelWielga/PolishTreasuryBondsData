@@ -44,7 +44,8 @@ jobs:
       - name: Validate tests and rebuild Pages tree from reviewed main
         run: |
           python -m unittest discover -s tests -v
-          python scripts/update.py --offline --check
+          python scripts/update.py --offline
+          python scripts/check_generated_tree.py
       - name: Derive mutable source freshness from durable last-success timestamps
         run: python scripts/status.py
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
