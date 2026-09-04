@@ -109,16 +109,20 @@ class NbpXmlSourceTests(unittest.TestCase):
             ("2026-03-05", "3,75"),
         )
         current_xml = self._current("2026-03-05", "3,75")
+        legacy_url = "https://nbp.pl/podstawowe-stopy-procentowe-archiwum/"
+        observations = [
+            self._observation("2022-05-06", "5.25"),
+            self._observation("2026-03-05", "3.75"),
+        ]
+        for observation in observations:
+            observation["source"] = legacy_url
         source = {
             "source": {
                 "publisher": "NBP",
-                "url": "https://nbp.pl/podstawowe-stopy-procentowe-archiwum/",
+                "url": legacy_url,
                 "verifiedAt": "2026-09-03T00:00:00Z",
             },
-            "observations": [
-                self._observation("2022-05-06", "5.25"),
-                self._observation("2026-03-05", "3.75"),
-            ],
+            "observations": observations,
         }
 
         with (
@@ -135,6 +139,9 @@ class NbpXmlSourceTests(unittest.TestCase):
         self.assertEqual(NBP_RATES_URL, written["source"]["url"])
         self.assertEqual(NBP_CURRENT_RATES_URL, written["source"]["currentUrl"])
         self.assertEqual("2026-09-04T00:00:00Z", written["verifiedAt"])
+        self.assertEqual(2, len(written["observations"]))
+        self.assertTrue(all(item["revision"] == 1 for item in written["observations"]))
+        self.assertTrue(all(item["source"] == NBP_RATES_URL for item in written["observations"]))
 
     def test_sync_fails_closed_when_current_file_is_newer_than_archive(self):
         archive_xml = self._archive(
@@ -230,6 +237,33 @@ class NbpXmlSourceTests(unittest.TestCase):
             patch("scripts.update.write_json") as write_mock,
         ):
             with self.assertRaisesRegex(SourceError, "lost previously published.*2022-06-09"):
+                sync_nbp(object(), "2026-09-04T00:00:00Z")
+
+        write_mock.assert_not_called()
+
+    def test_sync_fails_closed_when_both_feeds_regress_to_same_older_state(self):
+        archive_xml = self._archive(
+            ("2022-05-06", "5,25"),
+            ("2025-12-04", "4,00"),
+        )
+        current_xml = self._current("2025-12-04", "4,00")
+        source = {
+            "observations": [
+                self._observation("2022-05-06", "5.25"),
+                self._observation("2025-12-04", "4.00"),
+                self._observation("2026-03-05", "3.75"),
+            ]
+        }
+
+        with (
+            patch("scripts.update.load_json", return_value=source),
+            patch(
+                "scripts.update.fetch",
+                side_effect=[archive_xml.encode("utf-8"), current_xml.encode("utf-8")],
+            ),
+            patch("scripts.update.write_json") as write_mock,
+        ):
+            with self.assertRaisesRegex(SourceError, "lost previously published.*2026-03-05"):
                 sync_nbp(object(), "2026-09-04T00:00:00Z")
 
         write_mock.assert_not_called()
