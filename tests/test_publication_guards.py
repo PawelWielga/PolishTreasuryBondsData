@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import subprocess
 import tempfile
 import unittest
@@ -34,6 +35,20 @@ class GitRepositoryTestCase(unittest.TestCase):
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(content, encoding="utf-8")
 
+    def write_latest(self, revision: str) -> None:
+        self.write(
+            "publication/v1/latest.json",
+            json.dumps(
+                {
+                    "schemaVersion": "1.0",
+                    "datasetRevision": revision,
+                    "manifest": f"snapshots/{revision}/manifest.json",
+                },
+                indent=2,
+            )
+            + "\n",
+        )
+
     def commit_all(self, message: str) -> str:
         self.git("add", "-A")
         self.git("commit", "-qm", message)
@@ -44,6 +59,7 @@ class ImmutableSnapshotGuardTests(GitRepositoryTestCase):
     def setUp(self) -> None:
         super().setUp()
         self.write("publication/v1/snapshots/rev-reviewed/manifest.json", "reviewed\n")
+        self.write_latest("rev-reviewed")
         self.base = self.commit_all("reviewed base")
 
     def violations(self) -> list[str]:
@@ -65,11 +81,32 @@ class ImmutableSnapshotGuardTests(GitRepositoryTestCase):
         self.commit_all("extend snapshot")
         self.assertTrue(any("unexpected.json" in line for line in self.violations()))
 
-    def test_entirely_new_snapshot_is_allowed(self) -> None:
+    def test_selected_entirely_new_snapshot_is_allowed(self) -> None:
         self.write("publication/v1/snapshots/rev-new/manifest.json")
         self.write("publication/v1/snapshots/rev-new/catalog.json")
-        self.commit_all("add snapshot")
+        self.write_latest("rev-new")
+        self.commit_all("add selected snapshot")
         self.assertEqual([], self.violations())
+
+    def test_unreferenced_new_snapshot_is_rejected(self) -> None:
+        self.write("publication/v1/snapshots/rev-extra/manifest.json")
+        self.write("publication/v1/snapshots/rev-extra/catalog.json")
+        self.commit_all("add unreferenced snapshot")
+
+        violations = self.violations()
+
+        self.assertTrue(any("rev-extra" in line and "not selected" in line for line in violations))
+
+    def test_extra_new_snapshot_is_rejected_when_another_new_snapshot_is_selected(self) -> None:
+        self.write("publication/v1/snapshots/rev-selected/manifest.json")
+        self.write("publication/v1/snapshots/rev-extra/manifest.json")
+        self.write_latest("rev-selected")
+        self.commit_all("add selected and extra snapshots")
+
+        violations = self.violations()
+
+        self.assertFalse(any("rev-selected" in line for line in violations))
+        self.assertTrue(any("rev-extra" in line and "not selected" in line for line in violations))
 
 
 class GeneratedTreeGuardTests(GitRepositoryTestCase):
