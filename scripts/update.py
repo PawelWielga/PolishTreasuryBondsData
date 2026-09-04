@@ -12,7 +12,16 @@ from typing import Any
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from scripts.pipeline import DATA, ROOT, build_dist, load_json, load_series, write_json
+from scripts.pipeline import (
+    DATA,
+    ROOT,
+    GUS_HISTORY_START,
+    NBP_HISTORY_START,
+    build_dist,
+    load_json,
+    load_series,
+    write_json,
+)
 from scripts.sources import (
     MF_PAGE_URL,
     NBP_RATES_URL,
@@ -30,6 +39,7 @@ from scripts.sources import (
     utc_now,
 )
 
+NBP_CURRENT_RATES_URL = "https://static.nbp.pl/dane/stopy/stopy_procentowe.xml"
 COMMON_REQUIRED_CROSS_CHECK_FIELDS = (
     "seriesCode",
     "saleFrom",
@@ -65,10 +75,11 @@ def sync_series(parsed: list[dict[str, Any]]) -> tuple[int, int]:
     added = corrected = 0
     for candidate in parsed:
         revisions = by_code.setdefault(candidate["seriesCode"], [])
-        if any(item["contentHash"] == candidate["contentHash"] for item in revisions):
-            continue
         if revisions:
-            candidate["termsRevision"] = max(item["termsRevision"] for item in revisions) + 1
+            current_revision = max(revisions, key=lambda item: item["termsRevision"])
+            if current_revision["contentHash"] == candidate["contentHash"]:
+                continue
+            candidate["termsRevision"] = current_revision["termsRevision"] + 1
             corrected += 1
         else:
             added += 1
@@ -88,19 +99,100 @@ def _merge_revisions(existing: list[dict[str, Any]], incoming: list[dict[str, An
         by_identity.setdefault(item[identity], []).append(item)
     for candidate in incoming:
         revisions = by_identity.setdefault(candidate[identity], [])
-        if any(item[value] == candidate[value] for item in revisions):
-            continue
+        if revisions:
+            current_revision = max(revisions, key=lambda item: item["revision"])
+            if current_revision[value] == candidate[value]:
+                continue
+            next_revision = current_revision["revision"] + 1
+        else:
+            next_revision = 1
         candidate = dict(candidate)
-        candidate["revision"] = max((item["revision"] for item in revisions), default=0) + 1
+        candidate["revision"] = next_revision
         result.append(candidate)
         revisions.append(candidate)
     return sorted(result, key=lambda item: (item[identity], item["revision"]))
 
 
+def _validated_gus_observations(
+    incoming: list[dict[str, Any]],
+    existing: list[dict[str, Any]],
+    start_year: int,
+    end_year: int,
+    as_of: date | None = None,
+) -> list[dict[str, Any]]:
+    if start_year > end_year:
+        raise SourceError(f"GUS invalid requested range: {start_year}-{end_year}")
+
+    periods = [item["period"] for item in incoming]
+    if len(periods) != len(set(periods)):
+        raise SourceError("GUS source contains duplicate monthly observations")
+    periods = sorted(periods)
+    if not periods:
+        raise SourceError("GUS source returned no CPI observations")
+
+    expected_start = f"{start_year:04d}-01"
+    if periods[0] != expected_start:
+        raise SourceError(f"GUS source no longer covers requested history from {expected_start}")
+
+    by_year: dict[str, list[str]] = {}
+    for period in periods:
+        by_year.setdefault(period[:4], []).append(period)
+    years = sorted(by_year)
+    latest_year = int(years[-1])
+    if latest_year > end_year:
+        raise SourceError(f"GUS source returned future year {latest_year} beyond requested {end_year}")
+    if latest_year < end_year - 1:
+        raise SourceError(
+            f"GUS source has no recent coverage for {end_year - 1} or {end_year}; latest year is {latest_year}"
+        )
+    if as_of is not None and end_year >= as_of.year - 1:
+        latest_period_year, latest_period_month = (int(part) for part in periods[-1].split("-"))
+        lag_months = (as_of.year - latest_period_year) * 12 + as_of.month - latest_period_month
+        if lag_months < 0:
+            raise SourceError(
+                f"GUS source returned future CPI period {periods[-1]} for verification date {as_of.isoformat()}"
+            )
+        if lag_months > 2:
+            raise SourceError(
+                f"GUS source latest CPI period {periods[-1]} is too old for verification date {as_of.isoformat()}"
+            )
+
+    expected_years = [str(year) for year in range(start_year, latest_year + 1)]
+    if years != expected_years:
+        missing_years = sorted(set(expected_years) - set(years))
+        raise SourceError(f"GUS source coverage is missing years: {missing_years}")
+
+    for year in years:
+        periods_for_year = by_year[year]
+        required_count = 12 if int(year) < latest_year else len(periods_for_year)
+        expected_periods = [f"{year}-{month:02d}" for month in range(1, required_count + 1)]
+        if periods_for_year != expected_periods:
+            raise SourceError(f"GUS source coverage is incomplete/non-contiguous for {year}")
+
+    incoming_periods = set(periods)
+    previously_published_periods = {
+        item["period"]
+        for item in existing
+        if start_year <= int(item["period"][:4]) <= end_year
+    }
+    missing_periods = sorted(previously_published_periods - incoming_periods)
+    if missing_periods:
+        raise SourceError(
+            "GUS source lost previously published CPI periods: " + ", ".join(missing_periods)
+        )
+    return incoming
+
+
 def sync_gus(session: Any, start_year: int, end_year: int, verified_at: str) -> int:
     path = DATA / "reference" / "gus-cpi.json"
     source = load_json(path)
-    incoming = fetch_gus_history(session, start_year, end_year)
+    incoming = _validated_gus_observations(
+        fetch_gus_history(session, start_year, end_year),
+        source["observations"],
+        start_year,
+        end_year,
+        date.fromisoformat(verified_at[:10]),
+    )
     merged = _merge_revisions(source["observations"], incoming, "period", "indexPreviousYear100")
     added = len(merged) - len(source["observations"])
     if added:
@@ -118,21 +210,122 @@ def sync_gus(session: Any, start_year: int, end_year: int, verified_at: str) -> 
     return added
 
 
+def _validated_nbp_observations(
+    archive: list[dict[str, Any]],
+    current: list[dict[str, Any]],
+    existing: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    scoped_archive = [item for item in archive if item["effectiveFrom"] >= NBP_HISTORY_START]
+    if not scoped_archive or scoped_archive[0]["effectiveFrom"] != NBP_HISTORY_START:
+        raise SourceError(f"NBP archive no longer covers required history from {NBP_HISTORY_START}")
+    if len(current) != 1:
+        raise SourceError(f"NBP current-rate file must contain exactly one reference rate, got {len(current)}")
+
+    latest_archive = scoped_archive[-1]
+    archive_dates = {item["effectiveFrom"] for item in scoped_archive}
+    previously_published_dates = {
+        item["effectiveFrom"]
+        for item in existing
+        if item["effectiveFrom"] >= NBP_HISTORY_START
+    }
+    missing_dates = sorted(previously_published_dates - archive_dates)
+    if missing_dates:
+        raise SourceError(
+            "NBP archive lost previously published reference-rate dates: " + ", ".join(missing_dates)
+        )
+
+    current_rate = current[0]
+    if current_rate["effectiveFrom"] != latest_archive["effectiveFrom"]:
+        raise SourceError(
+            "NBP archive and current-rate file are not synchronized: "
+            f"archive={latest_archive['effectiveFrom']}, current={current_rate['effectiveFrom']}"
+        )
+    if current_rate["annualRatePercent"] != latest_archive["annualRatePercent"]:
+        raise SourceError(
+            "NBP archive and current-rate file disagree on the latest reference rate: "
+            f"archive={latest_archive['annualRatePercent']}, current={current_rate['annualRatePercent']}"
+        )
+    return scoped_archive
+
+
 def sync_nbp(session: Any, verified_at: str) -> int:
     path = DATA / "reference" / "nbp-reference-rates.json"
     source = load_json(path)
-    html = fetch(session, NBP_RATES_URL, "text/html,application/xhtml+xml").decode("utf-8")
-    incoming = parse_nbp_rates(html)
+    archive_xml = fetch(session, NBP_RATES_URL, "application/xml,text/xml").decode("utf-8-sig")
+    current_xml = fetch(session, NBP_CURRENT_RATES_URL, "application/xml,text/xml").decode("utf-8-sig")
+    archive = parse_nbp_rates(archive_xml)
+    current = parse_nbp_rates(current_xml)
+    incoming = _validated_nbp_observations(archive, current, source["observations"])
     merged = _merge_revisions(source["observations"], incoming, "effectiveFrom", "annualRatePercent")
     added = len(merged) - len(source["observations"])
-    if added:
+    provenance_changed = False
+    for observation in merged:
+        if observation.get("source") != NBP_RATES_URL:
+            observation["source"] = NBP_RATES_URL
+            provenance_changed = True
+
+    expected_source = {
+        "publisher": "NBP",
+        "url": NBP_RATES_URL,
+        "currentUrl": NBP_CURRENT_RATES_URL,
+        "verifiedAt": verified_at,
+    }
+    current_source = source.get("source", {})
+    source_urls_changed = (
+        current_source.get("url") != NBP_RATES_URL
+        or current_source.get("currentUrl") != NBP_CURRENT_RATES_URL
+    )
+    if added or source_urls_changed or provenance_changed:
         source.update({
             "verifiedAt": verified_at,
-            "source": {"publisher": "NBP", "url": NBP_RATES_URL, "verifiedAt": verified_at},
+            "source": expected_source,
             "observations": merged,
         })
         write_json(path, source)
     return added
+
+
+def _validate_mf_current_offerings(parsed: list[dict[str, Any]], as_of: date) -> None:
+    current_month = as_of.strftime("%Y-%m")
+    current_families = {
+        item["productType"]
+        for item in parsed
+        if item["saleFrom"][:7] == current_month
+    }
+    missing_families = sorted(set(PRODUCT_RULES) - current_families)
+    if missing_families:
+        raise SourceError(
+            f"MF workbook is missing current-month {current_month} offerings for: "
+            + ", ".join(missing_families)
+        )
+
+
+def _validated_mf_series(
+    parsed: list[dict[str, Any]],
+    existing: list[dict[str, Any]],
+    as_of: date,
+) -> list[dict[str, Any]]:
+    parsed_codes = [item["seriesCode"] for item in parsed]
+    if len(parsed_codes) != len(set(parsed_codes)):
+        raise SourceError("MF workbook contains duplicate supported series codes")
+
+    current_by_code: dict[str, dict[str, Any]] = {}
+    for item in existing:
+        previous = current_by_code.get(item["seriesCode"])
+        if previous is None or item["termsRevision"] > previous["termsRevision"]:
+            current_by_code[item["seriesCode"]] = item
+
+    required_codes = {
+        series_code
+        for series_code, item in current_by_code.items()
+        if _can_still_be_outstanding(item, as_of)
+    }
+    missing_codes = sorted(required_codes - set(parsed_codes))
+    if missing_codes:
+        raise SourceError(
+            "MF workbook lost previously published outstanding series: " + ", ".join(missing_codes)
+        )
+    return parsed
 
 
 def sync_mf(session: Any, verified_date: str, workbook_path: Path | None = None, cross_check: bool = True) -> tuple[int, int]:
@@ -143,10 +336,13 @@ def sync_mf(session: Any, verified_date: str, workbook_path: Path | None = None,
         page = fetch(session, MF_PAGE_URL, "text/html,application/xhtml+xml").decode("utf-8")
         workbook_url = discover_mf_workbook(page)
         workbook_content = fetch(session, workbook_url, "application/vnd.ms-excel,application/octet-stream")
+    as_of = date.fromisoformat(verified_date)
     parsed = [
         item for item in parse_mf_workbook(workbook_content, workbook_url, verified_date)
-        if _can_still_be_outstanding(item, date.fromisoformat(verified_date))
+        if _can_still_be_outstanding(item, as_of)
     ]
+    parsed = _validated_mf_series(parsed, load_series(), as_of)
+    _validate_mf_current_offerings(parsed, as_of)
 
     if cross_check:
         for series in parsed:
@@ -194,10 +390,12 @@ def transition_source_status(item: dict[str, Any], success: bool, now: str, mess
     item["lastAttemptStatus"] = "SUCCESS" if success else "FAILED"
     item["message"] = message
     if success:
-        item["status"] = "FRESH"
+        if item.get("status") != "PARTIAL":
+            item["status"] = "FRESH"
         item["lastSuccessAt"] = now
     elif item.get("lastSuccessAt"):
-        item["status"] = "STALE"
+        if item.get("status") != "PARTIAL":
+            item["status"] = "STALE"
     else:
         item["status"] = "UNAVAILABLE"
 
@@ -227,7 +425,7 @@ def main() -> int:
     parser.add_argument("--mf-only", action="store_true", help="Refresh only the MF workbook/catalog")
     parser.add_argument("--mf-workbook", type=Path, help="Use a local official MF workbook instead of downloading it")
     parser.add_argument("--skip-cross-check", action="store_true", help="Skip live HTML cross-check (fixtures/bootstrap only)")
-    parser.add_argument("--gus-start-year", type=int, default=2014)
+    parser.add_argument("--gus-start-year", type=int, default=int(GUS_HISTORY_START[:4]))
     parser.add_argument("--as-of", help="Deterministic verification date (YYYY-MM-DD)")
     args = parser.parse_args()
 

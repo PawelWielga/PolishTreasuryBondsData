@@ -19,7 +19,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 MF_PAGE_URL = "https://www.gov.pl/web/finanse/obligacje-detaliczne1"
-NBP_RATES_URL = "https://nbp.pl/podstawowe-stopy-procentowe-archiwum/"
+NBP_RATES_URL = "https://static.nbp.pl/dane/stopy/stopy_procentowe_archiwum.xml"
 GUS_BASE_URL = "https://api-sdp.stat.gov.pl/api/1.1.0"
 USER_AGENT = "PolishTreasuryBondsData/2.0 (+https://github.com/PawelWielga/PolishTreasuryBondsData)"
 
@@ -32,6 +32,17 @@ GUS_HOUSEHOLD_TOTAL_POSITION = 6902025
 GUS_ANNUAL_MEASURE_ID = 5
 GUS_JANUARY_PERIOD_ID = 247
 GUS_DECEMBER_PERIOD_ID = 258
+
+RETAIL_BOND_FACE_VALUE_MINOR_UNITS = 10_000
+MF_REQUIRED_HEADERS = {
+    0: "Seria",
+    1: "Kod ISIN",
+    3: "Początek sprzedaży",
+    4: "Koniec sprzedaży",
+    5: "Cena emisyjna",
+    6: "Cena zamiany",
+    9: "Oprocentowanie",
+}
 
 
 class SourceError(RuntimeError):
@@ -136,6 +147,35 @@ def _excel_date(book: xlrd.book.Book, raw: Any) -> str:
     return date(year, month, day).isoformat()
 
 
+def _mf_header(sheet: Any, column: int) -> str:
+    return " ".join(str(sheet.cell_value(0, column)).split())
+
+
+def _validate_mf_sheet_layout(sheet: Any, family_code: str, rules: ProductRules) -> int | None:
+    required_last_column = max(MF_REQUIRED_HEADERS)
+    if sheet.ncols <= required_last_column:
+        raise SourceError(
+            f"MF workbook sheet {family_code} has only {sheet.ncols} columns; "
+            f"at least {required_last_column + 1} are required"
+        )
+    for column, expected in MF_REQUIRED_HEADERS.items():
+        actual = _mf_header(sheet, column)
+        if actual != expected:
+            raise SourceError(
+                f"MF workbook sheet {family_code} column {column + 1} changed: "
+                f"expected {expected!r}, got {actual!r}"
+            )
+
+    if family_code == "OTS":
+        if sheet.ncols <= 10 or _mf_header(sheet, 10) != "Odsetki (zł)":
+            raise SourceError("MF workbook sheet OTS is missing the expected Odsetki (zł) column")
+
+    margin_column = sheet.ncols - 1 if _mf_header(sheet, sheet.ncols - 1) == "Marża" else None
+    if rules.rate_model != "Fixed" and margin_column is None:
+        raise SourceError(f"MF workbook sheet {family_code} is missing required Marża column")
+    return margin_column
+
+
 def parse_mf_workbook(content: bytes, workbook_url: str, verified_at: str) -> list[dict[str, Any]]:
     try:
         book = xlrd.open_workbook(file_contents=content)
@@ -149,7 +189,7 @@ def parse_mf_workbook(content: bytes, workbook_url: str, verified_at: str) -> li
             raise SourceError(f"MF workbook is missing required sheet {family_code}")
         sheet = book.sheet_by_name(family_code)
         header_rows = 2 if sheet.cell_value(1, 0) == "" else 1
-        margin_column = sheet.ncols - 1 if str(sheet.cell_value(0, sheet.ncols - 1)).strip() == "Marża" else None
+        margin_column = _validate_mf_sheet_layout(sheet, family_code, rules)
         for row_index in range(header_rows, sheet.nrows):
             series_code = str(sheet.cell_value(row_index, 0)).strip().upper()
             if not re.fullmatch(rf"{family_code}\d{{4}}", series_code):
@@ -174,7 +214,7 @@ def parse_mf_workbook(content: bytes, workbook_url: str, verified_at: str) -> li
                 "saleFrom": sale_from,
                 "saleTo": _excel_date(book, sheet.cell_value(row_index, 4)),
                 "currency": "PLN",
-                "faceValueMinorUnits": money_minor_units(sheet.cell_value(row_index, 5)),
+                "faceValueMinorUnits": RETAIL_BOND_FACE_VALUE_MINOR_UNITS,
                 "issuePriceMinorUnits": money_minor_units(sheet.cell_value(row_index, 5)),
                 "exchangePriceMinorUnits": money_minor_units(sheet.cell_value(row_index, 6)),
                 "firstPeriodAnnualRatePercent": percent_from_fraction(first_rate),
@@ -247,6 +287,17 @@ def parse_series_html(html: str) -> dict[str, str | int | None]:
     elif rules.rate_model == "InflationPlusMargin":
         margin_match = re.search(r"marża\s*([0-9]+(?:,[0-9]+)?)%\s*\+\s*inflacja", text, re.I)
     margin = canonical_decimal(Decimal(margin_match.group(1).replace(",", "."))) if margin_match else None
+    fixed_maturity_interest = None
+    if family == "OTS":
+        fixed_maturity_interest = money_minor_units(
+            Decimal(
+                _required(
+                    r"\bOdsetki:\s*([0-9]+(?:[,.][0-9]+)?)\s*zł\b",
+                    text,
+                    "fixed maturity interest",
+                ).replace(",", ".")
+            )
+        )
     return {
         "seriesCode": series_code,
         "saleFrom": datetime.strptime(sale.group(1), "%d.%m.%Y").date().isoformat(),
@@ -254,6 +305,7 @@ def parse_series_html(html: str) -> dict[str, str | int | None]:
         "issuePriceMinorUnits": money_minor_units(issue_price),
         "firstPeriodAnnualRatePercent": canonical_decimal(first_rate),
         "marginPercent": margin,
+        "fixedMaturityInterestMinorUnits": fixed_maturity_interest,
         "maturityMonths": _parse_maturity_months(text[: max(text.find("Seria:"), 0)]),
     }
 
@@ -276,7 +328,7 @@ def cross_check_series(workbook_series: dict[str, Any], html_facts: dict[str, An
     comparable["maturityMonths"] = rules.maturity_months
     fields = (
         "seriesCode", "saleFrom", "saleTo", "issuePriceMinorUnits", "firstPeriodAnnualRatePercent",
-        "marginPercent", "maturityMonths",
+        "marginPercent", "fixedMaturityInterestMinorUnits", "maturityMonths",
     )
     for field in fields:
         if html_facts.get(field) is None:
@@ -393,7 +445,7 @@ def fetch_gus_history(
                 page += 1
                 sleep(0.2)
             sleep(0.2)
-        observations.extend(parse_gus_variable_responses(payloads, year, require_complete=year < date.today().year))
+        observations.extend(parse_gus_variable_responses(payloads, year, require_complete=False))
     return observations
 
 
@@ -419,11 +471,18 @@ def parse_nbp_rates(html_or_xml: str) -> list[dict[str, Any]]:
         try:
             root = ET.fromstring(document)
         except ET.ParseError as exc:
-            raise SourceError(f"NBP embedded rate XML is malformed: {exc}") from exc
+            raise SourceError(f"NBP rate XML is malformed: {exc}") from exc
+        parents = {child: parent for parent in root.iter() for child in parent}
         for element in root.iter():
             if element.attrib.get("id") != "ref":
                 continue
-            effective = element.attrib.get("obowiazuje_od") or element.attrib.get("obowiązuje_od")
+            parent = parents.get(element)
+            effective = (
+                element.attrib.get("obowiazuje_od")
+                or element.attrib.get("obowiązuje_od")
+                or (parent.attrib.get("obowiazuje_od") if parent is not None else None)
+                or (parent.attrib.get("obowiązuje_od") if parent is not None else None)
+            )
             raw_rate = element.attrib.get("oprocentowanie")
             if not effective or not raw_rate:
                 raise SourceError("NBP reference-rate row lacks effective date or value")

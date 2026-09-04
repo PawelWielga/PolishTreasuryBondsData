@@ -74,7 +74,7 @@ The catalog supports OTS, ROR, DOR, TOS, COI, EDO, ROS and ROD. It separates:
 - immutable provenance in the snapshot manifest;
 - current source health in `status.json`.
 
-Money uses integer PLN minor units (`10000` means PLN 100.00). Rates and margins use exact decimal percentage strings (`"5.35"` means 5.35%), never JSON binary floating point. Each series uses a stable integer `termsRevision` and a deterministic SHA-256 `contentHash` over calculation-relevant facts. A financial correction creates another revision; a provenance-only change does not.
+Money uses integer PLN minor units (`10000` means PLN 100.00). `faceValueMinorUnits` is the official fixed PLN 100 nominal value of one retail Treasury Bond and is deliberately independent from its sale or exchange price. Rates and margins use exact decimal percentage strings (`"5.35"` means 5.35%), never JSON binary floating point. Each series uses a stable integer `termsRevision` and a deterministic SHA-256 `contentHash` over calculation-relevant facts. A financial correction creates another revision; a provenance-only change does not.
 
 ### Migration from v1
 
@@ -107,19 +107,28 @@ The primary series source is the official `Dane dotyczące obligacji detalicznyc
 https://www.gov.pl/web/finanse/obligacje-detaliczne1
 ```
 
-The importer retains the workbook URL, SHA-256, sheet and row. Current offer facts are independently compared with the relevant `obligacjeskarbowe.pl` detail page. A disagreement in series code, sale window, price or first-period rate blocks the update. Checked-in, content-addressed workbooks make historical backfills reproducible offline.
+The importer retains the workbook URL, SHA-256, sheet and row. Current offer facts are independently compared with the relevant `obligacjeskarbowe.pl` detail page. A disagreement in series code, sale window, price or first-period rate blocks the update; for OTS, the fixed maturity interest amount is independently cross-checked as well. Checked-in, content-addressed workbooks make historical backfills reproducible offline.
 
-The public catalog includes every series from the workbook that can still be outstanding on the dataset date. Once imported, matured series remain in later snapshots. Coverage and gaps are machine-readable in every manifest.
+The public catalog includes every series from the workbook that can still be outstanding on the dataset date. Once imported, matured series remain in later snapshots. A live refresh also requires the workbook to contain a current-month offering for every supported family; an unchanged or partially stale workbook cannot refresh source health indefinitely. Coverage and gaps are machine-readable in every manifest.
 
 ### GUS CPI
 
 Monthly year-over-year CPI comes from the official public SDP API. Years through 2025 use indicator `1832`; 2026+ uses variable `305`, COICOP 2018 section `1698`, with complete pagination. The dataset preserves both the official previous-year-100 index and the derived exact percentage difference, including negative CPI.
 
-CPI rows are source observations only. There is deliberately no `appliesToInterestPeriodStartMonth`, inflation floor or latest-value fallback. A missing period remains missing and incomplete closed years fail validation.
+CPI rows are source observations only. There is deliberately no `appliesToInterestPeriodStartMonth`, inflation floor or latest-value fallback. The updater requires every previously published period to remain present in the official response and rejects gaps or missing closed years. Year completeness is based on the latest observed CPI year rather than the calendar changing on January 1, so the previous December may remain legitimately unpublished until GUS releases it; once a newer-year observation appears, the preceding year must be complete. A live refresh allows at most a two-calendar-month publication lag; older data fails closed instead of refreshing `lastSuccessAt`.
 
 ### NBP reference rate
 
-The official NBP archive page provides the reference-rate change timeline. The parser reads the embedded `stopy_procentowe_archiwum` and current `interest_rates` XML sections and publishes exact effective dates and percentage strings. It does not choose a rate for any ROR/DOR period.
+Reference-rate data comes directly from the official machine-readable NBP XML files:
+
+```text
+https://static.nbp.pl/dane/stopy/stopy_procentowe_archiwum.xml
+https://static.nbp.pl/dane/stopy/stopy_procentowe.xml
+```
+
+The archive provides the complete supported change timeline and the current file independently confirms the latest effective reference rate. The updater requires both files to identify the same latest effective date and percentage value. It also verifies that the archive still contains every previously published effective date within the supported range. Any disagreement, source lag in either direction or regression in archive coverage fails closed and preserves the last-known-good snapshot instead of guessing a missing decision.
+
+The published NBP history intentionally starts at `2022-05-06`, the first reference-rate observation needed for supported ROR/DOR offerings. Older entries present in the NBP archive are not backfilled into this contract. The dataset publishes exact effective dates and percentage strings and does not choose a rate for any ROR/DOR interest period.
 
 ### Reference observation revisions
 
