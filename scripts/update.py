@@ -122,32 +122,41 @@ def sync_gus(session: Any, start_year: int, end_year: int, verified_at: str) -> 
 
 
 def _validated_nbp_observations(
-    archive: list[dict[str, Any]], current: list[dict[str, Any]]
+    archive: list[dict[str, Any]],
+    current: list[dict[str, Any]],
+    existing: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     scoped_archive = [item for item in archive if item["effectiveFrom"] >= NBP_HISTORY_START]
-    if not scoped_archive:
-        raise SourceError(f"NBP archive contains no reference-rate data from {NBP_HISTORY_START}")
+    if not scoped_archive or scoped_archive[0]["effectiveFrom"] != NBP_HISTORY_START:
+        raise SourceError(f"NBP archive no longer covers required history from {NBP_HISTORY_START}")
     if len(current) != 1:
         raise SourceError(f"NBP current-rate file must contain exactly one reference rate, got {len(current)}")
 
     latest_archive = scoped_archive[-1]
-    current_rate = dict(current[0])
-    current_rate["source"] = NBP_CURRENT_RATES_URL
-
-    if current_rate["effectiveFrom"] < latest_archive["effectiveFrom"]:
+    archive_dates = {item["effectiveFrom"] for item in scoped_archive}
+    previously_published_dates = {
+        item["effectiveFrom"]
+        for item in existing
+        if NBP_HISTORY_START <= item["effectiveFrom"] <= latest_archive["effectiveFrom"]
+    }
+    missing_dates = sorted(previously_published_dates - archive_dates)
+    if missing_dates:
         raise SourceError(
-            "NBP current-rate file is older than the archive: "
-            f"current={current_rate['effectiveFrom']}, archive={latest_archive['effectiveFrom']}"
+            "NBP archive lost previously published reference-rate dates: " + ", ".join(missing_dates)
         )
-    if current_rate["effectiveFrom"] == latest_archive["effectiveFrom"]:
-        if current_rate["annualRatePercent"] != latest_archive["annualRatePercent"]:
-            raise SourceError(
-                "NBP archive and current-rate file disagree on the latest reference rate: "
-                f"archive={latest_archive['annualRatePercent']}, current={current_rate['annualRatePercent']}"
-            )
-        return scoped_archive
 
-    return [*scoped_archive, current_rate]
+    current_rate = current[0]
+    if current_rate["effectiveFrom"] != latest_archive["effectiveFrom"]:
+        raise SourceError(
+            "NBP archive and current-rate file are not synchronized: "
+            f"archive={latest_archive['effectiveFrom']}, current={current_rate['effectiveFrom']}"
+        )
+    if current_rate["annualRatePercent"] != latest_archive["annualRatePercent"]:
+        raise SourceError(
+            "NBP archive and current-rate file disagree on the latest reference rate: "
+            f"archive={latest_archive['annualRatePercent']}, current={current_rate['annualRatePercent']}"
+        )
+    return scoped_archive
 
 
 def sync_nbp(session: Any, verified_at: str) -> int:
@@ -157,18 +166,24 @@ def sync_nbp(session: Any, verified_at: str) -> int:
     current_xml = fetch(session, NBP_CURRENT_RATES_URL, "application/xml,text/xml").decode("utf-8-sig")
     archive = parse_nbp_rates(archive_xml)
     current = parse_nbp_rates(current_xml)
-    incoming = _validated_nbp_observations(archive, current)
+    incoming = _validated_nbp_observations(archive, current, source["observations"])
     merged = _merge_revisions(source["observations"], incoming, "effectiveFrom", "annualRatePercent")
     added = len(merged) - len(source["observations"])
-    if added:
+    expected_source = {
+        "publisher": "NBP",
+        "url": NBP_RATES_URL,
+        "currentUrl": NBP_CURRENT_RATES_URL,
+        "verifiedAt": verified_at,
+    }
+    current_source = source.get("source", {})
+    source_urls_changed = (
+        current_source.get("url") != NBP_RATES_URL
+        or current_source.get("currentUrl") != NBP_CURRENT_RATES_URL
+    )
+    if added or source_urls_changed:
         source.update({
             "verifiedAt": verified_at,
-            "source": {
-                "publisher": "NBP",
-                "url": NBP_RATES_URL,
-                "currentUrl": NBP_CURRENT_RATES_URL,
-                "verifiedAt": verified_at,
-            },
+            "source": expected_source,
             "observations": merged,
         })
         write_json(path, source)
