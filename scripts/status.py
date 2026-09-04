@@ -49,9 +49,15 @@ def derive_source_health(item: dict[str, Any], as_of: datetime) -> str:
     if not last_success:
         return "UNAVAILABLE"
 
+    as_of_utc = as_of.astimezone(timezone.utc)
     success_at = parse_instant(last_success)
+    if success_at > as_of_utc:
+        raise ValueError(
+            f"Source lastSuccessAt {last_success} is in the future relative to {canonical_instant(as_of)}"
+        )
+
     stale_at = success_at + timedelta(hours=int(item["staleAfterHours"]))
-    if as_of.astimezone(timezone.utc) >= stale_at:
+    if as_of_utc >= stale_at:
         return "STALE"
 
     if item.get("status") == "PARTIAL":
