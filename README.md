@@ -74,7 +74,7 @@ The catalog supports OTS, ROR, DOR, TOS, COI, EDO, ROS and ROD. It separates:
 - immutable provenance in the snapshot manifest;
 - current source health in `status.json`.
 
-Money uses integer PLN minor units (`10000` means PLN 100.00). Rates and margins use exact decimal percentage strings (`"5.35"` means 5.35%), never JSON binary floating point. Each series uses a stable integer `termsRevision` and a deterministic SHA-256 `contentHash` over calculation-relevant facts. A financial correction creates another revision; a provenance-only change does not.
+Money uses integer PLN minor units (`10000` means PLN 100.00). `faceValueMinorUnits` is the official fixed PLN 100 nominal value of one retail Treasury Bond and is deliberately independent from its sale or exchange price. Rates and margins use exact decimal percentage strings (`"5.35"` means 5.35%), never JSON binary floating point. Each series uses a stable integer `termsRevision` and a deterministic SHA-256 `contentHash` over calculation-relevant facts. A financial correction creates another revision; a provenance-only change does not.
 
 ### Migration from v1
 

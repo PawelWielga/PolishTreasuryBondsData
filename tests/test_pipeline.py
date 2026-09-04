@@ -1,12 +1,16 @@
 import json
 import unittest
 from pathlib import Path
+
+import xlrd
 from unittest.mock import patch
 
 from scripts.pipeline import DATA, build_dist, load_series
 from scripts.sources import (
     MF_PAGE_URL,
+    MF_REQUIRED_HEADERS,
     PRODUCT_RULES,
+    RETAIL_BOND_FACE_VALUE_MINOR_UNITS,
     SourceError,
     cross_check_series,
     discover_mf_workbook,
@@ -69,11 +73,17 @@ class MinistryOfFinanceTests(unittest.TestCase):
             ncols = 11
             nrows = 2
 
-            @staticmethod
-            def cell_value(row: int, column: int):
-                if row == 0 and column == 10:
-                    return "Not Marża"
-                return ""
+            def __init__(self, family: str):
+                self.family = family
+
+            def cell_value(self, row: int, column: int):
+                if row != 0:
+                    return ""
+                if column in MF_REQUIRED_HEADERS:
+                    return MF_REQUIRED_HEADERS[column]
+                if self.family == "OTS" and column == 10:
+                    return "Odsetki (zł)"
+                return "Not Marża"
 
         class FakeBook:
             datemode = 0
@@ -83,12 +93,67 @@ class MinistryOfFinanceTests(unittest.TestCase):
                 return list(PRODUCT_RULES)
 
             @staticmethod
-            def sheet_by_name(_name: str):
-                return FakeSheet()
+            def sheet_by_name(name: str):
+                return FakeSheet(name)
 
         with patch("scripts.sources.xlrd.open_workbook", return_value=FakeBook()):
             with self.assertRaisesRegex(SourceError, "ROR.*required Marża column"):
                 parse_mf_workbook(b"fixture", MF_PAGE_URL, "2026-09-04")
+
+    def test_fixed_mf_header_shift_fails_closed(self):
+        class FakeSheet:
+            ncols = 11
+
+            @staticmethod
+            def cell_value(row: int, column: int):
+                if row == 0 and column in MF_REQUIRED_HEADERS:
+                    return "Unexpected header" if column == 3 else MF_REQUIRED_HEADERS[column]
+                if row == 0 and column == 10:
+                    return "Odsetki (zł)"
+                return ""
+
+        from scripts.sources import _validate_mf_sheet_layout
+
+        with self.assertRaisesRegex(SourceError, "Początek sprzedaży"):
+            _validate_mf_sheet_layout(FakeSheet(), "OTS", PRODUCT_RULES["OTS"])
+
+    def test_face_value_is_independent_from_issue_price(self):
+        real_book = xlrd.open_workbook(file_contents=self.workbook.read_bytes())
+        target_sheet = real_book.sheet_by_name("EDO")
+        target_row = next(
+            row for row in range(target_sheet.nrows)
+            if str(target_sheet.cell_value(row, 0)).strip() == "EDO0936"
+        )
+
+        class SheetProxy:
+            def __init__(self, name: str, sheet):
+                self.name = name
+                self.sheet = sheet
+                self.ncols = sheet.ncols
+                self.nrows = sheet.nrows
+
+            def cell_value(self, row: int, column: int):
+                if self.name == "EDO" and row == target_row and column == 5:
+                    return 101.0
+                return self.sheet.cell_value(row, column)
+
+        class BookProxy:
+            datemode = real_book.datemode
+
+            @staticmethod
+            def sheet_names():
+                return real_book.sheet_names()
+
+            @staticmethod
+            def sheet_by_name(name: str):
+                return SheetProxy(name, real_book.sheet_by_name(name))
+
+        with patch("scripts.sources.xlrd.open_workbook", return_value=BookProxy()):
+            parsed = parse_mf_workbook(b"fixture", MF_PAGE_URL, "2026-09-03")
+
+        edo = next(item for item in parsed if item["seriesCode"] == "EDO0936")
+        self.assertEqual(RETAIL_BOND_FACE_VALUE_MINOR_UNITS, edo["faceValueMinorUnits"])
+        self.assertEqual(10100, edo["issuePriceMinorUnits"])
 
     def test_provenance_does_not_change_financial_content_hash(self):
         item = dict(next(x for x in self.series if x["seriesCode"] == "EDO0936"))

@@ -33,6 +33,17 @@ GUS_ANNUAL_MEASURE_ID = 5
 GUS_JANUARY_PERIOD_ID = 247
 GUS_DECEMBER_PERIOD_ID = 258
 
+RETAIL_BOND_FACE_VALUE_MINOR_UNITS = 10_000
+MF_REQUIRED_HEADERS = {
+    0: "Seria",
+    1: "Kod ISIN",
+    3: "Początek sprzedaży",
+    4: "Koniec sprzedaży",
+    5: "Cena emisyjna",
+    6: "Cena zamiany",
+    9: "Oprocentowanie",
+}
+
 
 class SourceError(RuntimeError):
     """An official source could not be fetched or validated safely."""
@@ -136,6 +147,35 @@ def _excel_date(book: xlrd.book.Book, raw: Any) -> str:
     return date(year, month, day).isoformat()
 
 
+def _mf_header(sheet: Any, column: int) -> str:
+    return " ".join(str(sheet.cell_value(0, column)).split())
+
+
+def _validate_mf_sheet_layout(sheet: Any, family_code: str, rules: ProductRules) -> int | None:
+    required_last_column = max(MF_REQUIRED_HEADERS)
+    if sheet.ncols <= required_last_column:
+        raise SourceError(
+            f"MF workbook sheet {family_code} has only {sheet.ncols} columns; "
+            f"at least {required_last_column + 1} are required"
+        )
+    for column, expected in MF_REQUIRED_HEADERS.items():
+        actual = _mf_header(sheet, column)
+        if actual != expected:
+            raise SourceError(
+                f"MF workbook sheet {family_code} column {column + 1} changed: "
+                f"expected {expected!r}, got {actual!r}"
+            )
+
+    if family_code == "OTS":
+        if sheet.ncols <= 10 or _mf_header(sheet, 10) != "Odsetki (zł)":
+            raise SourceError("MF workbook sheet OTS is missing the expected Odsetki (zł) column")
+
+    margin_column = sheet.ncols - 1 if _mf_header(sheet, sheet.ncols - 1) == "Marża" else None
+    if rules.rate_model != "Fixed" and margin_column is None:
+        raise SourceError(f"MF workbook sheet {family_code} is missing required Marża column")
+    return margin_column
+
+
 def parse_mf_workbook(content: bytes, workbook_url: str, verified_at: str) -> list[dict[str, Any]]:
     try:
         book = xlrd.open_workbook(file_contents=content)
@@ -149,9 +189,7 @@ def parse_mf_workbook(content: bytes, workbook_url: str, verified_at: str) -> li
             raise SourceError(f"MF workbook is missing required sheet {family_code}")
         sheet = book.sheet_by_name(family_code)
         header_rows = 2 if sheet.cell_value(1, 0) == "" else 1
-        margin_column = sheet.ncols - 1 if str(sheet.cell_value(0, sheet.ncols - 1)).strip() == "Marża" else None
-        if rules.rate_model != "Fixed" and margin_column is None:
-            raise SourceError(f"MF workbook sheet {family_code} is missing required Marża column")
+        margin_column = _validate_mf_sheet_layout(sheet, family_code, rules)
         for row_index in range(header_rows, sheet.nrows):
             series_code = str(sheet.cell_value(row_index, 0)).strip().upper()
             if not re.fullmatch(rf"{family_code}\d{{4}}", series_code):
@@ -176,7 +214,7 @@ def parse_mf_workbook(content: bytes, workbook_url: str, verified_at: str) -> li
                 "saleFrom": sale_from,
                 "saleTo": _excel_date(book, sheet.cell_value(row_index, 4)),
                 "currency": "PLN",
-                "faceValueMinorUnits": money_minor_units(sheet.cell_value(row_index, 5)),
+                "faceValueMinorUnits": RETAIL_BOND_FACE_VALUE_MINOR_UNITS,
                 "issuePriceMinorUnits": money_minor_units(sheet.cell_value(row_index, 5)),
                 "exchangePriceMinorUnits": money_minor_units(sheet.cell_value(row_index, 6)),
                 "firstPeriodAnnualRatePercent": percent_from_fraction(first_rate),
