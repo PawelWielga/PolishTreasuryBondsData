@@ -121,8 +121,8 @@ def sync_gus(session: Any, start_year: int, end_year: int, verified_at: str) -> 
 def sync_nbp(session: Any, verified_at: str) -> int:
     path = DATA / "reference" / "nbp-reference-rates.json"
     source = load_json(path)
-    html = fetch(session, NBP_RATES_URL, "text/html,application/xhtml+xml").decode("utf-8")
-    incoming = parse_nbp_rates(html)
+    xml = fetch(session, NBP_RATES_URL, "application/xml,text/xml").decode("utf-8-sig")
+    incoming = parse_nbp_rates(xml)
     merged = _merge_revisions(source["observations"], incoming, "effectiveFrom", "annualRatePercent")
     added = len(merged) - len(source["observations"])
     if added:
