@@ -40,11 +40,20 @@ def snapshot_bytes(snapshot: Path) -> dict[str, bytes]:
     }
 
 
+def gus_observation(period: str, revision: int, index: str = "103.00", yoy: str = "3.00") -> dict:
+    return {
+        "period": period,
+        "revision": revision,
+        "indexPreviousYear100": index,
+        "yearOverYearPercent": yoy,
+    }
+
+
 class ReferenceRevisionValidationTests(unittest.TestCase):
     def test_gus_duplicate_identity_and_revision_is_rejected(self):
         observations = [
-            {"period": "2026-01", "revision": 1},
-            {"period": "2026-01", "revision": 1},
+            gus_observation("2026-01", 1),
+            gus_observation("2026-01", 1),
         ]
         with self.assertRaisesRegex(ValueError, r"unique by \(period, revision\)"):
             pipeline._validate_gus({"observations": observations})
@@ -60,8 +69,8 @@ class ReferenceRevisionValidationTests(unittest.TestCase):
     def test_distinct_revisions_of_same_identity_are_accepted(self):
         pipeline._validate_gus({
             "observations": [
-                {"period": "2026-01", "revision": 1},
-                {"period": "2026-01", "revision": 2},
+                gus_observation("2026-01", 1),
+                gus_observation("2026-01", 2, "103.10", "3.10"),
             ]
         })
         pipeline._validate_nbp({
@@ -70,6 +79,30 @@ class ReferenceRevisionValidationTests(unittest.TestCase):
                 {"effectiveFrom": "2022-05-06", "revision": 2},
             ]
         })
+
+    def test_gus_revision_gap_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, r"revisions must be contiguous from 1"):
+            pipeline._validate_gus({
+                "observations": [
+                    gus_observation("2026-01", 1),
+                    gus_observation("2026-01", 3, "103.10", "3.10"),
+                ]
+            })
+
+    def test_nbp_revision_gap_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, r"revisions must be contiguous from 1"):
+            pipeline._validate_nbp({
+                "observations": [
+                    {"effectiveFrom": "2022-05-06", "revision": 1},
+                    {"effectiveFrom": "2022-05-06", "revision": 3},
+                ]
+            })
+
+    def test_gus_index_and_year_over_year_must_describe_the_same_fact(self):
+        with self.assertRaisesRegex(ValueError, r"yearOverYearPercent must equal indexPreviousYear100 - 100"):
+            pipeline._validate_gus({
+                "observations": [gus_observation("2026-01", 1, "103.00", "2.90")]
+            })
 
     def test_highest_revision_is_the_current_consumer_observation(self):
         observations = [
