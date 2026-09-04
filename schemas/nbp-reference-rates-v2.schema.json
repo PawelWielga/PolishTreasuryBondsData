@@ -8,6 +8,7 @@
     "generatedAt": { "type": "string", "format": "date-time" },
     "observations": {
       "type": "array",
+      "minItems": 1,
       "items": {
         "type": "object",
         "required": ["effectiveFrom", "annualRatePercent", "revision", "publishedAt", "source"],
