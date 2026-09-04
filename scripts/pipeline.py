@@ -4,6 +4,7 @@ import hashlib
 import json
 from collections import defaultdict
 from datetime import datetime
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
@@ -174,17 +175,27 @@ def _validate_product_definitions(products: list[dict[str, Any]]) -> None:
 def _validate_series(series: list[dict[str, Any]], products: list[dict[str, Any]]) -> None:
     product_ids = {item["id"] for item in products}
     identities: set[tuple[str, int]] = set()
+    revisions_by_series: dict[str, list[int]] = defaultdict(list)
     for item in series:
         identity = (item["seriesCode"], item["termsRevision"])
         if identity in identities:
             raise ValueError(f"Duplicate terms revision: {identity}")
         identities.add(identity)
+        revisions_by_series[item["seriesCode"]].append(item["termsRevision"])
         if item["productDefinition"] not in product_ids:
             raise ValueError(f"{item['seriesCode']}: unknown product definition")
         if item["saleFrom"] > item["saleTo"]:
             raise ValueError(f"{item['seriesCode']}: invalid sale window")
         if item["contentHash"] != terms_content_hash(item):
             raise ValueError(f"{item['seriesCode']}: invalid contentHash")
+
+    for series_code, revisions in revisions_by_series.items():
+        ordered = sorted(revisions)
+        expected = list(range(1, ordered[-1] + 1))
+        if ordered != expected:
+            raise ValueError(
+                f"{series_code}: terms revisions must be contiguous from 1; got {ordered}"
+            )
 
 
 def _validate_revisioned_observations(
@@ -195,6 +206,17 @@ def _validate_revisioned_observations(
         raise ValueError(
             f"{label} observations must be unique by ({identity}, revision) and canonically ordered"
         )
+
+    revisions_by_identity: dict[str, list[int]] = defaultdict(list)
+    for item in observations:
+        revisions_by_identity[item[identity]].append(item["revision"])
+    for observation_identity, revisions in revisions_by_identity.items():
+        ordered = sorted(revisions)
+        expected = list(range(1, ordered[-1] + 1))
+        if ordered != expected:
+            raise ValueError(
+                f"{label} observation {observation_identity} revisions must be contiguous from 1; got {ordered}"
+            )
 
 
 def _current_reference_observations(
@@ -212,6 +234,17 @@ def _current_reference_observations(
 def _validate_gus(gus: dict[str, Any]) -> None:
     observations = gus.get("observations", [])
     _validate_revisioned_observations(observations, "period", "GUS")
+    for item in observations:
+        try:
+            index = Decimal(str(item["indexPreviousYear100"]))
+            year_over_year = Decimal(str(item["yearOverYearPercent"]))
+        except (KeyError, InvalidOperation, ValueError) as exc:
+            raise ValueError(f"GUS {item.get('period', '<unknown>')}: invalid CPI values") from exc
+        if year_over_year != index - Decimal("100"):
+            raise ValueError(
+                f"GUS {item['period']} revision {item['revision']}: yearOverYearPercent must equal indexPreviousYear100 - 100"
+            )
+
     periods = [item["period"] for item in _current_reference_observations(observations, "period")]
     by_year: dict[str, list[str]] = defaultdict(list)
     for period in periods:
