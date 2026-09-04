@@ -4,18 +4,21 @@ import hashlib
 import json
 from collections import defaultdict
 from datetime import datetime
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
 from jsonschema import Draft202012Validator, FormatChecker
 
-from scripts.sources import PRODUCT_RULES, terms_content_hash
+from scripts.sources import PRODUCT_RULES, canonical_decimal, terms_content_hash
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
 DIST = ROOT / "dist"
 PUBLICATION = ROOT / "publication" / "v1"
 SCHEMAS = ROOT / "schemas"
+GUS_HISTORY_START = "2014-01"
+NBP_HISTORY_START = "2022-05-06"
 
 
 def load_json(path: Path) -> Any:
@@ -166,25 +169,74 @@ def _validate_product_definitions(products: list[dict[str, Any]]) -> None:
     expected = {f"{code}-rules-1" for code in PRODUCT_RULES}
     if identities != expected:
         raise ValueError(f"Expected product definitions {sorted(expected)}, got {sorted(identities)}")
+
+    rule_fields = {
+        "maturityMonths": "maturity_months",
+        "interestPeriodMonths": "interest_period_months",
+        "rateModel": "rate_model",
+        "capitalizationRule": "capitalization_rule",
+        "interestPaymentRule": "interest_payment_rule",
+        "accrualRule": "accrual_rule",
+    }
     for product in products:
+        product_type = product["productType"]
+        rules = PRODUCT_RULES.get(product_type)
+        if rules is None:
+            raise ValueError(f"{product['id']}: unknown product type {product_type}")
+        expected_id = f"{product_type}-rules-{product['rulesRevision']}"
+        if product["id"] != expected_id:
+            raise ValueError(
+                f"{product['id']}: id does not match productType/rulesRevision ({expected_id})"
+            )
+        for document_field, rules_field in rule_fields.items():
+            expected_value = getattr(rules, rules_field)
+            if product[document_field] != expected_value:
+                raise ValueError(
+                    f"{product['id']}: {document_field} disagrees with parser rules: "
+                    f"{product[document_field]!r} != {expected_value!r}"
+                )
         if product["maturityMonths"] % product["interestPeriodMonths"]:
             raise ValueError(f"{product['id']}: maturity must be divisible by interest period")
 
 
 def _validate_series(series: list[dict[str, Any]], products: list[dict[str, Any]]) -> None:
-    product_ids = {item["id"] for item in products}
+    if not series:
+        raise ValueError("Series catalog is empty")
+
+    products_by_id = {item["id"]: item for item in products}
     identities: set[tuple[str, int]] = set()
+    revisions_by_code: dict[str, list[int]] = defaultdict(list)
     for item in series:
         identity = (item["seriesCode"], item["termsRevision"])
         if identity in identities:
             raise ValueError(f"Duplicate terms revision: {identity}")
         identities.add(identity)
-        if item["productDefinition"] not in product_ids:
+        revisions_by_code[item["seriesCode"]].append(item["termsRevision"])
+
+        product = products_by_id.get(item["productDefinition"])
+        if product is None:
             raise ValueError(f"{item['seriesCode']}: unknown product definition")
+        if item["productType"] != product["productType"]:
+            raise ValueError(
+                f"{item['seriesCode']}: productType {item['productType']} does not match "
+                f"{item['productDefinition']} ({product['productType']})"
+            )
+        if item["seriesCode"][:3] != item["productType"]:
+            raise ValueError(
+                f"{item['seriesCode']}: series code prefix does not match productType {item['productType']}"
+            )
         if item["saleFrom"] > item["saleTo"]:
             raise ValueError(f"{item['seriesCode']}: invalid sale window")
         if item["contentHash"] != terms_content_hash(item):
             raise ValueError(f"{item['seriesCode']}: invalid contentHash")
+
+    for series_code, revisions in revisions_by_code.items():
+        ordered = sorted(revisions)
+        expected_revisions = list(range(1, ordered[-1] + 1))
+        if ordered != expected_revisions:
+            raise ValueError(
+                f"{series_code}: terms revisions must be contiguous from 1; got {ordered}"
+            )
 
 
 def _validate_revisioned_observations(
@@ -195,6 +247,17 @@ def _validate_revisioned_observations(
         raise ValueError(
             f"{label} observations must be unique by ({identity}, revision) and canonically ordered"
         )
+
+    revisions_by_identity: dict[str, list[int]] = defaultdict(list)
+    for item in observations:
+        revisions_by_identity[item[identity]].append(item["revision"])
+    for observation_identity, revisions in revisions_by_identity.items():
+        ordered = sorted(revisions)
+        expected_revisions = list(range(1, ordered[-1] + 1))
+        if ordered != expected_revisions:
+            raise ValueError(
+                f"{label} {observation_identity}: revisions must be contiguous from 1; got {ordered}"
+            )
 
 
 def _current_reference_observations(
@@ -212,23 +275,65 @@ def _current_reference_observations(
 def _validate_gus(gus: dict[str, Any]) -> None:
     observations = gus.get("observations", [])
     _validate_revisioned_observations(observations, "period", "GUS")
-    periods = [item["period"] for item in _current_reference_observations(observations, "period")]
+    if not observations:
+        raise ValueError("GUS CPI observations are empty")
+
+    for item in observations:
+        expected_yoy = canonical_decimal(
+            Decimal(item["indexPreviousYear100"]) - Decimal("100")
+        )
+        if item["yearOverYearPercent"] != expected_yoy:
+            raise ValueError(
+                f"GUS {item['period']} revision {item['revision']}: yearOverYearPercent "
+                f"must equal indexPreviousYear100 - 100 ({expected_yoy})"
+            )
+        year, month = (int(part) for part in item["period"].split("-"))
+        source = item.get("source", {})
+        expected_period_id = 246 + month
+        if source.get("year") != year or source.get("periodId") != expected_period_id:
+            raise ValueError(
+                f"GUS {item['period']} revision {item['revision']}: source metadata does not match period"
+            )
+
+    current = _current_reference_observations(observations, "period")
+    periods = [item["period"] for item in current]
+    if periods[0] != GUS_HISTORY_START:
+        raise ValueError(f"GUS CPI history must start at {GUS_HISTORY_START}, got {periods[0]}")
+
     by_year: dict[str, list[str]] = defaultdict(list)
     for period in periods:
         by_year[period[:4]].append(period)
     years = sorted(by_year)
-    for year in years[:-1]:
-        if by_year[year] != [f"{year}-{month:02d}" for month in range(1, 13)]:
-            raise ValueError(f"GUS CPI coverage is incomplete for {year}")
+    start_year = int(GUS_HISTORY_START[:4])
+    expected_years = [str(year) for year in range(start_year, int(years[-1]) + 1)]
+    if years != expected_years:
+        missing_years = sorted(set(expected_years) - set(years))
+        raise ValueError(f"GUS CPI coverage is missing years: {missing_years}")
+
+    verified_year = int(gus["verifiedAt"][:4])
+    if int(years[-1]) > verified_year:
+        raise ValueError(
+            f"GUS CPI contains future coverage beyond verification year {verified_year}: {years[-1]}"
+        )
+    for year in years:
+        periods_for_year = by_year[year]
+        required_count = 12 if int(year) < verified_year else len(periods_for_year)
+        expected_periods = [f"{year}-{month:02d}" for month in range(1, required_count + 1)]
+        if periods_for_year != expected_periods:
+            raise ValueError(f"GUS CPI coverage is incomplete/non-contiguous for {year}")
 
 
 def _validate_nbp(nbp: dict[str, Any]) -> None:
     observations = nbp.get("observations", [])
     _validate_revisioned_observations(observations, "effectiveFrom", "NBP")
     current = _current_reference_observations(observations, "effectiveFrom")
-    dates = [item["effectiveFrom"] for item in current]
-    if current and dates[0] > "2022-06-01":
-        raise ValueError("NBP history does not cover the first ROR/DOR offering")
+    if not current:
+        raise ValueError("NBP reference-rate observations are empty")
+    first_date = current[0]["effectiveFrom"]
+    if first_date != NBP_HISTORY_START:
+        raise ValueError(
+            f"NBP history must start at {NBP_HISTORY_START}, got {first_date}"
+        )
 
 
 def _generated_at(series: list[dict[str, Any]], gus: dict[str, Any], nbp: dict[str, Any]) -> str:
