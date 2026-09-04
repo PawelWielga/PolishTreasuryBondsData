@@ -58,18 +58,22 @@ class ReferenceRevisionValidationTests(unittest.TestCase):
             pipeline._validate_nbp({"observations": observations})
 
     def test_distinct_revisions_of_same_identity_are_accepted(self):
-        pipeline._validate_gus({
-            "observations": [
+        pipeline._validate_revisioned_observations(
+            [
                 {"period": "2026-01", "revision": 1},
                 {"period": "2026-01", "revision": 2},
-            ]
-        })
-        pipeline._validate_nbp({
-            "observations": [
+            ],
+            "period",
+            "GUS",
+        )
+        pipeline._validate_revisioned_observations(
+            [
                 {"effectiveFrom": "2022-05-06", "revision": 1},
                 {"effectiveFrom": "2022-05-06", "revision": 2},
-            ]
-        })
+            ],
+            "effectiveFrom",
+            "NBP",
+        )
 
     def test_highest_revision_is_the_current_consumer_observation(self):
         observations = [
