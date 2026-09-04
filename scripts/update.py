@@ -118,6 +118,7 @@ def _validated_gus_observations(
     existing: list[dict[str, Any]],
     start_year: int,
     end_year: int,
+    as_of: date | None = None,
 ) -> list[dict[str, Any]]:
     if start_year > end_year:
         raise SourceError(f"GUS invalid requested range: {start_year}-{end_year}")
@@ -144,6 +145,17 @@ def _validated_gus_observations(
         raise SourceError(
             f"GUS source has no recent coverage for {end_year - 1} or {end_year}; latest year is {latest_year}"
         )
+    if as_of is not None:
+        latest_period_year, latest_period_month = (int(part) for part in periods[-1].split("-"))
+        lag_months = (as_of.year - latest_period_year) * 12 + as_of.month - latest_period_month
+        if lag_months < 0:
+            raise SourceError(
+                f"GUS source returned future CPI period {periods[-1]} for verification date {as_of.isoformat()}"
+            )
+        if lag_months > 2:
+            raise SourceError(
+                f"GUS source latest CPI period {periods[-1]} is too old for verification date {as_of.isoformat()}"
+            )
 
     expected_years = [str(year) for year in range(start_year, latest_year + 1)]
     if years != expected_years:
@@ -179,6 +191,7 @@ def sync_gus(session: Any, start_year: int, end_year: int, verified_at: str) -> 
         source["observations"],
         start_year,
         end_year,
+        date.fromisoformat(verified_at[:10]),
     )
     merged = _merge_revisions(source["observations"], incoming, "period", "indexPreviousYear100")
     added = len(merged) - len(source["observations"])
@@ -272,6 +285,21 @@ def sync_nbp(session: Any, verified_at: str) -> int:
     return added
 
 
+def _validate_mf_current_offerings(parsed: list[dict[str, Any]], as_of: date) -> None:
+    current_month = as_of.strftime("%Y-%m")
+    current_families = {
+        item["productType"]
+        for item in parsed
+        if item["saleFrom"][:7] == current_month
+    }
+    missing_families = sorted(set(PRODUCT_RULES) - current_families)
+    if missing_families:
+        raise SourceError(
+            f"MF workbook is missing current-month {current_month} offerings for: "
+            + ", ".join(missing_families)
+        )
+
+
 def _validated_mf_series(
     parsed: list[dict[str, Any]],
     existing: list[dict[str, Any]],
@@ -314,6 +342,7 @@ def sync_mf(session: Any, verified_date: str, workbook_path: Path | None = None,
         if _can_still_be_outstanding(item, as_of)
     ]
     parsed = _validated_mf_series(parsed, load_series(), as_of)
+    _validate_mf_current_offerings(parsed, as_of)
 
     if cross_check:
         for series in parsed:

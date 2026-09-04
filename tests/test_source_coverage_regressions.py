@@ -4,7 +4,12 @@ from unittest.mock import patch
 
 from scripts import pipeline, update
 from scripts.sources import SourceError, fetch_gus_history
-from scripts.update import _validated_gus_observations, _validated_mf_series, sync_gus
+from scripts.update import (
+    _validate_mf_current_offerings,
+    _validated_gus_observations,
+    _validated_mf_series,
+    sync_gus,
+)
 
 
 class GusCoverageRegressionTests(unittest.TestCase):
@@ -50,6 +55,23 @@ class GusCoverageRegressionTests(unittest.TestCase):
         with self.assertRaisesRegex(SourceError, "incomplete/non-contiguous for 2026"):
             _validated_gus_observations(incoming, self._periods(2026, 11), 2026, 2027)
 
+    def test_two_month_gus_publication_lag_is_allowed(self):
+        incoming = self._periods(2026, 11)
+
+        validated = _validated_gus_observations(
+            incoming, incoming, 2026, 2027, date(2027, 1, 5)
+        )
+
+        self.assertEqual(incoming, validated)
+
+    def test_gus_source_too_old_cannot_refresh_freshness(self):
+        incoming = self._periods(2026, 11)
+
+        with self.assertRaisesRegex(SourceError, "latest CPI period 2026-11 is too old"):
+            _validated_gus_observations(
+                incoming, incoming, 2026, 2027, date(2027, 2, 1)
+            )
+
     def test_live_refresh_rejects_loss_of_previously_published_period(self):
         existing = self._periods(2026, 12)
         truncated = self._periods(2026, 11)
@@ -88,13 +110,38 @@ class GusCoverageRegressionTests(unittest.TestCase):
 
 class MinistryCoverageRegressionTests(unittest.TestCase):
     @staticmethod
-    def _series(code: str, product_type: str, sale_to: str, revision: int = 1) -> dict:
+    def _series(
+        code: str,
+        product_type: str,
+        sale_to: str,
+        revision: int = 1,
+        sale_from: str = "2026-09-01",
+    ) -> dict:
         return {
             "seriesCode": code,
             "productType": product_type,
+            "saleFrom": sale_from,
             "saleTo": sale_to,
             "termsRevision": revision,
         }
+
+    def test_mf_requires_current_month_offering_for_every_supported_family(self):
+        parsed = [
+            self._series(f"{family}0927", family, "2027-09-30")
+            for family in update.PRODUCT_RULES
+            if family != "ROR"
+        ]
+
+        with self.assertRaisesRegex(SourceError, "current-month 2026-09 offerings.*ROR"):
+            _validate_mf_current_offerings(parsed, date(2026, 9, 4))
+
+    def test_mf_current_month_offerings_for_all_families_are_accepted(self):
+        parsed = [
+            self._series(f"{family}0927", family, "2027-09-30")
+            for family in update.PRODUCT_RULES
+        ]
+
+        _validate_mf_current_offerings(parsed, date(2026, 9, 4))
 
     def test_missing_previously_published_outstanding_series_fails_closed(self):
         existing = [self._series("ROR0927", "ROR", "2026-09-30")]
