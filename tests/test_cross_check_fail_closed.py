@@ -1,7 +1,11 @@
 import unittest
 
 from scripts.sources import SourceError, parse_series_html
-from scripts.update import required_cross_check_fields, validate_cross_check_facts
+from scripts.update import (
+    parse_ots_fixed_maturity_interest,
+    required_cross_check_fields,
+    validate_cross_check_facts,
+)
 
 CROSS_CHECK_URL = "https://www.obligacjeskarbowe.pl/oferta-obligacji/example/"
 
@@ -24,6 +28,53 @@ class CrossCheckCompletenessTests(unittest.TestCase):
                     "productType": product_type,
                 })
                 self.assertNotIn("marginPercent", fields)
+
+    def test_ots_explicitly_requires_fixed_maturity_interest(self):
+        fields = required_cross_check_fields({
+            "seriesCode": "OTS1226",
+            "productType": "OTS",
+        })
+        self.assertIn("fixedMaturityInterestMinorUnits", fields)
+
+    def test_ots_fixed_maturity_interest_is_parsed_from_official_summary(self):
+        html = """
+        <main>
+          <h1>3-miesięczne obligacje OTS</h1>
+          <p>Seria: OTS1226</p>
+          <p>Oprocentowanie: 2,00%</p>
+          <p>Sprzedaż: 01.09.2026 - 30.09.2026</p>
+          <p>Cena sprzedaży jednej obligacji: 100,00 zł</p>
+          <p>Odsetki: 0,50 zł</p>
+        </main>
+        """
+        self.assertEqual(50, parse_ots_fixed_maturity_interest(html, "OTS1226"))
+
+    def test_ots_missing_fixed_maturity_interest_fails_closed(self):
+        html = """
+        <main>
+          <p>Seria: OTS1226</p>
+          <p>Oprocentowanie: 2,00%</p>
+        </main>
+        """
+        with self.assertRaisesRegex(SourceError, "fixed maturity interest"):
+            parse_ots_fixed_maturity_interest(html, "OTS1226")
+
+    def test_ots_maturity_interest_disagreement_between_xls_and_html_is_rejected(self):
+        series = {
+            "seriesCode": "OTS1226",
+            "productType": "OTS",
+            "fixedMaturityInterestMinorUnits": 50,
+        }
+        facts = {
+            "seriesCode": "OTS1226",
+            "saleFrom": "2026-09-01",
+            "saleTo": "2026-09-30",
+            "issuePriceMinorUnits": 10000,
+            "firstPeriodAnnualRatePercent": "2.00",
+            "fixedMaturityInterestMinorUnits": 49,
+        }
+        with self.assertRaisesRegex(SourceError, "official sources disagree"):
+            validate_cross_check_facts(series, facts, CROSS_CHECK_URL)
 
     def test_parser_wording_drift_for_variable_margin_fails_closed(self):
         html = """
