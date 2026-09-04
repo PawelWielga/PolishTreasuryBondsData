@@ -172,9 +172,16 @@ class ReferenceRevisionPublicationTests(unittest.TestCase):
             corrected = copy.deepcopy(original)
             corrected["indexPreviousYear100"] = "103.00"
             corrected["yearOverYearPercent"] = "3.00"
+            year = int(original["period"][:4])
+            incoming = [
+                copy.deepcopy(item)
+                for item in pipeline._current_reference_observations(source["observations"], "period")
+                if int(item["period"][:4]) == year
+            ]
+            incoming = [corrected if item["period"] == original["period"] else item for item in incoming]
 
-            with patch.object(update, "fetch_gus_history", return_value=[corrected]):
-                added = update.sync_gus(object(), int(original["period"][:4]), int(original["period"][:4]), "2026-09-04T00:00:00Z")
+            with patch.object(update, "fetch_gus_history", return_value=incoming):
+                added = update.sync_gus(object(), year, year, "2026-09-04T00:00:00Z")
 
             self.assertEqual(1, added)
             second_revision = pipeline.build_dist()
