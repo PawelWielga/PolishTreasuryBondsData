@@ -119,7 +119,16 @@ CPI rows are source observations only. There is deliberately no `appliesToIntere
 
 ### NBP reference rate
 
-The official NBP archive page provides the reference-rate change timeline. The parser reads the embedded `stopy_procentowe_archiwum` and current `interest_rates` XML sections and publishes exact effective dates and percentage strings. It does not choose a rate for any ROR/DOR period.
+Reference-rate data comes directly from the official machine-readable NBP XML files:
+
+```text
+https://static.nbp.pl/dane/stopy/stopy_procentowe_archiwum.xml
+https://static.nbp.pl/dane/stopy/stopy_procentowe.xml
+```
+
+The archive provides the change timeline and the current file independently confirms the latest effective reference rate. The updater fails closed when the two official files disagree or when the current file is older than the archive. If the current file contains a newer decision that has not yet appeared in the archive, that current observation is published so ROR/DOR calculations do not lag behind NBP.
+
+The published NBP history intentionally starts at `2022-05-06`, the first reference-rate observation needed for supported ROR/DOR offerings. Older entries present in the NBP archive are not backfilled into this contract. The dataset publishes exact effective dates and percentage strings and does not choose a rate for any ROR/DOR interest period.
 
 ### Reference observation revisions
 
