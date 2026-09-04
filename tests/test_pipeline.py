@@ -1,10 +1,12 @@
 import json
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from scripts.pipeline import DATA, build_dist, load_series
 from scripts.sources import (
     MF_PAGE_URL,
+    PRODUCT_RULES,
     SourceError,
     cross_check_series,
     discover_mf_workbook,
@@ -61,6 +63,32 @@ class MinistryOfFinanceTests(unittest.TestCase):
         facts["firstPeriodAnnualRatePercent"] = "9.99"
         with self.assertRaisesRegex(SourceError, "official sources disagree"):
             cross_check_series(workbook, facts)
+
+    def test_variable_rate_sheet_without_margin_column_fails_closed(self):
+        class FakeSheet:
+            ncols = 11
+            nrows = 2
+
+            @staticmethod
+            def cell_value(row: int, column: int):
+                if row == 0 and column == 10:
+                    return "Not Marża"
+                return ""
+
+        class FakeBook:
+            datemode = 0
+
+            @staticmethod
+            def sheet_names():
+                return list(PRODUCT_RULES)
+
+            @staticmethod
+            def sheet_by_name(_name: str):
+                return FakeSheet()
+
+        with patch("scripts.sources.xlrd.open_workbook", return_value=FakeBook()):
+            with self.assertRaisesRegex(SourceError, "ROR.*required Marża column"):
+                parse_mf_workbook(b"fixture", MF_PAGE_URL, "2026-09-04")
 
     def test_provenance_does_not_change_financial_content_hash(self):
         item = dict(next(x for x in self.series if x["seriesCode"] == "EDO0936"))

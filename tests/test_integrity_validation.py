@@ -1,5 +1,8 @@
 import copy
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 from scripts import pipeline, update
 
@@ -129,6 +132,69 @@ class NormalizedIntegrityValidationTests(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "must start at 2022-05-06"):
             pipeline._validate_nbp(source)
+
+    @staticmethod
+    def _write_snapshot(publication: Path, *, series=None, gus=None, nbp=None, products=None) -> None:
+        snapshot = publication / "snapshots" / "previous"
+        pipeline.write_json(snapshot / "catalog.json", {"series": series or []})
+        pipeline.write_json(
+            snapshot / "product-definitions.json",
+            {"productDefinitions": products or []},
+        )
+        pipeline.write_json(snapshot / "gus-cpi.json", {"observations": gus or []})
+        pipeline.write_json(snapshot / "nbp-reference-rates.json", {"observations": nbp or []})
+
+    def test_offline_gate_rejects_deleting_entire_published_series(self):
+        previous = {
+            "seriesCode": "ROR0927",
+            "termsRevision": 1,
+            "contentHash": "sha256:previous",
+        }
+        with TemporaryDirectory() as temp:
+            publication = Path(temp)
+            self._write_snapshot(publication, series=[previous])
+            with patch.object(pipeline, "PUBLICATION", publication):
+                with self.assertRaisesRegex(ValueError, "Series revision .* was deleted"):
+                    pipeline._validate_append_only_history([], [], {"observations": []}, {"observations": []})
+
+    def test_offline_gate_rejects_deleting_published_gus_tail(self):
+        previous = {"period": "2026-08", "revision": 1, "indexPreviousYear100": "102.80"}
+        with TemporaryDirectory() as temp:
+            publication = Path(temp)
+            self._write_snapshot(publication, gus=[previous])
+            with patch.object(pipeline, "PUBLICATION", publication):
+                with self.assertRaisesRegex(ValueError, "GUS observation .* was deleted"):
+                    pipeline._validate_append_only_history([], [], {"observations": []}, {"observations": []})
+
+    def test_offline_gate_rejects_deleting_published_nbp_tail(self):
+        previous = {
+            "effectiveFrom": "2026-03-05",
+            "revision": 1,
+            "annualRatePercent": "3.75",
+        }
+        with TemporaryDirectory() as temp:
+            publication = Path(temp)
+            self._write_snapshot(publication, nbp=[previous])
+            with patch.object(pipeline, "PUBLICATION", publication):
+                with self.assertRaisesRegex(ValueError, "NBP observation .* was deleted"):
+                    pipeline._validate_append_only_history([], [], {"observations": []}, {"observations": []})
+
+    def test_offline_gate_allows_provenance_only_nbp_migration(self):
+        previous = {
+            "effectiveFrom": "2026-03-05",
+            "revision": 1,
+            "annualRatePercent": "3.75",
+            "source": "https://legacy.example/nbp",
+        }
+        current = dict(previous)
+        current["source"] = "https://static.nbp.pl/dane/stopy/stopy_procentowe_archiwum.xml"
+        with TemporaryDirectory() as temp:
+            publication = Path(temp)
+            self._write_snapshot(publication, nbp=[previous])
+            with patch.object(pipeline, "PUBLICATION", publication):
+                pipeline._validate_append_only_history(
+                    [], [], {"observations": []}, {"observations": [current]}
+                )
 
     def test_offline_and_live_nbp_boundaries_cannot_drift(self):
         self.assertEqual(update.NBP_HISTORY_START, pipeline.NBP_HISTORY_START)

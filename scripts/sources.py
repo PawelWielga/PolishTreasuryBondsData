@@ -150,6 +150,8 @@ def parse_mf_workbook(content: bytes, workbook_url: str, verified_at: str) -> li
         sheet = book.sheet_by_name(family_code)
         header_rows = 2 if sheet.cell_value(1, 0) == "" else 1
         margin_column = sheet.ncols - 1 if str(sheet.cell_value(0, sheet.ncols - 1)).strip() == "Marża" else None
+        if rules.rate_model != "Fixed" and margin_column is None:
+            raise SourceError(f"MF workbook sheet {family_code} is missing required Marża column")
         for row_index in range(header_rows, sheet.nrows):
             series_code = str(sheet.cell_value(row_index, 0)).strip().upper()
             if not re.fullmatch(rf"{family_code}\d{{4}}", series_code):

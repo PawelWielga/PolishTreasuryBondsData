@@ -63,6 +63,7 @@ def build_dist() -> str:
     _validate_series(series, products)
     _validate_gus(gus)
     _validate_nbp(nbp)
+    _validate_append_only_history(products, series, gus, nbp)
 
     generated_at = _generated_at(series, gus, nbp)
     documents = {
@@ -335,6 +336,89 @@ def _validate_nbp(nbp: dict[str, Any]) -> None:
         raise ValueError(
             f"NBP history must start at {NBP_HISTORY_START}, got {first_date}"
         )
+
+
+def _validate_append_only_history(
+    products: list[dict[str, Any]],
+    series: list[dict[str, Any]],
+    gus: dict[str, Any],
+    nbp: dict[str, Any],
+) -> None:
+    snapshots_root = PUBLICATION / "snapshots"
+    if not snapshots_root.exists():
+        return
+
+    current_products = {item["id"]: item for item in products}
+    current_series = {(item["seriesCode"], item["termsRevision"]): item for item in series}
+    current_gus = {(item["period"], item["revision"]): item for item in gus.get("observations", [])}
+    current_nbp = {
+        (item["effectiveFrom"], item["revision"]): item
+        for item in nbp.get("observations", [])
+    }
+
+    for snapshot in sorted(path for path in snapshots_root.iterdir() if path.is_dir()):
+        files = {
+            "products": snapshot / "product-definitions.json",
+            "series": snapshot / "catalog.json",
+            "gus": snapshot / "gus-cpi.json",
+            "nbp": snapshot / "nbp-reference-rates.json",
+        }
+        missing_files = [path.name for path in files.values() if not path.is_file()]
+        if missing_files:
+            raise ValueError(
+                f"Historical snapshot {snapshot.name} is incomplete: missing {sorted(missing_files)}"
+            )
+
+        previous_products = load_json(files["products"])["productDefinitions"]
+        for previous in previous_products:
+            current = current_products.get(previous["id"])
+            if current is None:
+                raise ValueError(
+                    f"Product definition {previous['id']} from historical snapshot {snapshot.name} was deleted"
+                )
+            if current != previous:
+                raise ValueError(
+                    f"Product definition {previous['id']} from historical snapshot {snapshot.name} was mutated"
+                )
+
+        previous_series = load_json(files["series"])["series"]
+        for previous in previous_series:
+            identity = (previous["seriesCode"], previous["termsRevision"])
+            current = current_series.get(identity)
+            if current is None:
+                raise ValueError(
+                    f"Series revision {identity} from historical snapshot {snapshot.name} was deleted"
+                )
+            if current["contentHash"] != previous["contentHash"]:
+                raise ValueError(
+                    f"Series revision {identity} from historical snapshot {snapshot.name} was mutated in place"
+                )
+
+        previous_gus = load_json(files["gus"])["observations"]
+        for previous in previous_gus:
+            identity = (previous["period"], previous["revision"])
+            current = current_gus.get(identity)
+            if current is None:
+                raise ValueError(
+                    f"GUS observation {identity} from historical snapshot {snapshot.name} was deleted"
+                )
+            if current["indexPreviousYear100"] != previous["indexPreviousYear100"]:
+                raise ValueError(
+                    f"GUS observation {identity} from historical snapshot {snapshot.name} was mutated in place"
+                )
+
+        previous_nbp = load_json(files["nbp"])["observations"]
+        for previous in previous_nbp:
+            identity = (previous["effectiveFrom"], previous["revision"])
+            current = current_nbp.get(identity)
+            if current is None:
+                raise ValueError(
+                    f"NBP observation {identity} from historical snapshot {snapshot.name} was deleted"
+                )
+            if current["annualRatePercent"] != previous["annualRatePercent"]:
+                raise ValueError(
+                    f"NBP observation {identity} from historical snapshot {snapshot.name} was mutated in place"
+                )
 
 
 def _generated_at(series: list[dict[str, Any]], gus: dict[str, Any], nbp: dict[str, Any]) -> str:
