@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import subprocess
 import sys
 import calendar
 from datetime import date
@@ -12,6 +11,7 @@ from typing import Any
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from scripts.check_generated_tree import main as check_generated_tree
 from scripts.pipeline import (
     DATA,
     ROOT,
@@ -444,10 +444,7 @@ def main() -> int:
         return 1
 
     if args.check:
-        result = subprocess.run(
-            ["git", "diff", "--exit-code", "--", "data", "dist", "publication"], cwd=ROOT, check=False
-        )
-        return result.returncode
+        return check_generated_tree()
     return 0
 
 
