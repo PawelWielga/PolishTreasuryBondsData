@@ -107,7 +107,7 @@ The primary series source is the official `Dane dotyczące obligacji detalicznyc
 https://www.gov.pl/web/finanse/obligacje-detaliczne1
 ```
 
-The importer retains the workbook URL, SHA-256, sheet and row. Current offer facts are independently compared with the relevant `obligacjeskarbowe.pl` detail page. A disagreement in series code, sale window, price or first-period rate blocks the update. Checked-in, content-addressed workbooks make historical backfills reproducible offline.
+The importer retains the workbook URL, SHA-256, sheet and row. Current offer facts are independently compared with the relevant `obligacjeskarbowe.pl` detail page. A disagreement in series code, sale window, price or first-period rate blocks the update; for OTS, the fixed maturity interest amount is independently cross-checked as well. Checked-in, content-addressed workbooks make historical backfills reproducible offline.
 
 The public catalog includes every series from the workbook that can still be outstanding on the dataset date. Once imported, matured series remain in later snapshots. A live refresh also requires the workbook to contain a current-month offering for every supported family; an unchanged or partially stale workbook cannot refresh source health indefinitely. Coverage and gaps are machine-readable in every manifest.
 

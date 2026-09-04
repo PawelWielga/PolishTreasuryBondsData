@@ -311,11 +311,16 @@ def _validate_gus(gus: dict[str, Any]) -> None:
         missing_years = sorted(set(expected_years) - set(years))
         raise ValueError(f"GUS CPI coverage is missing years: {missing_years}")
 
-    verified_year = int(gus["verifiedAt"][:4])
+    verified_period = gus["verifiedAt"][:7]
+    verified_year = int(verified_period[:4])
     latest_year = int(years[-1])
     if latest_year > verified_year:
         raise ValueError(
             f"GUS CPI contains future coverage beyond verification year {verified_year}: {years[-1]}"
+        )
+    if periods[-1] > verified_period:
+        raise ValueError(
+            f"GUS CPI contains future period {periods[-1]} beyond verification month {verified_period}"
         )
     for year in years:
         periods_for_year = by_year[year]

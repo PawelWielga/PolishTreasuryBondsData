@@ -287,6 +287,17 @@ def parse_series_html(html: str) -> dict[str, str | int | None]:
     elif rules.rate_model == "InflationPlusMargin":
         margin_match = re.search(r"marża\s*([0-9]+(?:,[0-9]+)?)%\s*\+\s*inflacja", text, re.I)
     margin = canonical_decimal(Decimal(margin_match.group(1).replace(",", "."))) if margin_match else None
+    fixed_maturity_interest = None
+    if family == "OTS":
+        fixed_maturity_interest = money_minor_units(
+            Decimal(
+                _required(
+                    r"\bOdsetki:\s*([0-9]+(?:[,.][0-9]+)?)\s*zł\b",
+                    text,
+                    "fixed maturity interest",
+                ).replace(",", ".")
+            )
+        )
     return {
         "seriesCode": series_code,
         "saleFrom": datetime.strptime(sale.group(1), "%d.%m.%Y").date().isoformat(),
@@ -294,6 +305,7 @@ def parse_series_html(html: str) -> dict[str, str | int | None]:
         "issuePriceMinorUnits": money_minor_units(issue_price),
         "firstPeriodAnnualRatePercent": canonical_decimal(first_rate),
         "marginPercent": margin,
+        "fixedMaturityInterestMinorUnits": fixed_maturity_interest,
         "maturityMonths": _parse_maturity_months(text[: max(text.find("Seria:"), 0)]),
     }
 
@@ -316,7 +328,7 @@ def cross_check_series(workbook_series: dict[str, Any], html_facts: dict[str, An
     comparable["maturityMonths"] = rules.maturity_months
     fields = (
         "seriesCode", "saleFrom", "saleTo", "issuePriceMinorUnits", "firstPeriodAnnualRatePercent",
-        "marginPercent", "maturityMonths",
+        "marginPercent", "fixedMaturityInterestMinorUnits", "maturityMonths",
     )
     for field in fields:
         if html_facts.get(field) is None:
