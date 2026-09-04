@@ -209,6 +209,20 @@ class PublicationTests(unittest.TestCase):
         self.assertEqual(8, len(manifest["coverage"]["catalog"]))
         self.assertEqual("2014-01", manifest["coverage"]["gusCpi"]["fromPeriod"])
 
+    def test_successful_refresh_preserves_partial_coverage_marker(self):
+        item = {"status": "PARTIAL", "lastSuccessAt": "2026-09-03T00:00:00Z"}
+        transition_source_status(item, True, "2026-09-04T00:00:00Z", "verified")
+        self.assertEqual("PARTIAL", item["status"])
+        self.assertEqual("2026-09-04T00:00:00Z", item["lastSuccessAt"])
+        self.assertEqual("SUCCESS", item["lastAttemptStatus"])
+
+    def test_failed_refresh_preserves_partial_coverage_marker(self):
+        item = {"status": "PARTIAL", "lastSuccessAt": "2026-09-03T00:00:00Z"}
+        transition_source_status(item, False, "2026-09-04T00:00:00Z", "upstream failed")
+        self.assertEqual("PARTIAL", item["status"])
+        self.assertEqual("2026-09-03T00:00:00Z", item["lastSuccessAt"])
+        self.assertEqual("FAILED", item["lastAttemptStatus"])
+
     def test_failed_refresh_does_not_advance_last_success(self):
         item = {"status":"FRESH", "lastSuccessAt":"2026-09-03T00:00:00Z"}
         transition_source_status(item, False, "2026-09-04T00:00:00Z", "upstream failed")

@@ -390,10 +390,12 @@ def transition_source_status(item: dict[str, Any], success: bool, now: str, mess
     item["lastAttemptStatus"] = "SUCCESS" if success else "FAILED"
     item["message"] = message
     if success:
-        item["status"] = "FRESH"
+        if item.get("status") != "PARTIAL":
+            item["status"] = "FRESH"
         item["lastSuccessAt"] = now
     elif item.get("lastSuccessAt"):
-        item["status"] = "STALE"
+        if item.get("status") != "PARTIAL":
+            item["status"] = "STALE"
     else:
         item["status"] = "UNAVAILABLE"
 
