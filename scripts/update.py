@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 import argparse
+import calendar
 import json
+import re
 import subprocess
 import sys
-import calendar
 from datetime import date
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
+
+from bs4 import BeautifulSoup
 
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -23,6 +27,7 @@ from scripts.sources import (
     discover_mf_workbook,
     fetch,
     fetch_gus_history,
+    money_minor_units,
     parse_mf_workbook,
     parse_nbp_rates,
     parse_series_html,
@@ -41,6 +46,8 @@ COMMON_REQUIRED_CROSS_CHECK_FIELDS = (
 
 def required_cross_check_fields(series: dict[str, Any]) -> tuple[str, ...]:
     rules = PRODUCT_RULES[series["productType"]]
+    if series["productType"] == "OTS":
+        return (*COMMON_REQUIRED_CROSS_CHECK_FIELDS, "fixedMaturityInterestMinorUnits")
     if rules.rate_model in {"NbpReferencePlusMargin", "InflationPlusMargin"}:
         return (*COMMON_REQUIRED_CROSS_CHECK_FIELDS, "marginPercent")
     return COMMON_REQUIRED_CROSS_CHECK_FIELDS
@@ -54,6 +61,34 @@ def validate_cross_check_facts(
             raise SourceError(
                 f"{series['seriesCode']}: required cross-check field {field} could not be parsed from {source_url}"
             )
+
+    if (
+        series["productType"] == "OTS"
+        and series.get("fixedMaturityInterestMinorUnits")
+        != html_facts.get("fixedMaturityInterestMinorUnits")
+    ):
+        raise SourceError(
+            f"{series['seriesCode']}: official sources disagree on fixedMaturityInterestMinorUnits: "
+            f"MF XLS={series.get('fixedMaturityInterestMinorUnits')!r}, "
+            f"HTML={html_facts.get('fixedMaturityInterestMinorUnits')!r}"
+        )
+
+
+def parse_ots_fixed_maturity_interest(html: str, series_code: str) -> int:
+    soup = BeautifulSoup(html, "html.parser")
+    content = soup.select_one("main") or soup
+    text = " ".join(content.stripped_strings)
+    matches = {
+        money_minor_units(Decimal(match.replace(",", ".")))
+        for match in re.findall(r"\bOdsetki:\s*([0-9]+(?:,[0-9]+)?)\s*zł\b", text, re.I)
+    }
+    matches.discard(None)
+    if len(matches) != 1:
+        raise SourceError(
+            f"{series_code}: expected one unambiguous fixed maturity interest amount on the official HTML page, "
+            f"found {len(matches)}"
+        )
+    return next(iter(matches))
 
 
 def sync_series(parsed: list[dict[str, Any]]) -> tuple[int, int]:
@@ -155,6 +190,10 @@ def sync_mf(session: Any, verified_date: str, workbook_path: Path | None = None,
                 continue
             html = fetch(session, cross_source["url"], "text/html,application/xhtml+xml").decode("utf-8")
             html_facts = parse_series_html(html)
+            if series["productType"] == "OTS":
+                html_facts["fixedMaturityInterestMinorUnits"] = parse_ots_fixed_maturity_interest(
+                    html, series["seriesCode"]
+                )
             validate_cross_check_facts(series, html_facts, cross_source["url"])
             cross_check_series(series, html_facts)
             cross_source["verifiedAt"] = verified_date
