@@ -68,10 +68,11 @@ def sync_series(parsed: list[dict[str, Any]]) -> tuple[int, int]:
     added = corrected = 0
     for candidate in parsed:
         revisions = by_code.setdefault(candidate["seriesCode"], [])
-        if any(item["contentHash"] == candidate["contentHash"] for item in revisions):
-            continue
         if revisions:
-            candidate["termsRevision"] = max(item["termsRevision"] for item in revisions) + 1
+            current_revision = max(revisions, key=lambda item: item["termsRevision"])
+            if current_revision["contentHash"] == candidate["contentHash"]:
+                continue
+            candidate["termsRevision"] = current_revision["termsRevision"] + 1
             corrected += 1
         else:
             added += 1
@@ -91,10 +92,15 @@ def _merge_revisions(existing: list[dict[str, Any]], incoming: list[dict[str, An
         by_identity.setdefault(item[identity], []).append(item)
     for candidate in incoming:
         revisions = by_identity.setdefault(candidate[identity], [])
-        if any(item[value] == candidate[value] for item in revisions):
-            continue
+        if revisions:
+            current_revision = max(revisions, key=lambda item: item["revision"])
+            if current_revision[value] == candidate[value]:
+                continue
+            next_revision = current_revision["revision"] + 1
+        else:
+            next_revision = 1
         candidate = dict(candidate)
-        candidate["revision"] = max((item["revision"] for item in revisions), default=0) + 1
+        candidate["revision"] = next_revision
         result.append(candidate)
         revisions.append(candidate)
     return sorted(result, key=lambda item: (item[identity], item["revision"]))
