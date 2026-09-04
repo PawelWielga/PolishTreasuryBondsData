@@ -145,10 +145,13 @@ class ReferenceRevisionPublicationTests(unittest.TestCase):
             original = copy.deepcopy(source["observations"][0])
             corrected = copy.deepcopy(original)
             corrected["annualRatePercent"] = "5.26" if original["annualRatePercent"] != "5.26" else "5.27"
+            archive = [copy.deepcopy(item) for item in source["observations"]]
+            archive[0] = corrected
+            current = [copy.deepcopy(archive[-1])]
 
             with (
                 patch.object(update, "fetch", return_value=b"fixture"),
-                patch.object(update, "parse_nbp_rates", return_value=[corrected]),
+                patch.object(update, "parse_nbp_rates", side_effect=[archive, current]),
             ):
                 added = update.sync_nbp(object(), "2026-09-04T00:00:00Z")
 
