@@ -30,6 +30,9 @@ from scripts.sources import (
     utc_now,
 )
 
+NBP_CURRENT_RATES_URL = "https://static.nbp.pl/dane/stopy/stopy_procentowe.xml"
+NBP_HISTORY_START = "2022-05-06"
+
 COMMON_REQUIRED_CROSS_CHECK_FIELDS = (
     "seriesCode",
     "saleFrom",
@@ -118,17 +121,54 @@ def sync_gus(session: Any, start_year: int, end_year: int, verified_at: str) -> 
     return added
 
 
+def _validated_nbp_observations(
+    archive: list[dict[str, Any]], current: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    scoped_archive = [item for item in archive if item["effectiveFrom"] >= NBP_HISTORY_START]
+    if not scoped_archive:
+        raise SourceError(f"NBP archive contains no reference-rate data from {NBP_HISTORY_START}")
+    if len(current) != 1:
+        raise SourceError(f"NBP current-rate file must contain exactly one reference rate, got {len(current)}")
+
+    latest_archive = scoped_archive[-1]
+    current_rate = dict(current[0])
+    current_rate["source"] = NBP_CURRENT_RATES_URL
+
+    if current_rate["effectiveFrom"] < latest_archive["effectiveFrom"]:
+        raise SourceError(
+            "NBP current-rate file is older than the archive: "
+            f"current={current_rate['effectiveFrom']}, archive={latest_archive['effectiveFrom']}"
+        )
+    if current_rate["effectiveFrom"] == latest_archive["effectiveFrom"]:
+        if current_rate["annualRatePercent"] != latest_archive["annualRatePercent"]:
+            raise SourceError(
+                "NBP archive and current-rate file disagree on the latest reference rate: "
+                f"archive={latest_archive['annualRatePercent']}, current={current_rate['annualRatePercent']}"
+            )
+        return scoped_archive
+
+    return [*scoped_archive, current_rate]
+
+
 def sync_nbp(session: Any, verified_at: str) -> int:
     path = DATA / "reference" / "nbp-reference-rates.json"
     source = load_json(path)
-    xml = fetch(session, NBP_RATES_URL, "application/xml,text/xml").decode("utf-8-sig")
-    incoming = parse_nbp_rates(xml)
+    archive_xml = fetch(session, NBP_RATES_URL, "application/xml,text/xml").decode("utf-8-sig")
+    current_xml = fetch(session, NBP_CURRENT_RATES_URL, "application/xml,text/xml").decode("utf-8-sig")
+    archive = parse_nbp_rates(archive_xml)
+    current = parse_nbp_rates(current_xml)
+    incoming = _validated_nbp_observations(archive, current)
     merged = _merge_revisions(source["observations"], incoming, "effectiveFrom", "annualRatePercent")
     added = len(merged) - len(source["observations"])
     if added:
         source.update({
             "verifiedAt": verified_at,
-            "source": {"publisher": "NBP", "url": NBP_RATES_URL, "verifiedAt": verified_at},
+            "source": {
+                "publisher": "NBP",
+                "url": NBP_RATES_URL,
+                "currentUrl": NBP_CURRENT_RATES_URL,
+                "verifiedAt": verified_at,
+            },
             "observations": merged,
         })
         write_json(path, source)
