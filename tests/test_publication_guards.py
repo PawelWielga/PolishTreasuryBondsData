@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from scripts import check_generated_tree, check_immutable_snapshots
+from scripts import check_generated_tree, check_immutable_snapshots, update
 
 
 class GitRepositoryTestCase(unittest.TestCase):
@@ -127,6 +127,20 @@ class GeneratedTreeGuardTests(GitRepositoryTestCase):
 
         with patch.object(check_generated_tree, "ROOT", self.root):
             self.assertEqual([], check_generated_tree.generated_tree_changes())
+
+    def test_update_check_uses_strong_guard_and_detects_untracked_output(self) -> None:
+        self.write("data/tracked.json")
+        self.commit_all("baseline")
+        self.write("publication/v1/snapshots/rev-untracked/manifest.json")
+
+        with (
+            patch.object(check_generated_tree, "ROOT", self.root),
+            patch.object(update, "build_dist", return_value="revision-a"),
+            patch("sys.argv", ["update.py", "--offline", "--check"]),
+        ):
+            result = update.main()
+
+        self.assertEqual(1, result)
 
 
 if __name__ == "__main__":
