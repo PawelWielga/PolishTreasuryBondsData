@@ -19,7 +19,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 MF_PAGE_URL = "https://www.gov.pl/web/finanse/obligacje-detaliczne1"
-NBP_RATES_URL = "https://nbp.pl/podstawowe-stopy-procentowe-archiwum/"
+NBP_RATES_URL = "https://static.nbp.pl/dane/stopy/stopy_procentowe_archiwum.xml"
 GUS_BASE_URL = "https://api-sdp.stat.gov.pl/api/1.1.0"
 USER_AGENT = "PolishTreasuryBondsData/2.0 (+https://github.com/PawelWielga/PolishTreasuryBondsData)"
 
@@ -419,11 +419,18 @@ def parse_nbp_rates(html_or_xml: str) -> list[dict[str, Any]]:
         try:
             root = ET.fromstring(document)
         except ET.ParseError as exc:
-            raise SourceError(f"NBP embedded rate XML is malformed: {exc}") from exc
+            raise SourceError(f"NBP rate XML is malformed: {exc}") from exc
+        parents = {child: parent for parent in root.iter() for child in parent}
         for element in root.iter():
             if element.attrib.get("id") != "ref":
                 continue
-            effective = element.attrib.get("obowiazuje_od") or element.attrib.get("obowiązuje_od")
+            parent = parents.get(element)
+            effective = (
+                element.attrib.get("obowiazuje_od")
+                or element.attrib.get("obowiązuje_od")
+                or (parent.attrib.get("obowiazuje_od") if parent is not None else None)
+                or (parent.attrib.get("obowiązuje_od") if parent is not None else None)
+            )
             raw_rate = element.attrib.get("oprocentowanie")
             if not effective or not raw_rate:
                 raise SourceError("NBP reference-rate row lacks effective date or value")
