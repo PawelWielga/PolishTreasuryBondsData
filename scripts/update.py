@@ -137,7 +137,7 @@ def _validated_nbp_observations(
     previously_published_dates = {
         item["effectiveFrom"]
         for item in existing
-        if NBP_HISTORY_START <= item["effectiveFrom"] <= latest_archive["effectiveFrom"]
+        if item["effectiveFrom"] >= NBP_HISTORY_START
     }
     missing_dates = sorted(previously_published_dates - archive_dates)
     if missing_dates:
@@ -169,6 +169,12 @@ def sync_nbp(session: Any, verified_at: str) -> int:
     incoming = _validated_nbp_observations(archive, current, source["observations"])
     merged = _merge_revisions(source["observations"], incoming, "effectiveFrom", "annualRatePercent")
     added = len(merged) - len(source["observations"])
+    provenance_changed = False
+    for observation in merged:
+        if observation.get("source") != NBP_RATES_URL:
+            observation["source"] = NBP_RATES_URL
+            provenance_changed = True
+
     expected_source = {
         "publisher": "NBP",
         "url": NBP_RATES_URL,
@@ -180,7 +186,7 @@ def sync_nbp(session: Any, verified_at: str) -> int:
         current_source.get("url") != NBP_RATES_URL
         or current_source.get("currentUrl") != NBP_CURRENT_RATES_URL
     )
-    if added or source_urls_changed:
+    if added or source_urls_changed or provenance_changed:
         source.update({
             "verifiedAt": verified_at,
             "source": expected_source,
