@@ -145,7 +145,7 @@ def _validated_gus_observations(
         raise SourceError(
             f"GUS source has no recent coverage for {end_year - 1} or {end_year}; latest year is {latest_year}"
         )
-    if as_of is not None:
+    if as_of is not None and end_year >= as_of.year - 1:
         latest_period_year, latest_period_month = (int(part) for part in periods[-1].split("-"))
         lag_months = (as_of.year - latest_period_year) * 12 + as_of.month - latest_period_month
         if lag_months < 0:
