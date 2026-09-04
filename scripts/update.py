@@ -12,7 +12,16 @@ from typing import Any
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from scripts.pipeline import DATA, ROOT, build_dist, load_json, load_series, write_json
+from scripts.pipeline import (
+    DATA,
+    ROOT,
+    GUS_HISTORY_START,
+    NBP_HISTORY_START,
+    build_dist,
+    load_json,
+    load_series,
+    write_json,
+)
 from scripts.sources import (
     MF_PAGE_URL,
     NBP_RATES_URL,
@@ -31,8 +40,6 @@ from scripts.sources import (
 )
 
 NBP_CURRENT_RATES_URL = "https://static.nbp.pl/dane/stopy/stopy_procentowe.xml"
-NBP_HISTORY_START = "2022-05-06"
-
 COMMON_REQUIRED_CROSS_CHECK_FIELDS = (
     "seriesCode",
     "saleFrom",
@@ -106,10 +113,73 @@ def _merge_revisions(existing: list[dict[str, Any]], incoming: list[dict[str, An
     return sorted(result, key=lambda item: (item[identity], item["revision"]))
 
 
+def _validated_gus_observations(
+    incoming: list[dict[str, Any]],
+    existing: list[dict[str, Any]],
+    start_year: int,
+    end_year: int,
+) -> list[dict[str, Any]]:
+    if start_year > end_year:
+        raise SourceError(f"GUS invalid requested range: {start_year}-{end_year}")
+
+    periods = [item["period"] for item in incoming]
+    if len(periods) != len(set(periods)):
+        raise SourceError("GUS source contains duplicate monthly observations")
+    periods = sorted(periods)
+    if not periods:
+        raise SourceError("GUS source returned no CPI observations")
+
+    expected_start = f"{start_year:04d}-01"
+    if periods[0] != expected_start:
+        raise SourceError(f"GUS source no longer covers requested history from {expected_start}")
+
+    by_year: dict[str, list[str]] = {}
+    for period in periods:
+        by_year.setdefault(period[:4], []).append(period)
+    years = sorted(by_year)
+    latest_year = int(years[-1])
+    if latest_year > end_year:
+        raise SourceError(f"GUS source returned future year {latest_year} beyond requested {end_year}")
+    if latest_year < end_year - 1:
+        raise SourceError(
+            f"GUS source has no recent coverage for {end_year - 1} or {end_year}; latest year is {latest_year}"
+        )
+
+    expected_years = [str(year) for year in range(start_year, latest_year + 1)]
+    if years != expected_years:
+        missing_years = sorted(set(expected_years) - set(years))
+        raise SourceError(f"GUS source coverage is missing years: {missing_years}")
+
+    for year in years:
+        periods_for_year = by_year[year]
+        required_count = 12 if int(year) < latest_year else len(periods_for_year)
+        expected_periods = [f"{year}-{month:02d}" for month in range(1, required_count + 1)]
+        if periods_for_year != expected_periods:
+            raise SourceError(f"GUS source coverage is incomplete/non-contiguous for {year}")
+
+    incoming_periods = set(periods)
+    previously_published_periods = {
+        item["period"]
+        for item in existing
+        if start_year <= int(item["period"][:4]) <= end_year
+    }
+    missing_periods = sorted(previously_published_periods - incoming_periods)
+    if missing_periods:
+        raise SourceError(
+            "GUS source lost previously published CPI periods: " + ", ".join(missing_periods)
+        )
+    return incoming
+
+
 def sync_gus(session: Any, start_year: int, end_year: int, verified_at: str) -> int:
     path = DATA / "reference" / "gus-cpi.json"
     source = load_json(path)
-    incoming = fetch_gus_history(session, start_year, end_year)
+    incoming = _validated_gus_observations(
+        fetch_gus_history(session, start_year, end_year),
+        source["observations"],
+        start_year,
+        end_year,
+    )
     merged = _merge_revisions(source["observations"], incoming, "period", "indexPreviousYear100")
     added = len(merged) - len(source["observations"])
     if added:
@@ -202,6 +272,34 @@ def sync_nbp(session: Any, verified_at: str) -> int:
     return added
 
 
+def _validated_mf_series(
+    parsed: list[dict[str, Any]],
+    existing: list[dict[str, Any]],
+    as_of: date,
+) -> list[dict[str, Any]]:
+    parsed_codes = [item["seriesCode"] for item in parsed]
+    if len(parsed_codes) != len(set(parsed_codes)):
+        raise SourceError("MF workbook contains duplicate supported series codes")
+
+    current_by_code: dict[str, dict[str, Any]] = {}
+    for item in existing:
+        previous = current_by_code.get(item["seriesCode"])
+        if previous is None or item["termsRevision"] > previous["termsRevision"]:
+            current_by_code[item["seriesCode"]] = item
+
+    required_codes = {
+        series_code
+        for series_code, item in current_by_code.items()
+        if _can_still_be_outstanding(item, as_of)
+    }
+    missing_codes = sorted(required_codes - set(parsed_codes))
+    if missing_codes:
+        raise SourceError(
+            "MF workbook lost previously published outstanding series: " + ", ".join(missing_codes)
+        )
+    return parsed
+
+
 def sync_mf(session: Any, verified_date: str, workbook_path: Path | None = None, cross_check: bool = True) -> tuple[int, int]:
     if workbook_path:
         workbook_content = workbook_path.read_bytes()
@@ -210,10 +308,12 @@ def sync_mf(session: Any, verified_date: str, workbook_path: Path | None = None,
         page = fetch(session, MF_PAGE_URL, "text/html,application/xhtml+xml").decode("utf-8")
         workbook_url = discover_mf_workbook(page)
         workbook_content = fetch(session, workbook_url, "application/vnd.ms-excel,application/octet-stream")
+    as_of = date.fromisoformat(verified_date)
     parsed = [
         item for item in parse_mf_workbook(workbook_content, workbook_url, verified_date)
-        if _can_still_be_outstanding(item, date.fromisoformat(verified_date))
+        if _can_still_be_outstanding(item, as_of)
     ]
+    parsed = _validated_mf_series(parsed, load_series(), as_of)
 
     if cross_check:
         for series in parsed:
@@ -294,7 +394,7 @@ def main() -> int:
     parser.add_argument("--mf-only", action="store_true", help="Refresh only the MF workbook/catalog")
     parser.add_argument("--mf-workbook", type=Path, help="Use a local official MF workbook instead of downloading it")
     parser.add_argument("--skip-cross-check", action="store_true", help="Skip live HTML cross-check (fixtures/bootstrap only)")
-    parser.add_argument("--gus-start-year", type=int, default=2014)
+    parser.add_argument("--gus-start-year", type=int, default=int(GUS_HISTORY_START[:4]))
     parser.add_argument("--as-of", help="Deterministic verification date (YYYY-MM-DD)")
     args = parser.parse_args()
 

@@ -115,7 +115,7 @@ The public catalog includes every series from the workbook that can still be out
 
 Monthly year-over-year CPI comes from the official public SDP API. Years through 2025 use indicator `1832`; 2026+ uses variable `305`, COICOP 2018 section `1698`, with complete pagination. The dataset preserves both the official previous-year-100 index and the derived exact percentage difference, including negative CPI.
 
-CPI rows are source observations only. There is deliberately no `appliesToInterestPeriodStartMonth`, inflation floor or latest-value fallback. A missing period remains missing and incomplete closed years fail validation.
+CPI rows are source observations only. There is deliberately no `appliesToInterestPeriodStartMonth`, inflation floor or latest-value fallback. The updater requires every previously published period to remain present in the official response and rejects gaps or missing closed years. Year completeness is based on the latest observed CPI year rather than the calendar changing on January 1, so the previous December may remain legitimately unpublished until GUS releases it; once a newer-year observation appears, the preceding year must be complete.
 
 ### NBP reference rate
 

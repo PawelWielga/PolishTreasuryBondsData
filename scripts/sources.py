@@ -393,7 +393,7 @@ def fetch_gus_history(
                 page += 1
                 sleep(0.2)
             sleep(0.2)
-        observations.extend(parse_gus_variable_responses(payloads, year, require_complete=year < date.today().year))
+        observations.extend(parse_gus_variable_responses(payloads, year, require_complete=False))
     return observations
 
 
