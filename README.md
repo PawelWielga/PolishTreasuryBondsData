@@ -126,7 +126,7 @@ https://static.nbp.pl/dane/stopy/stopy_procentowe_archiwum.xml
 https://static.nbp.pl/dane/stopy/stopy_procentowe.xml
 ```
 
-The archive provides the change timeline and the current file independently confirms the latest effective reference rate. The updater fails closed when the two official files disagree or when the current file is older than the archive. If the current file contains a newer decision that has not yet appeared in the archive, that current observation is published so ROR/DOR calculations do not lag behind NBP.
+The archive provides the complete supported change timeline and the current file independently confirms the latest effective reference rate. The updater requires both files to identify the same latest effective date and percentage value. It also verifies that the archive still contains every previously published effective date within the supported range. Any disagreement, source lag in either direction or regression in archive coverage fails closed and preserves the last-known-good snapshot instead of guessing a missing decision.
 
 The published NBP history intentionally starts at `2022-05-06`, the first reference-rate observation needed for supported ROR/DOR offerings. Older entries present in the NBP archive are not backfilled into this contract. The dataset publishes exact effective dates and percentage strings and does not choose a rate for any ROR/DOR interest period.
 
