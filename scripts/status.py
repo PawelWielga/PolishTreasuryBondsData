@@ -44,6 +44,11 @@ def derive_source_health(item: dict[str, Any], as_of: datetime) -> str:
     window. Transient FAILED attempts are deliberately not required for this
     calculation, so a failed updater cannot keep a source FRESH merely because
     its working-tree status was never committed.
+
+    A success timestamp in the future is invalid operational state. It is
+    rendered as UNAVAILABLE instead of raising, so the scheduled Pages health
+    refresh can still publish a conservative status rather than leaving an old
+    public FRESH result in place indefinitely.
     """
     last_success = item.get("lastSuccessAt")
     if not last_success:
@@ -52,9 +57,7 @@ def derive_source_health(item: dict[str, Any], as_of: datetime) -> str:
     as_of_utc = as_of.astimezone(timezone.utc)
     success_at = parse_instant(last_success)
     if success_at > as_of_utc:
-        raise ValueError(
-            f"Source lastSuccessAt {last_success} is in the future relative to {canonical_instant(as_of)}"
-        )
+        return "UNAVAILABLE"
 
     stale_at = success_at + timedelta(hours=int(item["staleAfterHours"]))
     if as_of_utc >= stale_at:
