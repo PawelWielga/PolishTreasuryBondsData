@@ -2,7 +2,13 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 from pathlib import Path
+
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from scripts.sources import NBP_RATES_URL
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -28,7 +34,7 @@ def main() -> None:
     print(f"- generated snapshot files: {len(snapshots)}")
     print("- primary series source: https://www.gov.pl/web/finanse/obligacje-detaliczne1")
     print("- CPI source: https://api-sdp.stat.gov.pl")
-    print("- NBP source: https://nbp.pl/podstawowe-stopy-procentowe-archiwum/")
+    print(f"- NBP source: {NBP_RATES_URL}")
     print()
     print("All cross-source, schema, semantic, golden-fixture and immutable-snapshot checks passed.")
     print("Any source disagreement stops the workflow before this pull request is created.")
