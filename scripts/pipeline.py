@@ -135,13 +135,17 @@ def build_dist() -> str:
 
 def _write_immutable_snapshot(snapshot: Path, files: dict[str, bytes]) -> None:
     if snapshot.exists():
+        if snapshot.is_symlink() or not snapshot.is_dir():
+            raise ValueError(f"Immutable snapshot {snapshot.name} is not a real directory")
         for name, expected in files.items():
             path = snapshot / name
-            if not path.exists() or path.read_bytes() != expected:
+            if path.is_symlink() or not path.is_file() or path.read_bytes() != expected:
                 raise ValueError(f"Immutable snapshot {snapshot.name} would be rewritten: {name}")
-        unexpected = {path.name for path in snapshot.iterdir() if path.is_file()} - set(files)
+        unexpected = {path.name for path in snapshot.iterdir()} - set(files)
         if unexpected:
-            raise ValueError(f"Immutable snapshot {snapshot.name} contains unexpected files: {sorted(unexpected)}")
+            raise ValueError(
+                f"Immutable snapshot {snapshot.name} contains unexpected entries: {sorted(unexpected)}"
+            )
         return
     snapshot.mkdir(parents=True)
     for name, content in files.items():
