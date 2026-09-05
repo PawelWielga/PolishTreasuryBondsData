@@ -8,6 +8,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from scripts import check_generated_tree, check_immutable_snapshots, update
+from scripts.status import SOURCE_STALE_AFTER_HOURS
 
 
 class GitRepositoryTestCase(unittest.TestCase):
@@ -52,6 +53,22 @@ class GitRepositoryTestCase(unittest.TestCase):
     def write_snapshot(self, revision: str) -> None:
         for filename in check_immutable_snapshots.EXPECTED_SNAPSHOT_FILES:
             self.write(f"publication/v1/snapshots/{revision}/{filename}")
+
+    def write_source_status(self, overrides: dict[str, int] | None = None) -> None:
+        thresholds = {**SOURCE_STALE_AFTER_HOURS, **(overrides or {})}
+        self.write(
+            "data/source-status.json",
+            json.dumps(
+                {
+                    "sources": {
+                        name: {"staleAfterHours": hours}
+                        for name, hours in thresholds.items()
+                    }
+                },
+                indent=2,
+            )
+            + "\n",
+        )
 
     def commit_all(self, message: str) -> str:
         self.git("add", "-A")
@@ -160,7 +177,30 @@ class GeneratedTreeGuardTests(GitRepositoryTestCase):
         with patch.object(check_generated_tree, "ROOT", self.root):
             self.assertEqual([], check_generated_tree.generated_tree_changes())
 
+    def test_source_freshness_thresholds_match_contract(self) -> None:
+        self.write_source_status()
+
+        with patch.object(check_generated_tree, "ROOT", self.root):
+            self.assertEqual([], check_generated_tree.source_status_contract_violations())
+
+    def test_modified_nbp_freshness_threshold_is_rejected(self) -> None:
+        self.write_source_status({"nbp": 1680})
+
+        with patch.object(check_generated_tree, "ROOT", self.root):
+            violations = check_generated_tree.source_status_contract_violations()
+
+        self.assertTrue(any("nbp.staleAfterHours must be 168" in line for line in violations))
+
+    def test_unexpected_source_status_entry_is_rejected(self) -> None:
+        self.write_source_status({"other": 24})
+
+        with patch.object(check_generated_tree, "ROOT", self.root):
+            violations = check_generated_tree.source_status_contract_violations()
+
+        self.assertTrue(any("unexpected sources: other" in line for line in violations))
+
     def test_update_check_uses_strong_guard_and_detects_untracked_output(self) -> None:
+        self.write_source_status()
         self.write("data/tracked.json")
         self.commit_all("baseline")
         self.write("publication/v1/snapshots/rev-untracked/manifest.json")
