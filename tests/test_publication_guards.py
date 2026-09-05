@@ -49,6 +49,10 @@ class GitRepositoryTestCase(unittest.TestCase):
             + "\n",
         )
 
+    def write_snapshot(self, revision: str) -> None:
+        for filename in check_immutable_snapshots.EXPECTED_SNAPSHOT_FILES:
+            self.write(f"publication/v1/snapshots/{revision}/{filename}")
+
     def commit_all(self, message: str) -> str:
         self.git("add", "-A")
         self.git("commit", "-qm", message)
@@ -82,11 +86,39 @@ class ImmutableSnapshotGuardTests(GitRepositoryTestCase):
         self.assertTrue(any("unexpected.json" in line for line in self.violations()))
 
     def test_selected_entirely_new_snapshot_is_allowed(self) -> None:
-        self.write("publication/v1/snapshots/rev-new/manifest.json")
-        self.write("publication/v1/snapshots/rev-new/catalog.json")
+        self.write_snapshot("rev-new")
         self.write_latest("rev-new")
         self.commit_all("add selected snapshot")
         self.assertEqual([], self.violations())
+
+    def test_selected_new_snapshot_must_be_complete(self) -> None:
+        self.write("publication/v1/snapshots/rev-new/manifest.json")
+        self.write_latest("rev-new")
+        self.commit_all("add incomplete selected snapshot")
+
+        violations = self.violations()
+
+        self.assertTrue(any("incomplete" in line for line in violations))
+
+    def test_nested_content_in_selected_new_snapshot_is_rejected(self) -> None:
+        self.write_snapshot("rev-new")
+        self.write("publication/v1/snapshots/rev-new/extra/payload.json")
+        self.write_latest("rev-new")
+        self.commit_all("add nested snapshot content")
+
+        violations = self.violations()
+
+        self.assertTrue(any("extra/payload.json" in line and "unexpected path" in line for line in violations))
+
+    def test_extra_top_level_file_in_selected_new_snapshot_is_rejected(self) -> None:
+        self.write_snapshot("rev-new")
+        self.write("publication/v1/snapshots/rev-new/notes.txt", "unexpected\n")
+        self.write_latest("rev-new")
+        self.commit_all("add unexpected snapshot file")
+
+        violations = self.violations()
+
+        self.assertTrue(any("notes.txt" in line and "unexpected path" in line for line in violations))
 
     def test_unreferenced_new_snapshot_is_rejected(self) -> None:
         self.write("publication/v1/snapshots/rev-extra/manifest.json")
@@ -98,7 +130,7 @@ class ImmutableSnapshotGuardTests(GitRepositoryTestCase):
         self.assertTrue(any("rev-extra" in line and "not selected" in line for line in violations))
 
     def test_extra_new_snapshot_is_rejected_when_another_new_snapshot_is_selected(self) -> None:
-        self.write("publication/v1/snapshots/rev-selected/manifest.json")
+        self.write_snapshot("rev-selected")
         self.write("publication/v1/snapshots/rev-extra/manifest.json")
         self.write_latest("rev-selected")
         self.commit_all("add selected and extra snapshots")
