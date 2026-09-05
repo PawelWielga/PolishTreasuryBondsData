@@ -60,7 +60,7 @@
                 "url": { "type": "string", "format": "uri" },
                 "verifiedAt": { "type": "string", "format": "date" }
               },
-              "required": ["url"],
+              "required": ["url", "verifiedAt"],
               "additionalProperties": false
             },
             "verifiedAt": { "type": "string", "format": "date" }
