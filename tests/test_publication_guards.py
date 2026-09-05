@@ -184,6 +184,53 @@ class ImmutableSnapshotGuardTests(GitRepositoryTestCase):
         self.assertTrue(any("rev-extra" in line and "not selected" in line for line in violations))
 
 
+class ImmutableSnapshotArchiveTests(GitRepositoryTestCase):
+    def setUp(self) -> None:
+        super().setUp()
+        self.write_snapshot("rev-reviewed")
+        self.write_latest("rev-reviewed")
+        self.creation = self.commit_all("publish reviewed snapshot")
+
+    def violations(self) -> list[str]:
+        with patch.object(check_immutable_snapshots, "ROOT", self.root):
+            return check_immutable_snapshots.archive_integrity_violations()
+
+    def test_unchanged_archive_matches_first_reviewed_history(self) -> None:
+        self.assertEqual([], self.violations())
+
+    def test_old_snapshot_mutation_remains_rejected_after_unrelated_later_commit(self) -> None:
+        self.write("publication/v1/snapshots/rev-reviewed/manifest.json", "mutated\n")
+        self.commit_all("bypass immutable snapshot guard")
+        self.write("README.md", "later unrelated change\n")
+        self.commit_all("later unrelated change")
+
+        violations = self.violations()
+
+        self.assertTrue(any("manifest.json" in line and self.creation in line for line in violations))
+
+    def test_old_snapshot_extension_remains_rejected_after_unrelated_later_commit(self) -> None:
+        self.write("publication/v1/snapshots/rev-reviewed/notes.txt", "unexpected\n")
+        self.commit_all("bypass immutable snapshot guard")
+        self.write("README.md", "later unrelated change\n")
+        self.commit_all("later unrelated change")
+
+        violations = self.violations()
+
+        self.assertTrue(any("unexpected entries: notes.txt" in line for line in violations))
+        self.assertTrue(any("notes.txt" in line and self.creation in line for line in violations))
+
+    def test_old_snapshot_deletion_remains_rejected_after_unrelated_later_commit(self) -> None:
+        (self.root / "publication/v1/snapshots/rev-reviewed/catalog.json").unlink()
+        self.commit_all("bypass immutable snapshot guard")
+        self.write("README.md", "later unrelated change\n")
+        self.commit_all("later unrelated change")
+
+        violations = self.violations()
+
+        self.assertTrue(any("missing canonical files: catalog.json" in line for line in violations))
+        self.assertTrue(any("catalog.json" in line and self.creation in line for line in violations))
+
+
 class GeneratedTreeGuardTests(GitRepositoryTestCase):
     def test_untracked_generated_file_is_detected(self) -> None:
         self.write("data/tracked.json")
