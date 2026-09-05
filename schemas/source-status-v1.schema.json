@@ -20,6 +20,21 @@
           "staleAfterHours": { "type": "integer", "minimum": 1 },
           "message": { "type": ["string", "null"] }
         },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "status": { "enum": ["FRESH", "STALE", "PARTIAL"] }
+              },
+              "required": ["status"]
+            },
+            "then": {
+              "properties": {
+                "lastSuccessAt": { "type": "string", "format": "date-time" }
+              }
+            }
+          }
+        ],
         "additionalProperties": false
       }
     }
