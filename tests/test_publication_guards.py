@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import tempfile
@@ -69,6 +70,31 @@ class GitRepositoryTestCase(unittest.TestCase):
             )
             + "\n",
         )
+
+    def write_mf_series_with_artifact(
+        self,
+        content: str = "official workbook bytes\n",
+        *,
+        artifact_content: str | None = None,
+    ) -> str:
+        digest = hashlib.sha256(content.encode("utf-8")).hexdigest()
+        self.write(
+            "data/series/ROR/ROR0927/terms-v1.json",
+            json.dumps(
+                {
+                    "provenance": {
+                        "primary": {
+                            "sha256": digest,
+                        }
+                    }
+                },
+                indent=2,
+            )
+            + "\n",
+        )
+        if artifact_content is not None:
+            self.write(f"data/sources/mf/{digest}.xls", artifact_content)
+        return digest
 
     def commit_all(self, message: str) -> str:
         self.git("add", "-A")
@@ -198,6 +224,39 @@ class GeneratedTreeGuardTests(GitRepositoryTestCase):
             violations = check_generated_tree.source_status_contract_violations()
 
         self.assertTrue(any("unexpected sources: other" in line for line in violations))
+
+    def test_referenced_mf_source_artifact_is_verified(self) -> None:
+        content = "official workbook bytes\n"
+        self.write_mf_series_with_artifact(content, artifact_content=content)
+
+        with patch.object(check_generated_tree, "ROOT", self.root):
+            self.assertEqual([], check_generated_tree.mf_source_artifact_violations())
+
+    def test_missing_referenced_mf_source_artifact_is_rejected(self) -> None:
+        digest = self.write_mf_series_with_artifact()
+
+        with patch.object(check_generated_tree, "ROOT", self.root):
+            violations = check_generated_tree.mf_source_artifact_violations()
+
+        self.assertTrue(any(digest in line and "missing" in line for line in violations))
+
+    def test_tampered_mf_source_artifact_is_rejected(self) -> None:
+        digest = self.write_mf_series_with_artifact(artifact_content="tampered\n")
+
+        with patch.object(check_generated_tree, "ROOT", self.root):
+            violations = check_generated_tree.mf_source_artifact_violations()
+
+        self.assertTrue(any(digest in line and "SHA-256 mismatch" in line for line in violations))
+
+    def test_unreferenced_mf_source_artifact_is_rejected(self) -> None:
+        content = "orphan workbook\n"
+        digest = hashlib.sha256(content.encode("utf-8")).hexdigest()
+        self.write(f"data/sources/mf/{digest}.xls", content)
+
+        with patch.object(check_generated_tree, "ROOT", self.root):
+            violations = check_generated_tree.mf_source_artifact_violations()
+
+        self.assertTrue(any("unreferenced or unexpected entries" in line for line in violations))
 
     def test_update_check_uses_strong_guard_and_detects_untracked_output(self) -> None:
         self.write_source_status()
