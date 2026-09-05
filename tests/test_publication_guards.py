@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -219,7 +220,7 @@ class ImmutableSnapshotArchiveTests(GitRepositoryTestCase):
         self.assertTrue(any("unexpected entries: notes.txt" in line for line in violations))
         self.assertTrue(any("notes.txt" in line and self.creation in line for line in violations))
 
-    def test_old_snapshot_deletion_remains_rejected_after_unrelated_later_commit(self) -> None:
+    def test_old_snapshot_file_deletion_remains_rejected_after_unrelated_later_commit(self) -> None:
         (self.root / "publication/v1/snapshots/rev-reviewed/catalog.json").unlink()
         self.commit_all("bypass immutable snapshot guard")
         self.write("README.md", "later unrelated change\n")
@@ -229,6 +230,22 @@ class ImmutableSnapshotArchiveTests(GitRepositoryTestCase):
 
         self.assertTrue(any("missing canonical files: catalog.json" in line for line in violations))
         self.assertTrue(any("catalog.json" in line and self.creation in line for line in violations))
+
+    def test_entire_old_snapshot_deletion_remains_rejected_after_unrelated_later_commit(self) -> None:
+        shutil.rmtree(self.root / "publication/v1/snapshots/rev-reviewed")
+        self.commit_all("bypass immutable snapshot guard")
+        self.write("README.md", "later unrelated change\n")
+        self.commit_all("later unrelated change")
+
+        violations = self.violations()
+
+        self.assertTrue(
+            any(
+                "rev-reviewed" in line
+                and "historical snapshot directory is missing from current tree" in line
+                for line in violations
+            )
+        )
 
 
 class GeneratedTreeGuardTests(GitRepositoryTestCase):
