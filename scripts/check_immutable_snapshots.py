@@ -9,6 +9,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SNAPSHOTS_ROOT = "publication/v1/snapshots"
 LATEST_PATH = "publication/v1/latest.json"
+EXPECTED_SNAPSHOT_FILES = frozenset(
+    {
+        "catalog.json",
+        "product-definitions.json",
+        "gus-cpi.json",
+        "nbp-reference-rates.json",
+        "manifest.json",
+    }
+)
 
 
 def _git(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -30,6 +39,16 @@ def _snapshot_directory(path: str) -> str | None:
     if not separator or not revision:
         return None
     return f"{SNAPSHOTS_ROOT}/{revision}"
+
+
+def _snapshot_relative_path(snapshot: str, path: str) -> str | None:
+    prefix = snapshot + "/"
+    if not path.startswith(prefix):
+        return None
+    relative = path[len(prefix) :]
+    if not relative or "/" in relative:
+        return None
+    return relative
 
 
 def _exists_in_revision(revision: str, path: str) -> bool:
@@ -62,10 +81,13 @@ def immutable_snapshot_violations(base: str, head: str = "HEAD") -> list[str]:
 
     Every snapshot directory already present in the reviewed base revision is
     byte-immutable. A candidate may add only the single new snapshot selected by
-    the candidate's ``latest.json``; arbitrary extra snapshot directories are
-    rejected so Pages cannot publish unreferenced data under a permanent URL.
+    the candidate's ``latest.json``. A new snapshot must contain exactly the
+    canonical five top-level files; nested or arbitrary extra content is rejected
+    before it can acquire a permanent Pages URL.
     """
     selected_snapshot = _selected_snapshot(head)
+    selected_is_new = not _exists_in_revision(base, selected_snapshot)
+    selected_additions: set[str] = set()
     diff = _git(
         "diff",
         "--name-status",
@@ -97,14 +119,31 @@ def immutable_snapshot_violations(base: str, head: str = "HEAD") -> list[str]:
                 violations.append(
                     f"{status}\t{path} (new snapshot is not selected by {LATEST_PATH})"
                 )
+                continue
+
+            relative = _snapshot_relative_path(snapshot, path)
+            if relative is None or relative not in EXPECTED_SNAPSHOT_FILES:
+                violations.append(
+                    f"{status}\t{path} (unexpected path in selected snapshot)"
+                )
+                continue
+            selected_additions.add(relative)
+
+    if selected_is_new:
+        missing = sorted(EXPECTED_SNAPSHOT_FILES - selected_additions)
+        if missing:
+            violations.append(
+                "selected snapshot is incomplete; missing canonical files: " + ", ".join(missing)
+            )
+
     return violations
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Reject rewrites of reviewed immutable snapshots and unselected new "
-            "snapshot directories"
+            "Reject rewrites of reviewed immutable snapshots and non-canonical "
+            "new snapshot contents"
         )
     )
     parser.add_argument("--base", required=True, help="Reviewed base commit/ref")
