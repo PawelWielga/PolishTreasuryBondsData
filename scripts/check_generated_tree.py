@@ -91,6 +91,11 @@ def source_status_contract_violations() -> list[str]:
                     f"{SOURCE_STATUS_PATH}: {name} with lastAttemptStatus NEVER "
                     "must not have attempt/success timestamps"
                 )
+            if durable_status != "UNAVAILABLE":
+                violations.append(
+                    f"{SOURCE_STATUS_PATH}: {name} with lastAttemptStatus NEVER "
+                    "must have durable status UNAVAILABLE"
+                )
             continue
 
         if attempt_status in {"SUCCESS", "FAILED"} and not isinstance(attempt_at, str):
@@ -121,6 +126,11 @@ def source_status_contract_violations() -> list[str]:
                 violations.append(
                     f"{SOURCE_STATUS_PATH}: {name} successful lastAttemptAt must equal lastSuccessAt"
                 )
+            if durable_status not in {"FRESH", "PARTIAL"}:
+                violations.append(
+                    f"{SOURCE_STATUS_PATH}: {name} successful durable attempt "
+                    "must have status FRESH or PARTIAL"
+                )
         elif attempt_status == "FAILED":
             if (
                 attempt_instant is not None
@@ -129,6 +139,17 @@ def source_status_contract_violations() -> list[str]:
             ):
                 violations.append(
                     f"{SOURCE_STATUS_PATH}: {name} failed lastAttemptAt cannot predate lastSuccessAt"
+                )
+            if success_at is None:
+                if durable_status != "UNAVAILABLE":
+                    violations.append(
+                        f"{SOURCE_STATUS_PATH}: {name} failed durable attempt without prior success "
+                        "must have status UNAVAILABLE"
+                    )
+            elif success_instant is not None and durable_status not in {"STALE", "PARTIAL"}:
+                violations.append(
+                    f"{SOURCE_STATUS_PATH}: {name} failed durable attempt with prior success "
+                    "must have status STALE or PARTIAL"
                 )
 
         if durable_status in {"FRESH", "PARTIAL", "STALE"} and success_at is None:
