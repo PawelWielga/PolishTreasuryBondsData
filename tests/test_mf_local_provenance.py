@@ -1,5 +1,6 @@
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from scripts.sources import SourceError
 from scripts.update import _validate_official_mf_workbook_url, sync_mf
@@ -48,6 +49,18 @@ class LocalMinistryWorkbookProvenanceTests(unittest.TestCase):
                 workbook_url=self.OFFICIAL_URL,
                 cross_check=False,
             )
+
+    def test_live_discovery_rejects_external_workbook_host_before_fetch(self) -> None:
+        page = b'''<a class="file-download"
+            href="https://evil.example/attachment/fake.xls"
+            aria-label="Dane dotyczace obligacji detalicznych plik w formacie xls">
+            Pobierz
+        </a>'''
+        with patch("scripts.update.fetch", return_value=page) as fetch_mock:
+            with self.assertRaisesRegex(SourceError, "exact official"):
+                sync_mf(object(), "2026-09-05", cross_check=False)
+
+        fetch_mock.assert_called_once()
 
 
 if __name__ == "__main__":
