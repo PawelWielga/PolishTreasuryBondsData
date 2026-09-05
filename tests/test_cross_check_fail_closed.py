@@ -1,5 +1,7 @@
+import copy
 import unittest
 
+from scripts import pipeline
 from scripts.sources import SourceError, parse_series_html
 from scripts.update import required_cross_check_fields, validate_cross_check_facts
 
@@ -86,6 +88,25 @@ class CrossCheckCompletenessTests(unittest.TestCase):
             "maturityMonths": None,
         }
         validate_cross_check_facts(series, facts, CROSS_CHECK_URL)
+
+    def test_catalog_rejects_cross_check_without_verification_evidence(self):
+        item = copy.deepcopy(
+            next(
+                series
+                for series in pipeline.load_series()
+                if series["provenance"].get("crossCheck") is not None
+            )
+        )
+        item["provenance"]["crossCheck"].pop("verifiedAt", None)
+        document = {
+            "schemaVersion": "2.0",
+            "generatedAt": "2026-09-03T00:00:00Z",
+            "series": [item],
+        }
+        schema = pipeline.load_json(pipeline.SCHEMAS / "catalog-v2.schema.json")
+
+        with self.assertRaisesRegex(ValueError, "verifiedAt.*required"):
+            pipeline._validate_schema(document, schema, "catalog.json")
 
 
 if __name__ == "__main__":

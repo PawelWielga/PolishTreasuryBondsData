@@ -125,10 +125,11 @@ class RuntimeFreshnessTests(unittest.TestCase):
                 }
             }
             (data / "source-status.json").write_text(json.dumps(source), encoding="utf-8")
+            selected_revision = "20260903T000000Z-aaaaaaaaaaaa"
             latest = {
                 "schemaVersion": "1.0",
-                "datasetRevision": "revision-stays-selected",
-                "manifest": "snapshots/revision-stays-selected/manifest.json",
+                "datasetRevision": selected_revision,
+                "manifest": f"snapshots/{selected_revision}/manifest.json",
             }
             latest_path = publication / "latest.json"
             latest_path.write_text(json.dumps(latest), encoding="utf-8")
@@ -147,7 +148,7 @@ class RuntimeFreshnessTests(unittest.TestCase):
                 )
 
             self.assertEqual(latest_before, latest_path.read_bytes())
-            self.assertEqual("revision-stays-selected", rendered["datasetRevision"])
+            self.assertEqual(selected_revision, rendered["datasetRevision"])
             self.assertEqual("STALE", rendered["sources"]["nbp"]["status"])
 
 

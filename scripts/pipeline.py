@@ -135,13 +135,17 @@ def build_dist() -> str:
 
 def _write_immutable_snapshot(snapshot: Path, files: dict[str, bytes]) -> None:
     if snapshot.exists():
+        if snapshot.is_symlink() or not snapshot.is_dir():
+            raise ValueError(f"Immutable snapshot {snapshot.name} is not a real directory")
         for name, expected in files.items():
             path = snapshot / name
-            if not path.exists() or path.read_bytes() != expected:
+            if path.is_symlink() or not path.is_file() or path.read_bytes() != expected:
                 raise ValueError(f"Immutable snapshot {snapshot.name} would be rewritten: {name}")
-        unexpected = {path.name for path in snapshot.iterdir() if path.is_file()} - set(files)
+        unexpected = {path.name for path in snapshot.iterdir()} - set(files)
         if unexpected:
-            raise ValueError(f"Immutable snapshot {snapshot.name} contains unexpected files: {sorted(unexpected)}")
+            raise ValueError(
+                f"Immutable snapshot {snapshot.name} contains unexpected entries: {sorted(unexpected)}"
+            )
         return
     snapshot.mkdir(parents=True)
     for name, content in files.items():
@@ -433,12 +437,21 @@ def _generated_at(series: list[dict[str, Any]], gus: dict[str, Any], nbp: dict[s
 
 
 def _mf_provenance(series: list[dict[str, Any]]) -> dict[str, Any]:
-    primary = series[-1]["provenance"]["primary"]
+    source_series = max(
+        series,
+        key=lambda item: (
+            item["provenance"]["verifiedAt"],
+            item["saleFrom"],
+            item["seriesCode"],
+            item["termsRevision"],
+        ),
+    )
+    primary = source_series["provenance"]["primary"]
     return {
         "publisher": primary["publisher"],
         "url": primary["url"],
         "sha256": primary["sha256"],
-        "verifiedAt": max(item["provenance"]["verifiedAt"] for item in series),
+        "verifiedAt": source_series["provenance"]["verifiedAt"],
     }
 
 

@@ -12,6 +12,11 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
 PUBLICATION = ROOT / "publication" / "v1"
 SCHEMAS = ROOT / "schemas"
+SOURCE_STALE_AFTER_HOURS = {
+    "mf": 744,
+    "gus": 744,
+    "nbp": 168,
+}
 
 
 def load_json(path: Path) -> Any:
@@ -44,14 +49,23 @@ def derive_source_health(item: dict[str, Any], as_of: datetime) -> str:
     window. Transient FAILED attempts are deliberately not required for this
     calculation, so a failed updater cannot keep a source FRESH merely because
     its working-tree status was never committed.
+
+    A success timestamp in the future is invalid operational state. It is
+    rendered as UNAVAILABLE instead of raising, so the scheduled Pages health
+    refresh can still publish a conservative status rather than leaving an old
+    public FRESH result in place indefinitely.
     """
     last_success = item.get("lastSuccessAt")
     if not last_success:
         return "UNAVAILABLE"
 
+    as_of_utc = as_of.astimezone(timezone.utc)
     success_at = parse_instant(last_success)
+    if success_at > as_of_utc:
+        return "UNAVAILABLE"
+
     stale_at = success_at + timedelta(hours=int(item["staleAfterHours"]))
-    if as_of.astimezone(timezone.utc) >= stale_at:
+    if as_of_utc >= stale_at:
         return "STALE"
 
     if item.get("status") == "PARTIAL":
@@ -71,13 +85,28 @@ def build_runtime_status(
     }
     for name in ("mf", "gus", "nbp"):
         item = source["sources"][name]
+        expected_stale_after = SOURCE_STALE_AFTER_HOURS[name]
+        configured_stale_after = item.get("staleAfterHours")
+        contract_mismatch = configured_stale_after != expected_stale_after
+        normalized_item = {**item, "staleAfterHours": expected_stale_after}
+        message = item.get("message")
+        if contract_mismatch:
+            message = (
+                f"Invalid staleAfterHours contract for {name}: "
+                f"expected {expected_stale_after}, got {configured_stale_after!r}"
+            )
+
         result["sources"][name] = {
-            "status": derive_source_health(item, as_of),
+            "status": (
+                "UNAVAILABLE"
+                if contract_mismatch
+                else derive_source_health(normalized_item, as_of)
+            ),
             "lastAttemptAt": item.get("lastAttemptAt"),
             "lastAttemptStatus": item.get("lastAttemptStatus", "NEVER"),
             "lastSuccessAt": item.get("lastSuccessAt"),
-            "staleAfterHours": item["staleAfterHours"],
-            "message": item.get("message"),
+            "staleAfterHours": expected_stale_after,
+            "message": message,
         }
     return result
 

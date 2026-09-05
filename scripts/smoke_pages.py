@@ -83,6 +83,15 @@ def expected_revision_from_local_publication(publication_root: Path) -> str:
     return revision
 
 
+def expected_status_from_local_publication(publication_root: Path) -> tuple[bytes, dict[str, Any]]:
+    path = publication_root / "status.json"
+    try:
+        content = path.read_bytes()
+    except OSError as exc:
+        raise SmokeError(f"Could not read local expected runtime health {path}: {exc}") from exc
+    return content, parse_json(content, str(path))
+
+
 def fetch_expected_latest(
     session: requests.Session,
     latest_url: str,
@@ -107,6 +116,41 @@ def fetch_expected_latest(
             time.sleep(retry_delay_seconds * attempt)
 
     raise SmokeError(f"Deployed latest.json did not converge at {latest_url}: {last_error}")
+
+
+def fetch_expected_status(
+    session: requests.Session,
+    status_url: str,
+    expected_content: bytes,
+    expected_revision: str,
+    attempts: int,
+    retry_delay_seconds: float,
+) -> dict[str, Any]:
+    last_error: Exception | None = None
+    for attempt in range(1, attempts + 1):
+        try:
+            content = fetch_bytes(session, status_url, 1, retry_delay_seconds)
+            status = parse_json(content, status_url)
+            if content != expected_content:
+                last_error = SmokeError("deployed status.json bytes do not match the rendered artifact")
+            elif status.get("schemaVersion") != "1.0":
+                last_error = SmokeError(
+                    f"unexpected status.json schemaVersion {status.get('schemaVersion')!r}"
+                )
+            elif status.get("datasetRevision") != expected_revision:
+                last_error = SmokeError(
+                    f"status.json advertises datasetRevision {status.get('datasetRevision')!r}; "
+                    f"expected {expected_revision!r}"
+                )
+            else:
+                return status
+        except SmokeError as exc:
+            last_error = exc
+
+        if attempt < attempts:
+            time.sleep(retry_delay_seconds * attempt)
+
+    raise SmokeError(f"Deployed status.json did not converge at {status_url}: {last_error}")
 
 
 def _document_count(document: dict[str, Any]) -> int | None:
@@ -192,7 +236,15 @@ def verify_public_contract(
 ) -> tuple[str, str | None]:
     normalized_base = base_url.rstrip("/") + "/"
     latest_url = urljoin(normalized_base, "v1/latest.json")
+    status_url = urljoin(normalized_base, "v1/status.json")
     expected_revision = expected_revision_from_local_publication(publication_root)
+    expected_status_bytes, expected_status = expected_status_from_local_publication(publication_root)
+    if expected_status.get("schemaVersion") != "1.0":
+        raise SmokeError("Local rendered status.json has an unexpected schemaVersion")
+    if expected_status.get("datasetRevision") != expected_revision:
+        raise SmokeError(
+            "Local rendered status.json does not point at the selected datasetRevision"
+        )
 
     with requests.Session() as session:
         latest = fetch_expected_latest(
@@ -224,6 +276,14 @@ def verify_public_contract(
         verify_manifest_and_files(
             session,
             manifest_url,
+            revision,
+            attempts,
+            retry_delay_seconds,
+        )
+        fetch_expected_status(
+            session,
+            status_url,
+            expected_status_bytes,
             revision,
             attempts,
             retry_delay_seconds,
@@ -277,11 +337,11 @@ def main() -> int:
         return 1
 
     if prior:
-        print(f"Pages contract verified: current={revision}, prior={prior}")
+        print(f"Pages contract verified: current={revision}, prior={prior}, runtime-health=verified")
     else:
         print(
             f"Pages contract verified: current={revision}; "
-            "no earlier real datasetRevision is retained yet"
+            "runtime-health=verified; no earlier real datasetRevision is retained yet"
         )
     return 0
 
