@@ -31,8 +31,8 @@ A future change that breaks a supported schema, removes fail-closed validation, 
 - all normal changes must arrive through a pull request;
 - the GitHub Actions `validate` check is required before merge;
 - the pull-request branch must be up to date with `main` before merge;
-- one approving review is required before merge;
-- conversation-resolution is not a required branch-protection check;
+- zero approving reviews are required, which keeps the workflow practical for a single maintainer;
+- all review conversations must be resolved;
 - linear history is required;
 - force pushes are disabled;
 - deletion of `main` is disabled;
@@ -59,6 +59,8 @@ The 2026-09-05 scheduled run demonstrated this exact failure mode: MF/GUS/NBP ac
 `--mf-workbook` is a reproducibility/debugging input, not a provenance bypass. It requires the exact canonical `https://www.gov.pl/attachment/...` URL and the updater downloads that URL during the run. The local workbook is accepted only when its SHA-256 matches the bytes fetched from that official URL. Redirects may remain only within the original HTTPS origin; a redirect to another host or port fails closed.
 
 Normalized MF series and generated manifests are independently constrained to the canonical MF, GUS and NBP source endpoints, while offer cross-check URLs must remain on `www.obligacjeskarbowe.pl`. A manually edited provenance object therefore cannot make an untrusted domain look official during an offline rebuild.
+
+The scheduled updater requires the repository-level GitHub Actions setting that permits workflows to create pull requests. Default workflow token permissions remain read-only; the updater declares its write permissions explicitly.
 
 ## Pages publication
 
