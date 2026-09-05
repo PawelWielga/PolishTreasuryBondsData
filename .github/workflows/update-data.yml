@@ -19,6 +19,8 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.12.12'
@@ -31,6 +33,11 @@ jobs:
         run: python scripts/update.py
       - name: Run deterministic regression tests
         run: python -m unittest discover -s tests -v
+      - name: Verify immutable archive and deterministic candidate tree
+        run: |
+          python scripts/check_immutable_snapshots.py
+          python scripts/update.py --offline
+          python scripts/check_generated_tree.py
       - name: Build pull request summary
         run: python scripts/change_summary.py > /tmp/update-pr-body.md
       - name: Create or update one reviewed data pull request

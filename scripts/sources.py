@@ -10,7 +10,7 @@ from datetime import date, datetime, timezone
 from decimal import Decimal, ROUND_HALF_UP
 from io import BytesIO
 from typing import Any, Callable, Iterable
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 import requests
 import xlrd
@@ -89,6 +89,56 @@ def default_session() -> requests.Session:
     return session
 
 
+def _https_origin(url: str) -> tuple[str, str, int]:
+    try:
+        parsed = urlparse(url)
+        port = parsed.port or 443
+    except ValueError as exc:
+        raise SourceError(f"Official source URL is malformed: {url}") from exc
+    if (
+        parsed.scheme.lower() != "https"
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+    ):
+        raise SourceError(f"Official source URL must be credential-free HTTPS: {url}")
+    return parsed.scheme.lower(), parsed.hostname.lower(), port
+
+
+def validate_official_mf_workbook_url(workbook_url: str) -> str:
+    parsed = urlparse(workbook_url)
+    if (
+        parsed.scheme != "https"
+        or parsed.netloc != "www.gov.pl"
+        or not parsed.path.startswith("/attachment/")
+        or parsed.params
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise SourceError(
+            "MF workbook provenance must be the exact official "
+            "https://www.gov.pl/attachment/... URL"
+        )
+    return workbook_url
+
+
+def validate_official_cross_check_url(url: str) -> str:
+    parsed = urlparse(url)
+    if (
+        parsed.scheme != "https"
+        or parsed.netloc != "www.obligacjeskarbowe.pl"
+        or not parsed.path.startswith("/oferta-obligacji/")
+        or parsed.params
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise SourceError(
+            "Treasury Bond cross-check provenance must stay on the exact official "
+            "https://www.obligacjeskarbowe.pl/oferta-obligacji/... URL"
+        )
+    return url
+
+
 def fetch(
     session: requests.Session,
     url: str,
@@ -96,8 +146,14 @@ def fetch(
     timeout: tuple[int, int] = (10, 45),
     allow_not_found: bool = False,
 ) -> bytes:
+    requested_origin = _https_origin(url)
     try:
         response = session.get(url, headers={"Accept": accept}, timeout=timeout)
+        response_url = getattr(response, "url", url)
+        if isinstance(response_url, str) and _https_origin(response_url) != requested_origin:
+            raise SourceError(
+                f"Official source redirect left trusted origin: {url} -> {response_url}"
+            )
         if allow_not_found and response.status_code == 404:
             return b""
         response.raise_for_status()

@@ -47,7 +47,7 @@
               "required": ["publisher", "url", "sha256", "sheet", "row"],
               "properties": {
                 "publisher": { "const": "Ministry of Finance" },
-                "url": { "type": "string", "format": "uri" },
+                "url": { "type": "string", "format": "uri", "pattern": "^https://www\\.gov\\.pl/attachment/[^?#]+$" },
                 "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
                 "sheet": { "type": "string" },
                 "row": { "type": "integer", "minimum": 1 }
@@ -57,7 +57,7 @@
             "crossCheck": {
               "type": ["object", "null"],
               "properties": {
-                "url": { "type": "string", "format": "uri" },
+                "url": { "type": "string", "format": "uri", "pattern": "^https://www\\.obligacjeskarbowe\\.pl/oferta-obligacji/[^?#]+$" },
                 "verifiedAt": { "type": "string", "format": "date" }
               },
               "required": ["url", "verifiedAt"],
