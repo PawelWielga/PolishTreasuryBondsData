@@ -18,6 +18,17 @@ class SmokeError(RuntimeError):
     """The deployed GitHub Pages contract is incomplete or inconsistent."""
 
 
+def _https_origin(url: str) -> tuple[str, str, int]:
+    parsed = urlparse(url)
+    if parsed.scheme.lower() != "https" or not parsed.hostname:
+        raise SmokeError(f"Pages resource URL must use HTTPS: {url}")
+    try:
+        port = parsed.port or 443
+    except ValueError as exc:
+        raise SmokeError(f"Malformed Pages resource URL: {url}") from exc
+    return parsed.scheme.lower(), parsed.hostname.lower(), port
+
+
 def _safe_relative_path(value: str, label: str) -> str:
     parsed = urlparse(value)
     path = PurePosixPath(parsed.path)
@@ -40,6 +51,11 @@ def fetch_bytes(
                 headers={"Accept": "application/json", "Cache-Control": "no-cache"},
                 timeout=(10, 30),
             )
+            response_url = getattr(response, "url", url)
+            if isinstance(response_url, str) and _https_origin(response_url) != _https_origin(url):
+                raise SmokeError(
+                    f"Pages resource redirect left expected origin: {url} -> {response_url}"
+                )
             if response.status_code == 200:
                 return response.content
             last_error = SmokeError(f"HTTP {response.status_code} for {url}")

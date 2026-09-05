@@ -80,6 +80,15 @@ class OfflineContractRegressionTests(unittest.TestCase):
             with self.subTest(source=source, field=field):
                 self.assertTrue(list(validator.iter_errors(candidate)))
 
+
+    def test_nbp_v2_schema_rejects_unofficial_observation_source(self) -> None:
+        document = json.loads((pipeline.DIST / "nbp-reference-rates-v2.json").read_text(encoding="utf-8"))
+        candidate = copy.deepcopy(document)
+        candidate["observations"][0]["source"] = "https://evil.example/rates.xml"
+        schema = json.loads((pipeline.SCHEMAS / "nbp-reference-rates-v2.schema.json").read_text(encoding="utf-8"))
+        errors = list(Draft202012Validator(schema, format_checker=FormatChecker()).iter_errors(candidate))
+        self.assertTrue(errors)
+
     def test_offline_nbp_rejects_future_effective_date(self) -> None:
         nbp = json.loads((pipeline.DATA / "reference" / "nbp-reference-rates.json").read_text(encoding="utf-8"))
         candidate = copy.deepcopy(nbp)
