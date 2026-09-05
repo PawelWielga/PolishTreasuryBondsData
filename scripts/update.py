@@ -340,7 +340,7 @@ def _validate_official_mf_workbook_url(workbook_url: str) -> str:
         or parsed.fragment
     ):
         raise SourceError(
-            "Local MF workbook provenance must be the exact official "
+            "MF workbook provenance must be the exact official "
             "https://www.gov.pl/attachment/... URL"
         )
     return workbook_url
@@ -364,7 +364,7 @@ def sync_mf(
         if workbook_url:
             raise SourceError("--mf-workbook-url can only be used together with --mf-workbook")
         page = fetch(session, MF_PAGE_URL, "text/html,application/xhtml+xml").decode("utf-8")
-        workbook_url = discover_mf_workbook(page)
+        workbook_url = _validate_official_mf_workbook_url(discover_mf_workbook(page))
         workbook_content = fetch(session, workbook_url, "application/vnd.ms-excel,application/octet-stream")
     as_of = date.fromisoformat(verified_date)
     parsed = [
