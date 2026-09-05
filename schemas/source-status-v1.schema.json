@@ -5,38 +5,61 @@
   "required": ["schemaVersion", "datasetRevision", "sources"],
   "properties": {
     "schemaVersion": { "const": "1.0" },
-    "datasetRevision": { "type": "string" },
+    "datasetRevision": { "type": "string", "pattern": "^[0-9]{8}T[0-9]{6}Z-[a-f0-9]{12}$" },
     "sources": {
       "type": "object",
       "required": ["mf", "gus", "nbp"],
-      "additionalProperties": {
-        "type": "object",
-        "required": ["status", "lastAttemptAt", "lastAttemptStatus", "lastSuccessAt", "staleAfterHours", "message"],
-        "properties": {
-          "status": { "enum": ["FRESH", "STALE", "PARTIAL", "UNAVAILABLE"] },
-          "lastAttemptAt": { "type": ["string", "null"], "format": "date-time" },
-          "lastAttemptStatus": { "enum": ["SUCCESS", "FAILED", "NEVER"] },
-          "lastSuccessAt": { "type": ["string", "null"], "format": "date-time" },
-          "staleAfterHours": { "type": "integer", "minimum": 1 },
-          "message": { "type": ["string", "null"] }
+      "properties": {
+        "mf": {
+          "allOf": [
+            { "$ref": "#/$defs/sourceStatus" },
+            { "properties": { "staleAfterHours": { "const": 744 } } }
+          ]
         },
-        "allOf": [
-          {
-            "if": {
-              "properties": {
-                "status": { "enum": ["FRESH", "STALE", "PARTIAL"] }
-              },
-              "required": ["status"]
+        "gus": {
+          "allOf": [
+            { "$ref": "#/$defs/sourceStatus" },
+            { "properties": { "staleAfterHours": { "const": 744 } } }
+          ]
+        },
+        "nbp": {
+          "allOf": [
+            { "$ref": "#/$defs/sourceStatus" },
+            { "properties": { "staleAfterHours": { "const": 168 } } }
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "sourceStatus": {
+      "type": "object",
+      "required": ["status", "lastAttemptAt", "lastAttemptStatus", "lastSuccessAt", "staleAfterHours", "message"],
+      "properties": {
+        "status": { "enum": ["FRESH", "STALE", "PARTIAL", "UNAVAILABLE"] },
+        "lastAttemptAt": { "type": ["string", "null"], "format": "date-time" },
+        "lastAttemptStatus": { "enum": ["SUCCESS", "FAILED", "NEVER"] },
+        "lastSuccessAt": { "type": ["string", "null"], "format": "date-time" },
+        "staleAfterHours": { "type": "integer", "minimum": 1 },
+        "message": { "type": ["string", "null"] }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": { "enum": ["FRESH", "STALE", "PARTIAL"] }
             },
-            "then": {
-              "properties": {
-                "lastSuccessAt": { "type": "string", "format": "date-time" }
-              }
+            "required": ["status"]
+          },
+          "then": {
+            "properties": {
+              "lastSuccessAt": { "type": "string", "format": "date-time" }
             }
           }
-        ],
-        "additionalProperties": false
-      }
+        }
+      ],
+      "additionalProperties": false
     }
   },
   "additionalProperties": false
