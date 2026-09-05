@@ -7,6 +7,7 @@ import calendar
 from datetime import date
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -328,11 +329,40 @@ def _validated_mf_series(
     return parsed
 
 
-def sync_mf(session: Any, verified_date: str, workbook_path: Path | None = None, cross_check: bool = True) -> tuple[int, int]:
+def _validate_official_mf_workbook_url(workbook_url: str) -> str:
+    parsed = urlparse(workbook_url)
+    if (
+        parsed.scheme != "https"
+        or parsed.hostname != "www.gov.pl"
+        or not parsed.path.startswith("/attachment/")
+        or parsed.params
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise SourceError(
+            "Local MF workbook provenance must be the exact official "
+            "https://www.gov.pl/attachment/... URL"
+        )
+    return workbook_url
+
+
+def sync_mf(
+    session: Any,
+    verified_date: str,
+    workbook_path: Path | None = None,
+    cross_check: bool = True,
+    workbook_url: str | None = None,
+) -> tuple[int, int]:
     if workbook_path:
+        if not workbook_url:
+            raise SourceError(
+                "--mf-workbook requires --mf-workbook-url with the exact official MF attachment URL"
+            )
+        workbook_url = _validate_official_mf_workbook_url(workbook_url)
         workbook_content = workbook_path.read_bytes()
-        workbook_url = MF_PAGE_URL
     else:
+        if workbook_url:
+            raise SourceError("--mf-workbook-url can only be used together with --mf-workbook")
         page = fetch(session, MF_PAGE_URL, "text/html,application/xhtml+xml").decode("utf-8")
         workbook_url = discover_mf_workbook(page)
         workbook_content = fetch(session, workbook_url, "application/vnd.ms-excel,application/octet-stream")
@@ -405,7 +435,16 @@ def run_live(args: argparse.Namespace) -> None:
     verified_date = args.as_of or date.today().isoformat()
     verified_at = f"{verified_date}T00:00:00Z"
     tasks = (
-        ("mf", lambda: sync_mf(session, verified_date, args.mf_workbook, not args.skip_cross_check)),
+        (
+            "mf",
+            lambda: sync_mf(
+                session,
+                verified_date,
+                args.mf_workbook,
+                not args.skip_cross_check,
+                args.mf_workbook_url,
+            ),
+        ),
         ("gus", lambda: sync_gus(session, args.gus_start_year, int(verified_date[:4]), verified_at)),
         ("nbp", lambda: sync_nbp(session, verified_at)),
     )
@@ -424,6 +463,10 @@ def main() -> int:
     parser.add_argument("--check", action="store_true", help="Fail if generated output or normalized layout is stale")
     parser.add_argument("--mf-only", action="store_true", help="Refresh only the MF workbook/catalog")
     parser.add_argument("--mf-workbook", type=Path, help="Use a local official MF workbook instead of downloading it")
+    parser.add_argument(
+        "--mf-workbook-url",
+        help="Exact official https://www.gov.pl/attachment/... provenance URL required with --mf-workbook",
+    )
     parser.add_argument("--skip-cross-check", action="store_true", help="Skip live HTML cross-check (fixtures/bootstrap only)")
     parser.add_argument("--gus-start-year", type=int, default=int(GUS_HISTORY_START[:4]))
     parser.add_argument("--as-of", help="Deterministic verification date (YYYY-MM-DD)")
@@ -433,7 +476,13 @@ def main() -> int:
         if not args.offline:
             if args.mf_only:
                 verified_date = args.as_of or date.today().isoformat()
-                sync_mf(default_session(), verified_date, args.mf_workbook, not args.skip_cross_check)
+                sync_mf(
+                    default_session(),
+                    verified_date,
+                    args.mf_workbook,
+                    not args.skip_cross_check,
+                    args.mf_workbook_url,
+                )
                 mark_source_status("mf", True, "MF-only refresh succeeded")
             else:
                 run_live(args)
