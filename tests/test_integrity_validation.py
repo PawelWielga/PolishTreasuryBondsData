@@ -133,6 +133,39 @@ class NormalizedIntegrityValidationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "must start at 2022-05-06"):
             pipeline._validate_nbp(source)
 
+    def test_immutable_snapshot_rejects_unexpected_directory(self):
+        with TemporaryDirectory() as temp:
+            snapshot = Path(temp) / "revision-a"
+            snapshot.mkdir()
+            (snapshot / "manifest.json").write_bytes(b"manifest\n")
+            (snapshot / "extra").mkdir()
+            (snapshot / "extra" / "payload.json").write_text("{}\n", encoding="utf-8")
+
+            with self.assertRaisesRegex(ValueError, "unexpected entries.*extra"):
+                pipeline._write_immutable_snapshot(
+                    snapshot,
+                    {"manifest.json": b"manifest\n"},
+                )
+
+    def test_immutable_snapshot_rejects_symlinked_expected_file(self):
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            snapshot = root / "revision-a"
+            snapshot.mkdir()
+            target = root / "target.json"
+            target.write_bytes(b"manifest\n")
+            link = snapshot / "manifest.json"
+            try:
+                link.symlink_to(target)
+            except OSError as exc:
+                self.skipTest(f"symlinks unavailable in test environment: {exc}")
+
+            with self.assertRaisesRegex(ValueError, "would be rewritten: manifest.json"):
+                pipeline._write_immutable_snapshot(
+                    snapshot,
+                    {"manifest.json": b"manifest\n"},
+                )
+
     @staticmethod
     def _write_snapshot(publication: Path, *, series=None, gus=None, nbp=None, products=None) -> None:
         snapshot = publication / "snapshots" / "previous"
