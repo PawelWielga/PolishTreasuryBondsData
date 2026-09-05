@@ -76,6 +76,36 @@ def _selected_snapshot(revision: str) -> str:
     return f"{SNAPSHOTS_ROOT}/{dataset_revision}"
 
 
+def _historical_snapshot_directories(head: str) -> set[str]:
+    """Return every snapshot directory that ever appeared on first-parent history.
+
+    Looking only at directories that still exist cannot detect a privileged full
+    directory deletion after a later unrelated commit. Name-status history keeps
+    the old path visible even after the directory disappears from the current
+    tree, including rename/delete records.
+    """
+    history = _git(
+        "log",
+        "--first-parent",
+        "--format=",
+        "--name-status",
+        "--find-renames",
+        head,
+        "--",
+        SNAPSHOTS_ROOT,
+    ).stdout
+    snapshots: set[str] = set()
+    for raw_line in history.splitlines():
+        if not raw_line.strip():
+            continue
+        parts = raw_line.split("\t")
+        for path in parts[1:]:
+            snapshot = _snapshot_directory(path)
+            if snapshot is not None:
+                snapshots.add(snapshot)
+    return snapshots
+
+
 def archive_integrity_violations(head: str = "HEAD") -> list[str]:
     """Verify every reviewed snapshot still matches its first mainline appearance.
 
@@ -83,16 +113,28 @@ def archive_integrity_violations(head: str = "HEAD") -> list[str]:
     a privileged/bypassed rewrite lands, a later unrelated commit would make the
     rewritten bytes part of the next push's base. Full-history validation anchors
     every snapshot directory to the first commit on the current first-parent
-    history where its manifest appears. This also runs on scheduled Pages deploys,
-    so a previously rejected rewrite cannot become publishable merely with time.
+    history where its manifest appears. Historical directory names are recovered
+    from Git as well, so a snapshot that was deleted entirely cannot disappear
+    from validation. This also runs on scheduled Pages deploys, so a previously
+    rejected rewrite cannot become publishable merely with time.
     """
     root = ROOT / SNAPSHOTS_ROOT
     if root.is_symlink() or not root.is_dir():
         return [f"{SNAPSHOTS_ROOT}: snapshot archive is missing or is not a real directory"]
 
+    current_entries = {
+        f"{SNAPSHOTS_ROOT}/{entry.name}": entry
+        for entry in root.iterdir()
+    }
+    historical_snapshots = _historical_snapshot_directories(head)
+
     violations: list[str] = []
-    for entry in sorted(root.iterdir(), key=lambda path: path.name):
-        snapshot = f"{SNAPSHOTS_ROOT}/{entry.name}"
+    for missing_snapshot in sorted(historical_snapshots - set(current_entries)):
+        violations.append(
+            f"{missing_snapshot}: historical snapshot directory is missing from current tree"
+        )
+
+    for snapshot, entry in sorted(current_entries.items()):
         if entry.is_symlink() or not entry.is_dir():
             violations.append(f"{snapshot}: snapshot entry is not a real directory")
             continue
