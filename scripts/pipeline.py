@@ -437,12 +437,21 @@ def _generated_at(series: list[dict[str, Any]], gus: dict[str, Any], nbp: dict[s
 
 
 def _mf_provenance(series: list[dict[str, Any]]) -> dict[str, Any]:
-    primary = series[-1]["provenance"]["primary"]
+    source_series = max(
+        series,
+        key=lambda item: (
+            item["provenance"]["verifiedAt"],
+            item["saleFrom"],
+            item["seriesCode"],
+            item["termsRevision"],
+        ),
+    )
+    primary = source_series["provenance"]["primary"]
     return {
         "publisher": primary["publisher"],
         "url": primary["url"],
         "sha256": primary["sha256"],
-        "verifiedAt": max(item["provenance"]["verifiedAt"] for item in series),
+        "verifiedAt": source_series["provenance"]["verifiedAt"],
     }
 
 
