@@ -49,7 +49,7 @@ class SnapshotManifestSchemaSemanticsTests(unittest.TestCase):
         document = current_manifest()
         document["files"]["catalog.json"]["schemaVersion"] = "9.0"
 
-        self.assertTrue(any("2.0 was expected" in error.message for error in self.validate(document)))
+        self.assertTrue(any(error.validator == "const" for error in self.validate(document)))
 
     def test_mf_provenance_sha256_is_structurally_validated(self) -> None:
         document = current_manifest()
