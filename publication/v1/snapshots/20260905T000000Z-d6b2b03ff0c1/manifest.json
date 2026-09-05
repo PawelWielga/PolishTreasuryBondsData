@@ -1,0 +1,121 @@
+{
+  "schemaVersion": "1.0",
+  "datasetRevision": "20260905T000000Z-d6b2b03ff0c1",
+  "generatedAt": "2026-09-05T00:00:00Z",
+  "files": {
+    "catalog.json": {
+      "path": "catalog.json",
+      "sha256": "6950c7f5a42a1ee33871949386ce44a9ec8072fdbd3d677a3ef54457071ea1a9",
+      "schemaVersion": "2.0",
+      "count": 442
+    },
+    "gus-cpi.json": {
+      "path": "gus-cpi.json",
+      "sha256": "7470eb38eb29032e5c9fbfe6413847c808d3908b7c88361053d447d2a6bc3bce",
+      "schemaVersion": "2.0",
+      "count": 151
+    },
+    "nbp-reference-rates.json": {
+      "path": "nbp-reference-rates.json",
+      "sha256": "db5c87aea1a941891b0003adef462cb17c6014c6c0273adc9b9ea2d8a50e5bee",
+      "schemaVersion": "2.0",
+      "count": 13
+    },
+    "product-definitions.json": {
+      "path": "product-definitions.json",
+      "sha256": "1cdcd2dab56f250e0b28ad9db11735fed0d7dd40cc8649ce29729b59e6c3b32c",
+      "schemaVersion": "2.0",
+      "count": 8
+    }
+  },
+  "provenance": {
+    "mf": {
+      "publisher": "Ministry of Finance",
+      "url": "https://www.gov.pl/attachment/f69d7165-7300-4377-be6a-13d0cafd778e",
+      "sha256": "080ca1e805f08854b0bf213f2937bd2055d193ec34beb1cefd0e00a98750cacb",
+      "verifiedAt": "2026-09-03"
+    },
+    "gus": {
+      "publisher": "GUS",
+      "api": "SDP",
+      "baseUrl": "https://api-sdp.stat.gov.pl/api/1.1.0",
+      "verifiedAt": "2026-09-03T00:00:00Z"
+    },
+    "nbp": {
+      "publisher": "NBP",
+      "url": "https://static.nbp.pl/dane/stopy/stopy_procentowe_archiwum.xml",
+      "currentUrl": "https://static.nbp.pl/dane/stopy/stopy_procentowe.xml",
+      "verifiedAt": "2026-09-05T00:00:00Z"
+    }
+  },
+  "coverage": {
+    "catalog": {
+      "COI": {
+        "firstSaleFrom": "2022-09-01",
+        "lastSaleTo": "2026-09-30",
+        "seriesCount": 49,
+        "termsRevisionCount": 49,
+        "gaps": []
+      },
+      "DOR": {
+        "firstSaleFrom": "2024-09-01",
+        "lastSaleTo": "2026-09-30",
+        "seriesCount": 25,
+        "termsRevisionCount": 25,
+        "gaps": []
+      },
+      "EDO": {
+        "firstSaleFrom": "2016-09-01",
+        "lastSaleTo": "2026-09-30",
+        "seriesCount": 121,
+        "termsRevisionCount": 121,
+        "gaps": []
+      },
+      "OTS": {
+        "firstSaleFrom": "2026-06-01",
+        "lastSaleTo": "2026-09-30",
+        "seriesCount": 4,
+        "termsRevisionCount": 4,
+        "gaps": []
+      },
+      "ROD": {
+        "firstSaleFrom": "2016-10-01",
+        "lastSaleTo": "2026-09-30",
+        "seriesCount": 120,
+        "termsRevisionCount": 120,
+        "gaps": []
+      },
+      "ROR": {
+        "firstSaleFrom": "2025-09-01",
+        "lastSaleTo": "2026-09-30",
+        "seriesCount": 13,
+        "termsRevisionCount": 13,
+        "gaps": []
+      },
+      "ROS": {
+        "firstSaleFrom": "2020-09-01",
+        "lastSaleTo": "2026-09-30",
+        "seriesCount": 73,
+        "termsRevisionCount": 73,
+        "gaps": []
+      },
+      "TOS": {
+        "firstSaleFrom": "2023-09-01",
+        "lastSaleTo": "2026-09-30",
+        "seriesCount": 37,
+        "termsRevisionCount": 37,
+        "gaps": []
+      }
+    },
+    "gusCpi": {
+      "fromPeriod": "2014-01",
+      "throughPeriod": "2026-07",
+      "observationCount": 151
+    },
+    "nbpReferenceRates": {
+      "fromEffectiveDate": "2022-05-06",
+      "throughEffectiveDate": "2026-03-05",
+      "observationCount": 13
+    }
+  }
+}

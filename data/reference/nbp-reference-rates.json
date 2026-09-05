@@ -1,19 +1,102 @@
 {
-  "verifiedAt": "2026-09-03T00:00:00Z",
-  "source": {"publisher":"NBP","url":"https://nbp.pl/podstawowe-stopy-procentowe-archiwum/","verifiedAt":"2026-09-03T00:00:00Z"},
+  "verifiedAt": "2026-09-05T00:00:00Z",
+  "source": {
+    "publisher": "NBP",
+    "url": "https://static.nbp.pl/dane/stopy/stopy_procentowe_archiwum.xml",
+    "currentUrl": "https://static.nbp.pl/dane/stopy/stopy_procentowe.xml",
+    "verifiedAt": "2026-09-05T00:00:00Z"
+  },
   "observations": [
-    {"effectiveFrom":"2022-05-06","annualRatePercent":"5.25","revision":1,"publishedAt":null,"source":"https://nbp.pl/podstawowe-stopy-procentowe-archiwum/"},
-    {"effectiveFrom":"2022-06-09","annualRatePercent":"6.00","revision":1,"publishedAt":null,"source":"https://nbp.pl/podstawowe-stopy-procentowe-archiwum/"},
-    {"effectiveFrom":"2022-07-08","annualRatePercent":"6.50","revision":1,"publishedAt":null,"source":"https://nbp.pl/podstawowe-stopy-procentowe-archiwum/"},
-    {"effectiveFrom":"2022-09-08","annualRatePercent":"6.75","revision":1,"publishedAt":null,"source":"https://nbp.pl/podstawowe-stopy-procentowe-archiwum/"},
-    {"effectiveFrom":"2023-09-07","annualRatePercent":"6.00","revision":1,"publishedAt":null,"source":"https://nbp.pl/podstawowe-stopy-procentowe-archiwum/"},
-    {"effectiveFrom":"2023-10-05","annualRatePercent":"5.75","revision":1,"publishedAt":null,"source":"https://nbp.pl/podstawowe-stopy-procentowe-archiwum/"},
-    {"effectiveFrom":"2025-05-08","annualRatePercent":"5.25","revision":1,"publishedAt":null,"source":"https://nbp.pl/podstawowe-stopy-procentowe-archiwum/"},
-    {"effectiveFrom":"2025-07-03","annualRatePercent":"5.00","revision":1,"publishedAt":null,"source":"https://nbp.pl/podstawowe-stopy-procentowe-archiwum/"},
-    {"effectiveFrom":"2025-09-04","annualRatePercent":"4.75","revision":1,"publishedAt":null,"source":"https://nbp.pl/podstawowe-stopy-procentowe-archiwum/"},
-    {"effectiveFrom":"2025-10-09","annualRatePercent":"4.50","revision":1,"publishedAt":null,"source":"https://nbp.pl/podstawowe-stopy-procentowe-archiwum/"},
-    {"effectiveFrom":"2025-11-06","annualRatePercent":"4.25","revision":1,"publishedAt":null,"source":"https://nbp.pl/podstawowe-stopy-procentowe-archiwum/"},
-    {"effectiveFrom":"2025-12-04","annualRatePercent":"4.00","revision":1,"publishedAt":null,"source":"https://nbp.pl/podstawowe-stopy-procentowe-archiwum/"},
-    {"effectiveFrom":"2026-03-05","annualRatePercent":"3.75","revision":1,"publishedAt":null,"source":"https://nbp.pl/podstawowe-stopy-procentowe-archiwum/"}
+    {
+      "effectiveFrom": "2022-05-06",
+      "annualRatePercent": "5.25",
+      "revision": 1,
+      "publishedAt": null,
+      "source": "https://static.nbp.pl/dane/stopy/stopy_procentowe_archiwum.xml"
+    },
+    {
+      "effectiveFrom": "2022-06-09",
+      "annualRatePercent": "6.00",
+      "revision": 1,
+      "publishedAt": null,
+      "source": "https://static.nbp.pl/dane/stopy/stopy_procentowe_archiwum.xml"
+    },
+    {
+      "effectiveFrom": "2022-07-08",
+      "annualRatePercent": "6.50",
+      "revision": 1,
+      "publishedAt": null,
+      "source": "https://static.nbp.pl/dane/stopy/stopy_procentowe_archiwum.xml"
+    },
+    {
+      "effectiveFrom": "2022-09-08",
+      "annualRatePercent": "6.75",
+      "revision": 1,
+      "publishedAt": null,
+      "source": "https://static.nbp.pl/dane/stopy/stopy_procentowe_archiwum.xml"
+    },
+    {
+      "effectiveFrom": "2023-09-07",
+      "annualRatePercent": "6.00",
+      "revision": 1,
+      "publishedAt": null,
+      "source": "https://static.nbp.pl/dane/stopy/stopy_procentowe_archiwum.xml"
+    },
+    {
+      "effectiveFrom": "2023-10-05",
+      "annualRatePercent": "5.75",
+      "revision": 1,
+      "publishedAt": null,
+      "source": "https://static.nbp.pl/dane/stopy/stopy_procentowe_archiwum.xml"
+    },
+    {
+      "effectiveFrom": "2025-05-08",
+      "annualRatePercent": "5.25",
+      "revision": 1,
+      "publishedAt": null,
+      "source": "https://static.nbp.pl/dane/stopy/stopy_procentowe_archiwum.xml"
+    },
+    {
+      "effectiveFrom": "2025-07-03",
+      "annualRatePercent": "5.00",
+      "revision": 1,
+      "publishedAt": null,
+      "source": "https://static.nbp.pl/dane/stopy/stopy_procentowe_archiwum.xml"
+    },
+    {
+      "effectiveFrom": "2025-09-04",
+      "annualRatePercent": "4.75",
+      "revision": 1,
+      "publishedAt": null,
+      "source": "https://static.nbp.pl/dane/stopy/stopy_procentowe_archiwum.xml"
+    },
+    {
+      "effectiveFrom": "2025-10-09",
+      "annualRatePercent": "4.50",
+      "revision": 1,
+      "publishedAt": null,
+      "source": "https://static.nbp.pl/dane/stopy/stopy_procentowe_archiwum.xml"
+    },
+    {
+      "effectiveFrom": "2025-11-06",
+      "annualRatePercent": "4.25",
+      "revision": 1,
+      "publishedAt": null,
+      "source": "https://static.nbp.pl/dane/stopy/stopy_procentowe_archiwum.xml"
+    },
+    {
+      "effectiveFrom": "2025-12-04",
+      "annualRatePercent": "4.00",
+      "revision": 1,
+      "publishedAt": null,
+      "source": "https://static.nbp.pl/dane/stopy/stopy_procentowe_archiwum.xml"
+    },
+    {
+      "effectiveFrom": "2026-03-05",
+      "annualRatePercent": "3.75",
+      "revision": 1,
+      "publishedAt": null,
+      "source": "https://static.nbp.pl/dane/stopy/stopy_procentowe_archiwum.xml"
+    }
   ]
 }

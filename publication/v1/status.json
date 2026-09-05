@@ -1,30 +1,30 @@
 {
   "schemaVersion": "1.0",
-  "datasetRevision": "20260903T000000Z-e41685c90a6d",
+  "datasetRevision": "20260905T000000Z-d6b2b03ff0c1",
   "sources": {
     "mf": {
       "status": "FRESH",
-      "lastAttemptAt": "2026-09-03T09:37:52Z",
+      "lastAttemptAt": "2026-09-05T08:22:46Z",
       "lastAttemptStatus": "SUCCESS",
-      "lastSuccessAt": "2026-09-03T09:37:52Z",
+      "lastSuccessAt": "2026-09-05T08:22:46Z",
       "staleAfterHours": 744,
-      "message": "MF-only refresh succeeded"
+      "message": "Update result: (0, 0)"
     },
     "gus": {
       "status": "FRESH",
-      "lastAttemptAt": "2026-09-03T00:00:00Z",
+      "lastAttemptAt": "2026-09-05T08:23:29Z",
       "lastAttemptStatus": "SUCCESS",
-      "lastSuccessAt": "2026-09-03T00:00:00Z",
+      "lastSuccessAt": "2026-09-05T08:23:29Z",
       "staleAfterHours": 744,
-      "message": "Official SDP bootstrap"
+      "message": "Update result: 0"
     },
     "nbp": {
       "status": "FRESH",
-      "lastAttemptAt": "2026-09-03T00:00:00Z",
+      "lastAttemptAt": "2026-09-05T08:23:30Z",
       "lastAttemptStatus": "SUCCESS",
-      "lastSuccessAt": "2026-09-03T00:00:00Z",
+      "lastSuccessAt": "2026-09-05T08:23:30Z",
       "staleAfterHours": 168,
-      "message": "Official archive bootstrap"
+      "message": "Update result: 0"
     }
   }
 }
