@@ -12,6 +12,11 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
 PUBLICATION = ROOT / "publication" / "v1"
 SCHEMAS = ROOT / "schemas"
+SOURCE_STALE_AFTER_HOURS = {
+    "mf": 744,
+    "gus": 744,
+    "nbp": 168,
+}
 
 
 def load_json(path: Path) -> Any:
@@ -80,13 +85,28 @@ def build_runtime_status(
     }
     for name in ("mf", "gus", "nbp"):
         item = source["sources"][name]
+        expected_stale_after = SOURCE_STALE_AFTER_HOURS[name]
+        configured_stale_after = item.get("staleAfterHours")
+        contract_mismatch = configured_stale_after != expected_stale_after
+        normalized_item = {**item, "staleAfterHours": expected_stale_after}
+        message = item.get("message")
+        if contract_mismatch:
+            message = (
+                f"Invalid staleAfterHours contract for {name}: "
+                f"expected {expected_stale_after}, got {configured_stale_after!r}"
+            )
+
         result["sources"][name] = {
-            "status": derive_source_health(item, as_of),
+            "status": (
+                "UNAVAILABLE"
+                if contract_mismatch
+                else derive_source_health(normalized_item, as_of)
+            ),
             "lastAttemptAt": item.get("lastAttemptAt"),
             "lastAttemptStatus": item.get("lastAttemptStatus", "NEVER"),
             "lastSuccessAt": item.get("lastSuccessAt"),
-            "staleAfterHours": item["staleAfterHours"],
-            "message": item.get("message"),
+            "staleAfterHours": expected_stale_after,
+            "message": message,
         }
     return result
 
