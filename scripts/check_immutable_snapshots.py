@@ -76,6 +76,82 @@ def _selected_snapshot(revision: str) -> str:
     return f"{SNAPSHOTS_ROOT}/{dataset_revision}"
 
 
+def archive_integrity_violations(head: str = "HEAD") -> list[str]:
+    """Verify every reviewed snapshot still matches its first mainline appearance.
+
+    A per-push diff is not enough to protect an immutable archive forever: after
+    a privileged/bypassed rewrite lands, a later unrelated commit would make the
+    rewritten bytes part of the next push's base. Full-history validation anchors
+    every snapshot directory to the first commit on the current first-parent
+    history where its manifest appears. This also runs on scheduled Pages deploys,
+    so a previously rejected rewrite cannot become publishable merely with time.
+    """
+    root = ROOT / SNAPSHOTS_ROOT
+    if root.is_symlink() or not root.is_dir():
+        return [f"{SNAPSHOTS_ROOT}: snapshot archive is missing or is not a real directory"]
+
+    violations: list[str] = []
+    for entry in sorted(root.iterdir(), key=lambda path: path.name):
+        snapshot = f"{SNAPSHOTS_ROOT}/{entry.name}"
+        if entry.is_symlink() or not entry.is_dir():
+            violations.append(f"{snapshot}: snapshot entry is not a real directory")
+            continue
+
+        actual_entries = {path.name for path in entry.iterdir()}
+        missing = sorted(EXPECTED_SNAPSHOT_FILES - actual_entries)
+        unexpected = sorted(actual_entries - EXPECTED_SNAPSHOT_FILES)
+        if missing:
+            violations.append(
+                f"{snapshot}: missing canonical files: {', '.join(missing)}"
+            )
+        if unexpected:
+            violations.append(
+                f"{snapshot}: unexpected entries: {', '.join(unexpected)}"
+            )
+
+        for filename in sorted(EXPECTED_SNAPSHOT_FILES & actual_entries):
+            path = entry / filename
+            if path.is_symlink() or not path.is_file():
+                violations.append(
+                    f"{snapshot}/{filename}: canonical snapshot entry is not a regular file"
+                )
+
+        manifest_path = f"{snapshot}/manifest.json"
+        history = _git(
+            "log",
+            "--first-parent",
+            "--format=%H",
+            "--reverse",
+            head,
+            "--",
+            manifest_path,
+        ).stdout.splitlines()
+        if not history:
+            violations.append(
+                f"{snapshot}: manifest has no first-parent Git history in {head}"
+            )
+            continue
+
+        first_reviewed = history[0]
+        diff = _git(
+            "diff",
+            "--name-status",
+            "--find-renames",
+            first_reviewed,
+            head,
+            "--",
+            snapshot,
+        ).stdout
+        if diff.strip():
+            for line in diff.splitlines():
+                if line.strip():
+                    violations.append(
+                        f"{line} (snapshot differs from first reviewed appearance {first_reviewed})"
+                    )
+
+    return violations
+
+
 def immutable_snapshot_violations(base: str, head: str = "HEAD") -> list[str]:
     """Return changes that violate the immutable publication namespace.
 
@@ -139,34 +215,59 @@ def immutable_snapshot_violations(base: str, head: str = "HEAD") -> list[str]:
     return violations
 
 
+def _print_violations(title: str, violations: list[str]) -> None:
+    print(title, file=sys.stderr)
+    for violation in violations:
+        print(f"- {violation}", file=sys.stderr)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Reject rewrites of reviewed immutable snapshots and non-canonical "
-            "new snapshot contents"
+            "Verify the complete immutable snapshot archive and, when --base is "
+            "provided, reject unsafe candidate changes relative to a reviewed base"
         )
     )
-    parser.add_argument("--base", required=True, help="Reviewed base commit/ref")
+    parser.add_argument(
+        "--base",
+        help="Reviewed base commit/ref; omit to perform archive-integrity verification only",
+    )
     parser.add_argument("--head", default="HEAD", help="Candidate commit/ref (default: HEAD)")
     args = parser.parse_args()
 
     try:
-        violations = immutable_snapshot_violations(args.base, args.head)
+        archive_violations = archive_integrity_violations(args.head)
+        comparison_violations = (
+            immutable_snapshot_violations(args.base, args.head) if args.base else []
+        )
     except (subprocess.CalledProcessError, ValueError) as exc:
         if isinstance(exc, subprocess.CalledProcessError):
             detail = (exc.stderr or exc.stdout or str(exc)).strip()
         else:
             detail = str(exc)
-        print(f"ERROR: immutable snapshot comparison failed: {detail}", file=sys.stderr)
+        print(f"ERROR: immutable snapshot verification failed: {detail}", file=sys.stderr)
         return 2
 
-    if violations:
-        print("ERROR: immutable publication namespace was changed unsafely:", file=sys.stderr)
-        for violation in violations:
-            print(f"- {violation}", file=sys.stderr)
+    if archive_violations:
+        _print_violations(
+            "ERROR: immutable snapshot archive no longer matches its reviewed history:",
+            archive_violations,
+        )
         return 1
 
-    print(f"Immutable snapshot history is unchanged relative to {args.base}.")
+    if comparison_violations:
+        _print_violations(
+            "ERROR: immutable publication namespace was changed unsafely:",
+            comparison_violations,
+        )
+        return 1
+
+    if args.base:
+        print(
+            f"Immutable snapshot archive is intact and candidate history is safe relative to {args.base}."
+        )
+    else:
+        print("Immutable snapshot archive matches its first reviewed Git history.")
     return 0
 
 
