@@ -11,7 +11,7 @@ The production-readiness decision covers the public read-only data publication s
 - all supported bond families are represented through versioned schemas and deterministic aggregates;
 - MF offer data is cross-checked against an independent official offer page and calculation-relevant parse failures stop publication;
 - GUS CPI and NBP reference-rate observations preserve historical corrections as append-only revisions;
-- immutable snapshots are content-addressed and protected by manifest SHA-256 hashes;
+- immutable snapshots are content-addressed, protected by manifest SHA-256 hashes and rechecked against their first reviewed Git bytes on every Pages deployment;
 - legacy v1 compatibility artifacts are frozen byte-for-byte by regression tests;
 - the public Pages consumer path is exercised after every deployment by an end-to-end smoke test;
 - source freshness is published independently from immutable financial snapshots and ages fail-closed;
@@ -57,6 +57,10 @@ The 2026-09-05 scheduled run demonstrated this exact failure mode: MF/GUS/NBP ac
 ## Pages publication
 
 GitHub Pages deploys from reviewed `main` only. The Pages workflow validates the checked-in financial publication before upload. Its independent six-hour schedule may recalculate mutable `status.json` from durable source-success timestamps, but it does not fetch new financial facts or advance `latest.json`.
+
+Before every Pages upload, including scheduled freshness-only runs, `scripts/check_immutable_snapshots.py` verifies every retained snapshot directory against the bytes from its first appearance on the current first-parent Git history. This is deliberately stronger than checking only the latest push diff: if an immutable snapshot rewrite ever reached `main` through an exceptional protection bypass, a later unrelated commit or scheduled deployment still cannot make those rewritten bytes publishable.
+
+The archive verifier also requires each retained snapshot to keep exactly the five canonical top-level files and rejects symlinked/non-regular snapshot entries. Pull-request and push validation additionally compare the candidate against its reviewed base so a new snapshot may be introduced only as the single complete revision selected by `latest.json`.
 
 This keeps the two responsibilities separate:
 
