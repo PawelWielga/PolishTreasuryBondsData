@@ -10,7 +10,7 @@ from pathlib import Path
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from scripts.status import SOURCE_STALE_AFTER_HOURS
+from scripts.status import SOURCE_STALE_AFTER_HOURS, parse_instant
 
 ROOT = Path(__file__).resolve().parents[1]
 GENERATED_ROOTS = ("data", "dist", "publication")
@@ -46,7 +46,7 @@ def generated_tree_changes() -> list[str]:
 
 
 def source_status_contract_violations() -> list[str]:
-    """Return deviations from the production source-freshness contract."""
+    """Return deviations from freshness thresholds and durable attempt-state invariants."""
     path = ROOT / SOURCE_STATUS_PATH
     try:
         document = json.loads(path.read_text(encoding="utf-8"))
@@ -70,13 +70,72 @@ def source_status_contract_violations() -> list[str]:
     for name, expected_hours in SOURCE_STALE_AFTER_HOURS.items():
         item = sources.get(name)
         if not isinstance(item, dict):
+            violations.append(f"{SOURCE_STATUS_PATH}: {name} must be an object")
             continue
+
         actual_hours = item.get("staleAfterHours")
         if actual_hours != expected_hours:
             violations.append(
                 f"{SOURCE_STATUS_PATH}: {name}.staleAfterHours must be "
                 f"{expected_hours}, got {actual_hours!r}"
             )
+
+        attempt_status = item.get("lastAttemptStatus")
+        attempt_at = item.get("lastAttemptAt")
+        success_at = item.get("lastSuccessAt")
+        durable_status = item.get("status")
+
+        if attempt_status == "NEVER":
+            if attempt_at is not None or success_at is not None:
+                violations.append(
+                    f"{SOURCE_STATUS_PATH}: {name} with lastAttemptStatus NEVER "
+                    "must not have attempt/success timestamps"
+                )
+            continue
+
+        if attempt_status in {"SUCCESS", "FAILED"} and not isinstance(attempt_at, str):
+            violations.append(
+                f"{SOURCE_STATUS_PATH}: {name}.lastAttemptAt is required for {attempt_status}"
+            )
+            continue
+
+        attempt_instant = None
+        success_instant = None
+        if isinstance(attempt_at, str):
+            try:
+                attempt_instant = parse_instant(attempt_at)
+            except ValueError as exc:
+                violations.append(f"{SOURCE_STATUS_PATH}: {name}.lastAttemptAt: {exc}")
+        if isinstance(success_at, str):
+            try:
+                success_instant = parse_instant(success_at)
+            except ValueError as exc:
+                violations.append(f"{SOURCE_STATUS_PATH}: {name}.lastSuccessAt: {exc}")
+
+        if attempt_status == "SUCCESS":
+            if success_instant is None:
+                violations.append(
+                    f"{SOURCE_STATUS_PATH}: {name} successful attempt must have lastSuccessAt"
+                )
+            elif attempt_instant is not None and attempt_instant != success_instant:
+                violations.append(
+                    f"{SOURCE_STATUS_PATH}: {name} successful lastAttemptAt must equal lastSuccessAt"
+                )
+        elif attempt_status == "FAILED":
+            if (
+                attempt_instant is not None
+                and success_instant is not None
+                and attempt_instant < success_instant
+            ):
+                violations.append(
+                    f"{SOURCE_STATUS_PATH}: {name} failed lastAttemptAt cannot predate lastSuccessAt"
+                )
+
+        if durable_status in {"FRESH", "PARTIAL", "STALE"} and success_at is None:
+            violations.append(
+                f"{SOURCE_STATUS_PATH}: {name} status {durable_status} requires lastSuccessAt"
+            )
+
     return violations
 
 
@@ -105,7 +164,8 @@ def mf_source_artifact_violations() -> list[str]:
 
     if referenced and not source_root.is_dir():
         return violations + [
-            f"{MF_SOURCE_ROOT}: directory is missing but MF provenance references source artifacts"
+            f"{MF_SOURCE_ROOT}: directory is missing for referenced MF source artifacts: "
+            + ", ".join(sorted(referenced))
         ]
 
     for digest in sorted(referenced):
