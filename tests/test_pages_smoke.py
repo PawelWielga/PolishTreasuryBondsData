@@ -34,6 +34,18 @@ def encoded(value) -> bytes:
     return json.dumps(value, ensure_ascii=False).encode("utf-8")
 
 
+def status_document(revision: str, *, nbp_status: str = "FRESH") -> dict:
+    return {
+        "schemaVersion": "1.0",
+        "datasetRevision": revision,
+        "sources": {
+            "mf": {"status": "FRESH"},
+            "gus": {"status": "FRESH"},
+            "nbp": {"status": nbp_status},
+        },
+    }
+
+
 def snapshot_resources(base: str, revision: str, file_content: bytes) -> dict[str, bytes]:
     manifest_url = f"{base}v1/snapshots/{revision}/manifest.json"
     catalog_url = f"{base}v1/snapshots/{revision}/catalog.json"
@@ -70,9 +82,10 @@ class PagesSmokeTests(unittest.TestCase):
             }),
             encoding="utf-8",
         )
+        (publication / "status.json").write_bytes(encoded(status_document(current)))
         return publication
 
-    def test_consumer_flow_verifies_current_public_snapshot(self):
+    def test_consumer_flow_verifies_current_public_snapshot_and_runtime_health(self):
         base = "https://example.test/project/"
         revision = "rev-current"
         catalog = encoded({"schemaVersion": "2.0", "series": []})
@@ -82,6 +95,7 @@ class PagesSmokeTests(unittest.TestCase):
                 "datasetRevision": revision,
                 "manifest": f"snapshots/{revision}/manifest.json",
             }),
+            f"{base}v1/status.json": encoded(status_document(revision)),
             **snapshot_resources(base, revision, catalog),
         }
 
@@ -108,6 +122,7 @@ class PagesSmokeTests(unittest.TestCase):
                 "datasetRevision": revision,
                 "manifest": f"snapshots/{revision}/manifest.json",
             }),
+            f"{base}v1/status.json": encoded(status_document(revision)),
             **snapshot_resources(base, revision, good_catalog),
         }
         resources[f"{base}v1/snapshots/{revision}/catalog.json"] = encoded({
@@ -119,6 +134,55 @@ class PagesSmokeTests(unittest.TestCase):
             publication = self.make_publication(Path(temp_dir), revision)
             with patch.object(smoke.requests, "Session", return_value=FakeSession(resources)):
                 with self.assertRaisesRegex(smoke.SmokeError, "SHA-256 mismatch"):
+                    smoke.verify_public_contract(
+                        base,
+                        publication_root=publication,
+                        attempts=1,
+                        retry_delay_seconds=0,
+                    )
+
+    def test_missing_runtime_status_fails(self):
+        base = "https://example.test/project/"
+        revision = "rev-current"
+        catalog = encoded({"schemaVersion": "2.0", "series": []})
+        resources = {
+            f"{base}v1/latest.json": encoded({
+                "schemaVersion": "1.0",
+                "datasetRevision": revision,
+                "manifest": f"snapshots/{revision}/manifest.json",
+            }),
+            **snapshot_resources(base, revision, catalog),
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            publication = self.make_publication(Path(temp_dir), revision)
+            with patch.object(smoke.requests, "Session", return_value=FakeSession(resources)):
+                with self.assertRaisesRegex(smoke.SmokeError, "status.json did not converge"):
+                    smoke.verify_public_contract(
+                        base,
+                        publication_root=publication,
+                        attempts=1,
+                        retry_delay_seconds=0,
+                    )
+
+    def test_stale_runtime_status_artifact_fails(self):
+        base = "https://example.test/project/"
+        revision = "rev-current"
+        catalog = encoded({"schemaVersion": "2.0", "series": []})
+        resources = {
+            f"{base}v1/latest.json": encoded({
+                "schemaVersion": "1.0",
+                "datasetRevision": revision,
+                "manifest": f"snapshots/{revision}/manifest.json",
+            }),
+            f"{base}v1/status.json": encoded(status_document(revision, nbp_status="STALE")),
+            **snapshot_resources(base, revision, catalog),
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            publication = self.make_publication(Path(temp_dir), revision)
+            with patch.object(smoke.requests, "Session", return_value=FakeSession(resources)):
+                with self.assertRaisesRegex(smoke.SmokeError, "status.json did not converge"):
                     smoke.verify_public_contract(
                         base,
                         publication_root=publication,
@@ -138,6 +202,7 @@ class PagesSmokeTests(unittest.TestCase):
                 "datasetRevision": current,
                 "manifest": f"snapshots/{current}/manifest.json",
             }),
+            f"{base}v1/status.json": encoded(status_document(current)),
             **snapshot_resources(base, current, current_catalog),
             **snapshot_resources(base, prior, prior_catalog),
         }

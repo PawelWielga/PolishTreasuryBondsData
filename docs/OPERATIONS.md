@@ -11,7 +11,7 @@ The production-readiness decision covers the public read-only data publication s
 - all supported bond families are represented through versioned schemas and deterministic aggregates;
 - MF offer data is cross-checked against an independent official offer page and calculation-relevant parse failures stop publication;
 - GUS CPI and NBP reference-rate observations preserve historical corrections as append-only revisions;
-- immutable snapshots are content-addressed and protected by manifest SHA-256 hashes;
+- immutable snapshots are content-addressed, protected by manifest SHA-256 hashes and rechecked against their first reviewed Git bytes on every Pages deployment;
 - legacy v1 compatibility artifacts are frozen byte-for-byte by regression tests;
 - the public Pages consumer path is exercised after every deployment by an end-to-end smoke test;
 - source freshness is published independently from immutable financial snapshots and ages fail-closed;
@@ -46,9 +46,21 @@ The scheduled updater has `contents: write` and `pull-requests: write`, but it d
 
 Because branch protection targets `main`, the bot can continue creating and updating its proposal branch while the eventual merge remains subject to the same required `validate` check as every other pull request.
 
+### Required repository setting
+
+GitHub's repository-level Actions policy must allow workflows to create pull requests. In **Settings → Actions → General → Workflow permissions**, enable **Allow GitHub Actions to create and approve pull requests**. The workflow-level `pull-requests: write` permission is necessary but is not sufficient when that repository switch is disabled.
+
+If the repository setting is disabled, source acquisition and deterministic tests can still succeed and `peter-evans/create-pull-request` can push the generated `bot/update-data` branch, but the final REST request that opens the review pull request is rejected by GitHub. The workflow intentionally remains failed in that state because a candidate branch without its required review surface is not a successful production update cycle. The existing candidate can be recovered by opening a pull request from `bot/update-data` to `main`; financial data must still never be copied directly to `main`.
+
+The 2026-09-05 scheduled run demonstrated this exact failure mode: MF/GUS/NBP acquisition and the regression suite succeeded, then GitHub rejected only PR creation because the repository-level switch was disabled. Treat that setting as part of the production control plane, not as an optional convenience.
+
 ## Pages publication
 
 GitHub Pages deploys from reviewed `main` only. The Pages workflow validates the checked-in financial publication before upload. Its independent six-hour schedule may recalculate mutable `status.json` from durable source-success timestamps, but it does not fetch new financial facts or advance `latest.json`.
+
+Before every Pages upload, including scheduled freshness-only runs, `scripts/check_immutable_snapshots.py` verifies every retained snapshot directory against the bytes from its first appearance on the current first-parent Git history. This is deliberately stronger than checking only the latest push diff: if an immutable snapshot rewrite ever reached `main` through an exceptional protection bypass, a later unrelated commit or scheduled deployment still cannot make those rewritten bytes publishable.
+
+The archive verifier also requires each retained snapshot to keep exactly the five canonical top-level files and rejects symlinked/non-regular snapshot entries. Pull-request and push validation additionally compare the candidate against its reviewed base so a new snapshot may be introduced only as the single complete revision selected by `latest.json`.
 
 This keeps the two responsibilities separate:
 
@@ -65,9 +77,10 @@ Every successful Pages deployment is followed by a network smoke test against th
 4. fetch every file declared in the manifest;
 5. verify SHA-256 against the bytes returned by Pages;
 6. parse every file as JSON and verify its declared `schemaVersion`;
-7. verify manifest counts when the document has a known collection field.
+7. verify manifest counts when the document has a known collection field;
+8. fetch `v1/status.json`, require it to match the rendered deployment artifact and point at the selected dataset revision.
 
-The smoke tester retries public reads to tolerate short Pages propagation delays, but persistent missing files, broken paths, invalid JSON, revision disagreement or hash mismatch fail the workflow visibly and do not modify repository data.
+The smoke tester retries public reads to tolerate short Pages propagation delays, but persistent missing files, broken paths, invalid JSON, revision disagreement, status disagreement or hash mismatch fail the workflow visibly and do not modify repository data.
 
 When at least two real snapshot revisions are retained locally, the same deployment smoke test also fetches and fully verifies the newest prior immutable snapshot. Until the first actual data revision change occurs, the repository has only one genuine snapshot and the workflow reports that fact rather than fabricating historical data for the test.
 

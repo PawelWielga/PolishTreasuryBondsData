@@ -9,37 +9,151 @@
     "generatedAt": { "type": "string", "format": "date-time" },
     "files": {
       "type": "object",
-      "minProperties": 4,
-      "additionalProperties": {
-        "type": "object",
-        "required": ["path", "sha256", "schemaVersion", "count"],
-        "properties": {
-          "path": { "type": "string", "pattern": "^[a-z0-9-]+\\.json$" },
-          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
-          "schemaVersion": { "type": "string" },
-          "count": { "type": "integer", "minimum": 0 }
+      "required": ["catalog.json", "product-definitions.json", "gus-cpi.json", "nbp-reference-rates.json"],
+      "properties": {
+        "catalog.json": {
+          "allOf": [
+            { "$ref": "#/$defs/fileEntry" },
+            { "properties": { "path": { "const": "catalog.json" } } }
+          ]
         },
-        "additionalProperties": false
-      }
+        "product-definitions.json": {
+          "allOf": [
+            { "$ref": "#/$defs/fileEntry" },
+            { "properties": { "path": { "const": "product-definitions.json" } } }
+          ]
+        },
+        "gus-cpi.json": {
+          "allOf": [
+            { "$ref": "#/$defs/fileEntry" },
+            { "properties": { "path": { "const": "gus-cpi.json" } } }
+          ]
+        },
+        "nbp-reference-rates.json": {
+          "allOf": [
+            { "$ref": "#/$defs/fileEntry" },
+            { "properties": { "path": { "const": "nbp-reference-rates.json" } } }
+          ]
+        }
+      },
+      "additionalProperties": false
     },
-    "provenance": { "type": "object", "required": ["mf", "gus", "nbp"] },
+    "provenance": {
+      "type": "object",
+      "required": ["mf", "gus", "nbp"],
+      "properties": {
+        "mf": { "$ref": "#/$defs/mfProvenance" },
+        "gus": { "$ref": "#/$defs/gusProvenance" },
+        "nbp": { "$ref": "#/$defs/nbpProvenance" }
+      },
+      "additionalProperties": false
+    },
     "coverage": {
       "type": "object",
       "required": ["catalog", "gusCpi", "nbpReferenceRates"],
       "properties": {
-        "catalog": { "type": "object" },
-        "gusCpi": { "$ref": "#/$defs/referenceCoverage" },
-        "nbpReferenceRates": {
+        "catalog": {
           "type": "object",
-          "required": ["fromEffectiveDate", "throughEffectiveDate", "observationCount"]
-        }
-      }
+          "required": ["OTS", "ROR", "DOR", "TOS", "COI", "EDO", "ROS", "ROD"],
+          "properties": {
+            "OTS": { "$ref": "#/$defs/catalogCoverage" },
+            "ROR": { "$ref": "#/$defs/catalogCoverage" },
+            "DOR": { "$ref": "#/$defs/catalogCoverage" },
+            "TOS": { "$ref": "#/$defs/catalogCoverage" },
+            "COI": { "$ref": "#/$defs/catalogCoverage" },
+            "EDO": { "$ref": "#/$defs/catalogCoverage" },
+            "ROS": { "$ref": "#/$defs/catalogCoverage" },
+            "ROD": { "$ref": "#/$defs/catalogCoverage" }
+          },
+          "additionalProperties": false
+        },
+        "gusCpi": { "$ref": "#/$defs/gusCoverage" },
+        "nbpReferenceRates": { "$ref": "#/$defs/nbpCoverage" }
+      },
+      "additionalProperties": false
     }
   },
   "$defs": {
-    "referenceCoverage": {
+    "fileEntry": {
       "type": "object",
-      "required": ["fromPeriod", "throughPeriod", "observationCount"]
+      "required": ["path", "sha256", "schemaVersion", "count"],
+      "properties": {
+        "path": { "type": "string" },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "schemaVersion": { "const": "2.0" },
+        "count": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "mfProvenance": {
+      "type": "object",
+      "required": ["publisher", "url", "sha256", "verifiedAt"],
+      "properties": {
+        "publisher": { "const": "Ministry of Finance" },
+        "url": { "type": "string", "format": "uri" },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "verifiedAt": { "type": "string", "format": "date" }
+      },
+      "additionalProperties": false
+    },
+    "gusProvenance": {
+      "type": "object",
+      "required": ["publisher", "api", "baseUrl", "verifiedAt"],
+      "properties": {
+        "publisher": { "const": "GUS" },
+        "api": { "const": "SDP" },
+        "baseUrl": { "type": "string", "format": "uri" },
+        "verifiedAt": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "nbpProvenance": {
+      "type": "object",
+      "required": ["publisher", "url", "verifiedAt"],
+      "properties": {
+        "publisher": { "const": "NBP" },
+        "url": { "type": "string", "format": "uri" },
+        "currentUrl": { "type": "string", "format": "uri" },
+        "verifiedAt": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "catalogCoverage": {
+      "type": "object",
+      "required": ["firstSaleFrom", "lastSaleTo", "seriesCount", "termsRevisionCount", "gaps"],
+      "properties": {
+        "firstSaleFrom": { "type": "string", "format": "date" },
+        "lastSaleTo": { "type": "string", "format": "date" },
+        "seriesCount": { "type": "integer", "minimum": 1 },
+        "termsRevisionCount": { "type": "integer", "minimum": 1 },
+        "gaps": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$" },
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "gusCoverage": {
+      "type": "object",
+      "required": ["fromPeriod", "throughPeriod", "observationCount"],
+      "properties": {
+        "fromPeriod": { "type": "string", "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$" },
+        "throughPeriod": { "type": "string", "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$" },
+        "observationCount": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "nbpCoverage": {
+      "type": "object",
+      "required": ["fromEffectiveDate", "throughEffectiveDate", "observationCount"],
+      "properties": {
+        "fromEffectiveDate": { "type": "string", "format": "date" },
+        "throughEffectiveDate": { "type": "string", "format": "date" },
+        "observationCount": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
     }
-  }
+  },
+  "additionalProperties": false
 }

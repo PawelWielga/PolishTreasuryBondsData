@@ -30,7 +30,7 @@
         "saleFrom": { "type": "string", "format": "date" },
         "saleTo": { "type": "string", "format": "date" },
         "currency": { "const": "PLN" },
-        "faceValueMinorUnits": { "type": "integer", "exclusiveMinimum": 0 },
+        "faceValueMinorUnits": { "const": 10000 },
         "issuePriceMinorUnits": { "type": "integer", "exclusiveMinimum": 0 },
         "exchangePriceMinorUnits": { "type": ["integer", "null"], "exclusiveMinimum": 0 },
         "firstPeriodAnnualRatePercent": { "$ref": "#/$defs/exactPercent" },
@@ -60,7 +60,7 @@
                 "url": { "type": "string", "format": "uri" },
                 "verifiedAt": { "type": "string", "format": "date" }
               },
-              "required": ["url"],
+              "required": ["url", "verifiedAt"],
               "additionalProperties": false
             },
             "verifiedAt": { "type": "string", "format": "date" }
@@ -68,6 +68,24 @@
           "additionalProperties": false
         }
       },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "productType": { "const": "OTS" } },
+            "required": ["productType"]
+          },
+          "then": {
+            "properties": {
+              "fixedMaturityInterestMinorUnits": { "type": "integer", "minimum": 0 }
+            }
+          },
+          "else": {
+            "properties": {
+              "fixedMaturityInterestMinorUnits": { "const": null }
+            }
+          }
+        }
+      ],
       "additionalProperties": false
     }
   },
