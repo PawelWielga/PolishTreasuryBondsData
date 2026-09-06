@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import argparse
-import json
-import sys
 import calendar
+import json
+import subprocess
+import sys
 from datetime import date
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
 
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -38,9 +38,12 @@ from scripts.sources import (
     parse_series_html,
     sha256_bytes,
     utc_now,
+    validate_official_cross_check_url,
+    validate_official_mf_workbook_url,
 )
 
 NBP_CURRENT_RATES_URL = "https://static.nbp.pl/dane/stopy/stopy_procentowe.xml"
+MANAGED_PATHS = ("data", "dist", "publication")
 COMMON_REQUIRED_CROSS_CHECK_FIELDS = (
     "seriesCode",
     "saleFrom",
@@ -215,6 +218,7 @@ def _validated_nbp_observations(
     archive: list[dict[str, Any]],
     current: list[dict[str, Any]],
     existing: list[dict[str, Any]],
+    as_of: date | None = None,
 ) -> list[dict[str, Any]]:
     scoped_archive = [item for item in archive if item["effectiveFrom"] >= NBP_HISTORY_START]
     if not scoped_archive or scoped_archive[0]["effectiveFrom"] != NBP_HISTORY_START:
@@ -223,6 +227,11 @@ def _validated_nbp_observations(
         raise SourceError(f"NBP current-rate file must contain exactly one reference rate, got {len(current)}")
 
     latest_archive = scoped_archive[-1]
+    if as_of is not None and date.fromisoformat(latest_archive["effectiveFrom"]) > as_of:
+        raise SourceError(
+            f"NBP source returned future reference-rate date {latest_archive['effectiveFrom']} "
+            f"for verification date {as_of.isoformat()}"
+        )
     archive_dates = {item["effectiveFrom"] for item in scoped_archive}
     previously_published_dates = {
         item["effectiveFrom"]
@@ -256,7 +265,9 @@ def sync_nbp(session: Any, verified_at: str) -> int:
     current_xml = fetch(session, NBP_CURRENT_RATES_URL, "application/xml,text/xml").decode("utf-8-sig")
     archive = parse_nbp_rates(archive_xml)
     current = parse_nbp_rates(current_xml)
-    incoming = _validated_nbp_observations(archive, current, source["observations"])
+    incoming = _validated_nbp_observations(
+        archive, current, source["observations"], date.fromisoformat(verified_at[:10])
+    )
     merged = _merge_revisions(source["observations"], incoming, "effectiveFrom", "annualRatePercent")
     added = len(merged) - len(source["observations"])
     provenance_changed = False
@@ -330,20 +341,7 @@ def _validated_mf_series(
 
 
 def _validate_official_mf_workbook_url(workbook_url: str) -> str:
-    parsed = urlparse(workbook_url)
-    if (
-        parsed.scheme != "https"
-        or parsed.hostname != "www.gov.pl"
-        or not parsed.path.startswith("/attachment/")
-        or parsed.params
-        or parsed.query
-        or parsed.fragment
-    ):
-        raise SourceError(
-            "MF workbook provenance must be the exact official "
-            "https://www.gov.pl/attachment/... URL"
-        )
-    return workbook_url
+    return validate_official_mf_workbook_url(workbook_url)
 
 
 def sync_mf(
@@ -360,6 +358,13 @@ def sync_mf(
             )
         workbook_url = _validate_official_mf_workbook_url(workbook_url)
         workbook_content = workbook_path.read_bytes()
+        official_content = fetch(
+            session, workbook_url, "application/vnd.ms-excel,application/octet-stream"
+        )
+        if sha256_bytes(workbook_content) != sha256_bytes(official_content):
+            raise SourceError(
+                "Local MF workbook does not match the bytes fetched from its official provenance URL"
+            )
     else:
         if workbook_url:
             raise SourceError("--mf-workbook-url can only be used together with --mf-workbook")
@@ -379,7 +384,8 @@ def sync_mf(
             cross_source = series["provenance"].get("crossCheck")
             if not cross_source:
                 continue
-            html = fetch(session, cross_source["url"], "text/html,application/xhtml+xml").decode("utf-8")
+            cross_url = validate_official_cross_check_url(cross_source["url"])
+            html = fetch(session, cross_url, "text/html,application/xhtml+xml").decode("utf-8")
             html_facts = parse_series_html(html)
             validate_cross_check_facts(series, html_facts, cross_source["url"])
             cross_check_series(series, html_facts)
@@ -395,6 +401,8 @@ def sync_mf(
 
 
 def _can_still_be_outstanding(series: dict[str, Any], as_of: date) -> bool:
+    if date.fromisoformat(series["saleFrom"]) > as_of:
+        return False
     months = {
         "OTS": 3, "ROR": 12, "DOR": 24, "TOS": 36,
         "COI": 48, "EDO": 120, "ROS": 72, "ROD": 144,
@@ -428,6 +436,43 @@ def transition_source_status(item: dict[str, Any], success: bool, now: str, mess
             item["status"] = "STALE"
     else:
         item["status"] = "UNAVAILABLE"
+
+
+def _managed_tree_changes() -> list[str]:
+    result = subprocess.run(
+        ["git", "status", "--porcelain=v1", "--untracked-files=all", "--", *MANAGED_PATHS],
+        cwd=ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+    return [line for line in result.stdout.splitlines() if line.strip()]
+
+
+def _require_clean_managed_tree() -> None:
+    changes = _managed_tree_changes()
+    if changes:
+        raise SourceError(
+            "Live update requires a clean managed tree so rollback cannot destroy local work: "
+            + "; ".join(changes)
+        )
+
+
+def _rollback_managed_tree() -> None:
+    subprocess.run(
+        ["git", "restore", "--worktree", "--source=HEAD", "--", *MANAGED_PATHS],
+        cwd=ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "clean", "-fd", "--", *MANAGED_PATHS],
+        cwd=ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
 
 
 def run_live(args: argparse.Namespace) -> None:
@@ -472,8 +517,11 @@ def main() -> int:
     parser.add_argument("--as-of", help="Deterministic verification date (YYYY-MM-DD)")
     args = parser.parse_args()
 
+    live_transaction = False
     try:
         if not args.offline:
+            _require_clean_managed_tree()
+            live_transaction = True
             if args.mf_only:
                 verified_date = args.as_of or date.today().isoformat()
                 sync_mf(
@@ -488,7 +536,17 @@ def main() -> int:
                 run_live(args)
         revision = build_dist()
         print(f"Validated dataset revision: {revision}")
-    except (SourceError, ValueError, OSError, json.JSONDecodeError) as exc:
+    except Exception as exc:
+        if live_transaction:
+            try:
+                _rollback_managed_tree()
+            except Exception as rollback_exc:
+                print(
+                    f"ERROR: live update failed and managed-tree rollback also failed: {rollback_exc}",
+                    file=sys.stderr,
+                )
+                print(f"ORIGINAL ERROR: {exc}", file=sys.stderr)
+                return 1
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
 

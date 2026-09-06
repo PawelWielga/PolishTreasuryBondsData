@@ -10,7 +10,14 @@ from typing import Any
 
 from jsonschema import Draft202012Validator, FormatChecker
 
-from scripts.sources import PRODUCT_RULES, canonical_decimal, terms_content_hash
+from scripts.sources import (
+    PRODUCT_RULES,
+    SourceError,
+    canonical_decimal,
+    terms_content_hash,
+    validate_official_cross_check_url,
+    validate_official_mf_workbook_url,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
@@ -232,6 +239,27 @@ def _validate_series(series: list[dict[str, Any]], products: list[dict[str, Any]
             )
         if item["saleFrom"] > item["saleTo"]:
             raise ValueError(f"{item['seriesCode']}: invalid sale window")
+        sale_year, sale_month, _ = (int(part) for part in item["saleFrom"].split("-"))
+        maturity_index = sale_year * 12 + (sale_month - 1) + product["maturityMonths"]
+        maturity_year, maturity_month_zero_based = divmod(maturity_index, 12)
+        expected_suffix = f"{maturity_month_zero_based + 1:02d}{maturity_year % 100:02d}"
+        if item["seriesCode"][3:] != expected_suffix:
+            raise ValueError(
+                f"{item['seriesCode']}: maturity suffix disagrees with saleFrom/product maturity; "
+                f"expected {expected_suffix}"
+            )
+        primary = item["provenance"]["primary"]
+        try:
+            validate_official_mf_workbook_url(primary["url"])
+            cross_check = item["provenance"].get("crossCheck")
+            if cross_check is not None:
+                validate_official_cross_check_url(cross_check["url"])
+        except SourceError as exc:
+            raise ValueError(f"{item['seriesCode']}: invalid official provenance: {exc}") from exc
+        if primary["sheet"] != item["productType"]:
+            raise ValueError(
+                f"{item['seriesCode']}: MF provenance sheet {primary['sheet']} does not match productType"
+            )
         if item["contentHash"] != terms_content_hash(item):
             raise ValueError(f"{item['seriesCode']}: invalid contentHash")
 
@@ -344,6 +372,12 @@ def _validate_nbp(nbp: dict[str, Any]) -> None:
     if first_date != NBP_HISTORY_START:
         raise ValueError(
             f"NBP history must start at {NBP_HISTORY_START}, got {first_date}"
+        )
+    verified_date = nbp["verifiedAt"][:10]
+    if current[-1]["effectiveFrom"] > verified_date:
+        raise ValueError(
+            f"NBP contains future effective date {current[-1]['effectiveFrom']} "
+            f"beyond verification date {verified_date}"
         )
 
 

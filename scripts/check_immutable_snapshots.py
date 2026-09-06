@@ -106,17 +106,52 @@ def _historical_snapshot_directories(head: str) -> set[str]:
     return snapshots
 
 
-def archive_integrity_violations(head: str = "HEAD") -> list[str]:
-    """Verify every reviewed snapshot still matches its first mainline appearance.
+def _post_publication_history_changes(snapshot: str, first_reviewed: str, head: str) -> list[str]:
+    """Return every first-parent change to a snapshot after its publication commit.
 
-    A per-push diff is not enough to protect an immutable archive forever: after
-    a privileged/bypassed rewrite lands, a later unrelated commit would make the
-    rewritten bytes part of the next push's base. Full-history validation anchors
-    every snapshot directory to the first commit on the current first-parent
-    history where its manifest appears. Historical directory names are recovered
-    from Git as well, so a snapshot that was deleted entirely cannot disappear
-    from validation. This also runs on scheduled Pages deploys, so a previously
-    rejected rewrite cannot become publishable merely with time.
+    Comparing only the first and current trees misses a privileged mutation that
+    was later reverted. Immutable means that the namespace must never be touched
+    again, even temporarily, so audit each first-parent commit after the first
+    reviewed appearance instead of only the final tree state.
+    """
+    history = _git(
+        "log",
+        "--first-parent",
+        "--diff-merges=first-parent",
+        "--format=commit:%H",
+        "--name-status",
+        "--find-renames",
+        f"{first_reviewed}..{head}",
+        "--",
+        snapshot,
+    ).stdout
+
+    changes: list[str] = []
+    commit = "unknown"
+    for raw_line in history.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        if line.startswith("commit:"):
+            commit = line.removeprefix("commit:")
+            continue
+        changes.append(
+            f"{line} (snapshot first published at {first_reviewed}; "
+            f"changed after publication in {commit})"
+        )
+    return changes
+
+
+def archive_integrity_violations(head: str = "HEAD") -> list[str]:
+    """Verify every reviewed snapshot remains untouched after first publication.
+
+    A per-push diff is not enough to protect an immutable archive forever. Full
+    first-parent history anchors each snapshot to the commit where its manifest
+    first appeared and rejects every later touch to that namespace, including a
+    privileged rewrite that was subsequently reverted. Historical directory names
+    are recovered from Git as well, so a snapshot that was deleted entirely cannot
+    disappear from validation. This runs on scheduled Pages deploys too, preventing
+    a protection bypass from becoming publishable merely with time.
     """
     root = ROOT / SNAPSHOTS_ROOT
     if root.is_symlink() or not root.is_dir():
@@ -175,21 +210,22 @@ def archive_integrity_violations(head: str = "HEAD") -> list[str]:
             continue
 
         first_reviewed = history[0]
-        diff = _git(
-            "diff",
-            "--name-status",
-            "--find-renames",
-            first_reviewed,
-            head,
-            "--",
-            snapshot,
-        ).stdout
-        if diff.strip():
-            for line in diff.splitlines():
-                if line.strip():
-                    violations.append(
-                        f"{line} (snapshot differs from first reviewed appearance {first_reviewed})"
-                    )
+        try:
+            selected_at_first_appearance = _selected_snapshot(first_reviewed)
+        except (RuntimeError, ValueError) as exc:
+            violations.append(
+                f"{snapshot}: cannot prove first reviewed selection at {first_reviewed}: {exc}"
+            )
+        else:
+            if selected_at_first_appearance != snapshot:
+                violations.append(
+                    f"{snapshot}: first appeared at {first_reviewed} but was not selected by "
+                    f"{LATEST_PATH} (selected {selected_at_first_appearance})"
+                )
+
+        violations.extend(
+            _post_publication_history_changes(snapshot, first_reviewed, head)
+        )
 
     return violations
 
@@ -313,5 +349,9 @@ def main() -> int:
     return 0
 
 
+def _cli() -> int:
+    return main()
+
+
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(_cli())

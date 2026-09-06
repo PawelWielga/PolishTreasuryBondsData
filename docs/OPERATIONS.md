@@ -54,11 +54,19 @@ If the repository setting is disabled, source acquisition and deterministic test
 
 The 2026-09-05 scheduled run demonstrated this exact failure mode: MF/GUS/NBP acquisition and the regression suite succeeded, then GitHub rejected only PR creation because the repository-level switch was disabled. Treat that setting as part of the production control plane, not as an optional convenience.
 
+### Local MF workbook override
+
+`--mf-workbook` is a reproducibility/debugging input, not a provenance bypass. It requires the exact canonical `https://www.gov.pl/attachment/...` URL and the updater downloads that URL during the run. The local workbook is accepted only when its SHA-256 matches the bytes fetched from that official URL. Redirects may remain only within the original HTTPS origin; a redirect to another host or port fails closed.
+
+Normalized MF series and generated manifests are independently constrained to the canonical MF, GUS and NBP source endpoints, while offer cross-check URLs must remain on `www.obligacjeskarbowe.pl`. A manually edited provenance object therefore cannot make an untrusted domain look official during an offline rebuild.
+
+The scheduled updater requires the repository-level GitHub Actions setting that permits workflows to create pull requests. Default workflow token permissions remain read-only; the updater declares its write permissions explicitly.
+
 ## Pages publication
 
 GitHub Pages deploys from reviewed `main` only. The Pages workflow validates the checked-in financial publication before upload. Its independent six-hour schedule may recalculate mutable `status.json` from durable source-success timestamps, but it does not fetch new financial facts or advance `latest.json`.
 
-Before every Pages upload, including scheduled freshness-only runs, `scripts/check_immutable_snapshots.py` verifies every retained snapshot directory against the bytes from its first appearance on the current first-parent Git history. This is deliberately stronger than checking only the latest push diff: if an immutable snapshot rewrite ever reached `main` through an exceptional protection bypass, a later unrelated commit or scheduled deployment still cannot make those rewritten bytes publishable.
+Before every Pages upload, including scheduled freshness-only runs, `scripts/check_immutable_snapshots.py` verifies every retained snapshot directory against the bytes from its first appearance on the current first-parent Git history and requires that snapshot to have been selected by `latest.json` at that first appearance. This is deliberately stronger than checking only the latest push diff: if an immutable snapshot rewrite ever reached `main` through an exceptional protection bypass, a later unrelated commit or scheduled deployment still cannot make those rewritten bytes publishable.
 
 The archive verifier also requires each retained snapshot to keep exactly the five canonical top-level files and rejects symlinked/non-regular snapshot entries. Pull-request and push validation additionally compare the candidate against its reviewed base so a new snapshot may be introduced only as the single complete revision selected by `latest.json`.
 

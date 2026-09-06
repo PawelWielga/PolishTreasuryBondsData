@@ -101,6 +101,24 @@ class SupplyChainTests(unittest.TestCase):
             text = (ROOT / ".github" / "workflows" / workflow_name).read_text(encoding="utf-8")
             self.assertIn("timeout-minutes:", text, f"{workflow_name} must have a job timeout")
 
+    def test_updater_validates_staged_candidate_without_requiring_clean_head(self) -> None:
+        text = (ROOT / ".github" / "workflows" / "update-data.yml").read_text(encoding="utf-8")
+        archive = text.index("Verify committed immutable archive before update")
+        fetch = text.index("Fetch and cross-check MF, GUS and NBP")
+        stage = text.index("Stage and verify candidate immutable publication")
+        rebuild = text.index("Verify offline rebuild reproduces staged candidate")
+        create_pr = text.index("Create or update one reviewed data pull request")
+
+        self.assertLess(archive, fetch)
+        self.assertLess(fetch, stage)
+        self.assertLess(stage, rebuild)
+        self.assertLess(rebuild, create_pr)
+        self.assertIn("git add -A -- data dist publication", text)
+        self.assertIn("git write-tree", text)
+        self.assertIn("git commit-tree", text)
+        self.assertIn('check_immutable_snapshots.py --base HEAD --head "$candidate_commit"', text)
+        self.assertIn("check_generated_tree.py --against-index", text)
+
 
 if __name__ == "__main__":
     unittest.main()

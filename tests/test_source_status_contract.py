@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -37,9 +38,9 @@ class SourceStatusContractTests(unittest.TestCase):
             encoding="utf-8",
         )
 
-    def violations(self) -> list[str]:
+    def violations(self, as_of: datetime | None = None) -> list[str]:
         with patch.object(check_generated_tree, "ROOT", self.root):
-            return check_generated_tree.source_status_contract_violations()
+            return check_generated_tree.source_status_contract_violations(as_of=as_of)
 
     def test_valid_durable_status_passes(self) -> None:
         self.write_status({})
@@ -106,6 +107,18 @@ class SourceStatusContractTests(unittest.TestCase):
     def test_never_attempted_source_cannot_claim_timestamps(self) -> None:
         self.write_status({"lastAttemptStatus": "NEVER"})
         self.assertTrue(any("lastAttemptStatus NEVER" in item for item in self.violations()))
+
+
+    def test_future_success_timestamp_is_rejected(self) -> None:
+        self.write_status(
+            {
+                "lastAttemptAt": "2026-09-06T00:00:00Z",
+                "lastSuccessAt": "2026-09-06T00:00:00Z",
+            }
+        )
+        violations = self.violations(datetime(2026, 9, 5, 23, 59, tzinfo=timezone.utc))
+        self.assertTrue(any("lastAttemptAt cannot be in the future" in item for item in violations))
+        self.assertTrue(any("lastSuccessAt cannot be in the future" in item for item in violations))
 
     def test_never_attempted_source_must_be_unavailable(self) -> None:
         self.write_status(

@@ -90,7 +90,7 @@
       "required": ["publisher", "url", "sha256", "verifiedAt"],
       "properties": {
         "publisher": { "const": "Ministry of Finance" },
-        "url": { "type": "string", "format": "uri" },
+        "url": { "type": "string", "format": "uri", "pattern": "^https://www\\.gov\\.pl/attachment/[^?#]+$" },
         "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
         "verifiedAt": { "type": "string", "format": "date" }
       },
@@ -102,7 +102,7 @@
       "properties": {
         "publisher": { "const": "GUS" },
         "api": { "const": "SDP" },
-        "baseUrl": { "type": "string", "format": "uri" },
+        "baseUrl": { "const": "https://api-sdp.stat.gov.pl/api/1.1.0" },
         "verifiedAt": { "type": "string", "format": "date-time" }
       },
       "additionalProperties": false
@@ -112,8 +112,8 @@
       "required": ["publisher", "url", "verifiedAt"],
       "properties": {
         "publisher": { "const": "NBP" },
-        "url": { "type": "string", "format": "uri" },
-        "currentUrl": { "type": "string", "format": "uri" },
+        "url": { "const": "https://static.nbp.pl/dane/stopy/stopy_procentowe_archiwum.xml" },
+        "currentUrl": { "const": "https://static.nbp.pl/dane/stopy/stopy_procentowe.xml" },
         "verifiedAt": { "type": "string", "format": "date-time" }
       },
       "additionalProperties": false

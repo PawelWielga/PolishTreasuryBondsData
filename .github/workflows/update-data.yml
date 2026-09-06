@@ -6,6 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: write
   contents: write
   pull-requests: write
 
@@ -19,6 +20,8 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.12.12'
@@ -27,13 +30,31 @@ jobs:
       - name: Install hash-locked Python dependencies
         run: >-
           python -m pip install --require-hashes --only-binary=:all: -r requirements.txt
+      - name: Verify committed immutable archive before update
+        run: python scripts/check_immutable_snapshots.py
       - name: Fetch and cross-check MF, GUS and NBP
         run: python scripts/update.py
       - name: Run deterministic regression tests
         run: python -m unittest discover -s tests -v
+      - name: Stage and verify candidate immutable publication
+        shell: bash
+        run: |
+          git add -A -- data dist publication
+          export GIT_AUTHOR_NAME='github-actions[bot]'
+          export GIT_AUTHOR_EMAIL='41898282+github-actions[bot]@users.noreply.github.com'
+          export GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME"
+          export GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"
+          candidate_tree="$(git write-tree)"
+          candidate_commit="$(printf '%s\n' 'Validate generated update candidate' | git commit-tree "$candidate_tree" -p HEAD)"
+          python scripts/check_immutable_snapshots.py --base HEAD --head "$candidate_commit"
+      - name: Verify offline rebuild reproduces staged candidate
+        run: |
+          python scripts/update.py --offline
+          python scripts/check_generated_tree.py --against-index
       - name: Build pull request summary
         run: python scripts/change_summary.py > /tmp/update-pr-body.md
       - name: Create or update one reviewed data pull request
+        id: create_pr
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
           branch: bot/update-data
@@ -46,3 +67,8 @@ jobs:
             data
             dist
             publication
+      - name: Dispatch required validation for bot pull request
+        if: steps.create_pr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run validate.yml --ref bot/update-data
