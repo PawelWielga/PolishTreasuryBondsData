@@ -6,6 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: write
   contents: write
   pull-requests: write
 
@@ -53,6 +54,7 @@ jobs:
       - name: Build pull request summary
         run: python scripts/change_summary.py > /tmp/update-pr-body.md
       - name: Create or update one reviewed data pull request
+        id: create_pr
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
           branch: bot/update-data
@@ -65,3 +67,8 @@ jobs:
             data
             dist
             publication
+      - name: Dispatch required validation for bot pull request
+        if: steps.create_pr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run validate.yml --ref bot/update-data
