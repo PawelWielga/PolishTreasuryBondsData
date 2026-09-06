@@ -239,6 +239,15 @@ def _validate_series(series: list[dict[str, Any]], products: list[dict[str, Any]
             )
         if item["saleFrom"] > item["saleTo"]:
             raise ValueError(f"{item['seriesCode']}: invalid sale window")
+        sale_year, sale_month, _ = (int(part) for part in item["saleFrom"].split("-"))
+        maturity_index = sale_year * 12 + (sale_month - 1) + product["maturityMonths"]
+        maturity_year, maturity_month_zero_based = divmod(maturity_index, 12)
+        expected_suffix = f"{maturity_month_zero_based + 1:02d}{maturity_year % 100:02d}"
+        if item["seriesCode"][3:] != expected_suffix:
+            raise ValueError(
+                f"{item['seriesCode']}: maturity suffix disagrees with saleFrom/product maturity; "
+                f"expected {expected_suffix}"
+            )
         primary = item["provenance"]["primary"]
         try:
             validate_official_mf_workbook_url(primary["url"])
