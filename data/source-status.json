@@ -2,25 +2,25 @@
   "sources": {
     "mf": {
       "status": "FRESH",
-      "lastAttemptAt": "2026-09-05T08:22:46Z",
+      "lastAttemptAt": "2026-09-06T08:41:04Z",
       "lastAttemptStatus": "SUCCESS",
-      "lastSuccessAt": "2026-09-05T08:22:46Z",
+      "lastSuccessAt": "2026-09-06T08:41:04Z",
       "staleAfterHours": 744,
       "message": "Update result: (0, 0)"
     },
     "gus": {
       "status": "FRESH",
-      "lastAttemptAt": "2026-09-05T08:23:29Z",
+      "lastAttemptAt": "2026-09-06T08:41:43Z",
       "lastAttemptStatus": "SUCCESS",
-      "lastSuccessAt": "2026-09-05T08:23:29Z",
+      "lastSuccessAt": "2026-09-06T08:41:43Z",
       "staleAfterHours": 744,
       "message": "Update result: 0"
     },
     "nbp": {
       "status": "FRESH",
-      "lastAttemptAt": "2026-09-05T08:23:30Z",
+      "lastAttemptAt": "2026-09-06T08:41:44Z",
       "lastAttemptStatus": "SUCCESS",
-      "lastSuccessAt": "2026-09-05T08:23:30Z",
+      "lastSuccessAt": "2026-09-06T08:41:44Z",
       "staleAfterHours": 168,
       "message": "Update result: 0"
     }
