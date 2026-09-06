@@ -5,6 +5,7 @@ import json
 import re
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 if __package__ in (None, ""):
@@ -45,8 +46,12 @@ def generated_tree_changes() -> list[str]:
     return sorted(changed)
 
 
-def source_status_contract_violations() -> list[str]:
+def source_status_contract_violations(as_of: datetime | None = None) -> list[str]:
     """Return deviations from freshness thresholds and durable attempt-state invariants."""
+    reference = as_of or datetime.now(timezone.utc)
+    if reference.tzinfo is None:
+        raise ValueError("Source-status validation reference time must include a timezone")
+    reference = reference.astimezone(timezone.utc)
     path = ROOT / SOURCE_STATUS_PATH
     try:
         document = json.loads(path.read_text(encoding="utf-8"))
@@ -116,6 +121,17 @@ def source_status_contract_violations() -> list[str]:
                 success_instant = parse_instant(success_at)
             except ValueError as exc:
                 violations.append(f"{SOURCE_STATUS_PATH}: {name}.lastSuccessAt: {exc}")
+
+        if attempt_instant is not None and attempt_instant > reference:
+            violations.append(
+                f"{SOURCE_STATUS_PATH}: {name}.lastAttemptAt cannot be in the future "
+                f"relative to {reference.isoformat()}"
+            )
+        if success_instant is not None and success_instant > reference:
+            violations.append(
+                f"{SOURCE_STATUS_PATH}: {name}.lastSuccessAt cannot be in the future "
+                f"relative to {reference.isoformat()}"
+            )
 
         if attempt_status == "SUCCESS":
             if success_instant is None:

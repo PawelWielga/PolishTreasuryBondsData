@@ -11,7 +11,12 @@ from unittest.mock import Mock, patch
 from jsonschema import Draft202012Validator, FormatChecker
 
 from scripts import pipeline, update
-from scripts.sources import SourceError, fetch
+from scripts.sources import (
+    SourceError,
+    fetch,
+    validate_official_cross_check_url,
+    validate_official_mf_workbook_url,
+)
 
 
 class _Response:
@@ -41,6 +46,29 @@ class SourceBoundaryRegressionTests(unittest.TestCase):
             with self.subTest(url=url):
                 with self.assertRaisesRegex(SourceError, "exact official"):
                     update._validate_official_mf_workbook_url(url)
+
+
+    def test_mf_url_rejects_lookalike_domain_query_and_fragment(self) -> None:
+        invalid = (
+            "https://www.gov.pl.evil.example/attachment/example",
+            "https://www.gov.pl/attachment/example?download=1",
+            "https://www.gov.pl/attachment/example#fragment",
+        )
+        for url in invalid:
+            with self.subTest(url=url):
+                with self.assertRaisesRegex(SourceError, "exact official"):
+                    validate_official_mf_workbook_url(url)
+
+    def test_cross_check_url_rejects_lookalike_domain_query_and_fragment(self) -> None:
+        invalid = (
+            "https://www.obligacjeskarbowe.pl.evil.example/oferta-obligacji/x/y/",
+            "https://www.obligacjeskarbowe.pl/oferta-obligacji/x/y/?source=test",
+            "https://www.obligacjeskarbowe.pl/oferta-obligacji/x/y/#fragment",
+        )
+        for url in invalid:
+            with self.subTest(url=url):
+                with self.assertRaisesRegex(SourceError, "exact official"):
+                    validate_official_cross_check_url(url)
 
     def test_local_workbook_must_match_official_remote_bytes(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
