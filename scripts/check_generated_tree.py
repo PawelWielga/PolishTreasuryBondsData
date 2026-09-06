@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import re
@@ -31,16 +32,28 @@ def _git(*args: str) -> str:
     ).stdout
 
 
-def generated_tree_changes() -> list[str]:
-    """Return tracked, staged or untracked changes under generated/data roots."""
+def generated_tree_changes(include_cached: bool = True) -> list[str]:
+    """Return generated/data paths that differ from the selected baseline.
+
+    By default the baseline is ``HEAD`` and both staged and unstaged changes are
+    reported. With ``include_cached=False`` the Git index is the baseline: staged
+    candidate changes are accepted, while any later unstaged or untracked output
+    is still rejected. The latter mode is used by the updater after it stages the
+    exact live candidate and rebuilds it offline.
+    """
     changed: set[str] = set()
     separator = "--"
-
-    for args in (
+    commands = [
         ("diff", "--name-only", separator, *GENERATED_ROOTS),
-        ("diff", "--cached", "--name-only", separator, *GENERATED_ROOTS),
         ("ls-files", "--others", "--exclude-standard", separator, *GENERATED_ROOTS),
-    ):
+    ]
+    if include_cached:
+        commands.insert(
+            1,
+            ("diff", "--cached", "--name-only", separator, *GENERATED_ROOTS),
+        )
+
+    for args in commands:
         changed.update(line for line in _git(*args).splitlines() if line)
 
     return sorted(changed)
@@ -229,7 +242,7 @@ def mf_source_artifact_violations() -> list[str]:
     return violations
 
 
-def main() -> int:
+def main(*, against_index: bool = False) -> int:
     contract_violations = source_status_contract_violations()
     if contract_violations:
         print("ERROR: source freshness contract is invalid:", file=sys.stderr)
@@ -244,11 +257,12 @@ def main() -> int:
             print(f"- {violation}", file=sys.stderr)
         return 1
 
-    changes = generated_tree_changes()
+    changes = generated_tree_changes(include_cached=not against_index)
     if changes:
+        baseline = "staged candidate" if against_index else "HEAD"
         print(
-            "ERROR: normalized/generated repository state is not reproducible; "
-            "the following paths changed or were created:",
+            "ERROR: normalized/generated repository state is not reproducible against "
+            f"{baseline}; the following paths changed or were created:",
             file=sys.stderr,
         )
         for path in changes:
@@ -259,5 +273,21 @@ def main() -> int:
     return 0
 
 
+def _cli() -> int:
+    parser = argparse.ArgumentParser(
+        description="Verify normalized data, source artifacts and generated publication output"
+    )
+    parser.add_argument(
+        "--against-index",
+        action="store_true",
+        help=(
+            "Use the staged Git index as the candidate baseline, ignoring intentional cached "
+            "changes while still rejecting unstaged or untracked rebuild output"
+        ),
+    )
+    args = parser.parse_args()
+    return main(against_index=args.against_index)
+
+
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(_cli())
