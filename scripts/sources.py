@@ -333,9 +333,28 @@ def parse_series_html(html: str) -> dict[str, str | int | None]:
     sale = re.search(r"Sprzedaż:\s*(\d{2}\.\d{2}\.\d{4})\s*-\s*(\d{2}\.\d{2}\.\d{4})", text, re.I)
     if not sale:
         raise SourceError(f"{series_code}: sale window not found on cross-check page")
-    issue_price = Decimal(_required(r"Cena sprzedaży jednej obligacji:\s*([0-9]+(?:,[0-9]+)?)\s*zł", text, "sale price").replace(",", "."))
-    first_rate = Decimal(_required(r"Oprocentowanie:\s*([0-9]+(?:,[0-9]+)?)%", text, "first rate").replace(",", "."))
+    issue_price = Decimal(
+        _required(
+            r"Cena sprzedaży jednej obligacji:\s*([0-9]+(?:,[0-9]+)?)\s*zł",
+            text,
+            "sale price",
+        ).replace(",", ".")
+    )
+    first_rate = Decimal(
+        _required(r"Oprocentowanie:\s*([0-9]+(?:,[0-9]+)?)%", text, "first rate").replace(",", ".")
+    )
     family = series_code[:3]
+    if family not in PRODUCT_RULES:
+        raise SourceError(f"Unsupported Treasury Bond family on cross-check page: {family}")
+    exchange_price = None
+    if family not in {"ROS", "ROD"}:
+        exchange_price = Decimal(
+            _required(
+                r"Cena zamiany jednej obligacji:\s*([0-9]+(?:,[0-9]+)?)\s*zł",
+                text,
+                "exchange price",
+            ).replace(",", ".")
+        )
     rules = PRODUCT_RULES[family]
     margin_match = None
     if rules.rate_model == "NbpReferencePlusMargin":
@@ -359,6 +378,7 @@ def parse_series_html(html: str) -> dict[str, str | int | None]:
         "saleFrom": datetime.strptime(sale.group(1), "%d.%m.%Y").date().isoformat(),
         "saleTo": datetime.strptime(sale.group(2), "%d.%m.%Y").date().isoformat(),
         "issuePriceMinorUnits": money_minor_units(issue_price),
+        "exchangePriceMinorUnits": money_minor_units(exchange_price),
         "firstPeriodAnnualRatePercent": canonical_decimal(first_rate),
         "marginPercent": margin,
         "fixedMaturityInterestMinorUnits": fixed_maturity_interest,
@@ -383,8 +403,8 @@ def cross_check_series(workbook_series: dict[str, Any], html_facts: dict[str, An
     rules = PRODUCT_RULES[workbook_series["productType"]]
     comparable["maturityMonths"] = rules.maturity_months
     fields = (
-        "seriesCode", "saleFrom", "saleTo", "issuePriceMinorUnits", "firstPeriodAnnualRatePercent",
-        "marginPercent", "fixedMaturityInterestMinorUnits", "maturityMonths",
+        "seriesCode", "saleFrom", "saleTo", "issuePriceMinorUnits", "exchangePriceMinorUnits",
+        "firstPeriodAnnualRatePercent", "marginPercent", "fixedMaturityInterestMinorUnits", "maturityMonths",
     )
     for field in fields:
         if html_facts.get(field) is None:
