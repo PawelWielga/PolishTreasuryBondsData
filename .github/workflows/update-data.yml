@@ -29,15 +29,27 @@ jobs:
       - name: Install hash-locked Python dependencies
         run: >-
           python -m pip install --require-hashes --only-binary=:all: -r requirements.txt
+      - name: Verify committed immutable archive before update
+        run: python scripts/check_immutable_snapshots.py
       - name: Fetch and cross-check MF, GUS and NBP
         run: python scripts/update.py
       - name: Run deterministic regression tests
         run: python -m unittest discover -s tests -v
-      - name: Verify immutable archive and deterministic candidate tree
+      - name: Stage and verify candidate immutable publication
+        shell: bash
         run: |
-          python scripts/check_immutable_snapshots.py
+          git add -A -- data dist publication
+          export GIT_AUTHOR_NAME='github-actions[bot]'
+          export GIT_AUTHOR_EMAIL='41898282+github-actions[bot]@users.noreply.github.com'
+          export GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME"
+          export GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"
+          candidate_tree="$(git write-tree)"
+          candidate_commit="$(printf '%s\n' 'Validate generated update candidate' | git commit-tree "$candidate_tree" -p HEAD)"
+          python scripts/check_immutable_snapshots.py --base HEAD --head "$candidate_commit"
+      - name: Verify offline rebuild reproduces staged candidate
+        run: |
           python scripts/update.py --offline
-          python scripts/check_generated_tree.py
+          python scripts/check_generated_tree.py --against-index
       - name: Build pull request summary
         run: python scripts/change_summary.py > /tmp/update-pr-body.md
       - name: Create or update one reviewed data pull request
