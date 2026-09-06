@@ -9,10 +9,17 @@ import scripts.smoke_pages as smoke
 
 
 class FakeResponse:
-    def __init__(self, content: bytes, status_code: int = 200, url: str | None = None):
+    def __init__(
+        self,
+        content: bytes,
+        status_code: int = 200,
+        url: str | None = None,
+        history: list["FakeResponse"] | None = None,
+    ):
         self.content = content
         self.status_code = status_code
         self.url = url
+        self.history = history or []
 
 
 class FakeSession:
@@ -83,6 +90,48 @@ class PagesSmokeTests(unittest.TestCase):
                 attempts=1,
                 retry_delay_seconds=0,
             )
+    def test_intermediate_cross_origin_redirect_fails(self):
+        session = FakeSession({})
+        session.get = lambda url, **_kwargs: FakeResponse(
+            b"{}",
+            200,
+            url,
+            history=[
+                FakeResponse(b"", 302, url),
+                FakeResponse(b"", 302, "https://evil.example/intermediate.json"),
+            ],
+        )
+
+        with self.assertRaisesRegex(smoke.SmokeError, "redirect left expected origin"):
+            smoke.fetch_bytes(
+                session,
+                "https://example.test/project/v1/latest.json",
+                attempts=1,
+                retry_delay_seconds=0,
+            )
+
+    def test_relative_manifest_paths_reject_ambiguous_or_escaped_locations(self):
+        invalid = (
+            "catalog.json?download=1",
+            "catalog.json#fragment",
+            "%2e%2e/catalog.json",
+            "./catalog.json",
+            "folder\\catalog.json",
+        )
+        for value in invalid:
+            with self.subTest(value=value):
+                with self.assertRaisesRegex(smoke.SmokeError, "safe relative path"):
+                    smoke._safe_relative_path(value, "manifest file")
+
+    def test_manifest_schema_validation_fails_closed(self):
+        schema = {
+            "type": "object",
+            "required": ["provenance"],
+            "additionalProperties": True,
+        }
+        with self.assertRaisesRegex(smoke.SmokeError, "reviewed JSON Schema"):
+            smoke._validate_document_schema({"schemaVersion": "1.0"}, schema, "manifest.json")
+
     def make_publication(self, root: Path, current: str, prior: str | None = None) -> Path:
         publication = root / "publication" / "v1"
         snapshots = publication / "snapshots"

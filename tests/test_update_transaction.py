@@ -3,6 +3,7 @@ from __future__ import annotations
 import subprocess
 import tempfile
 import unittest
+from datetime import date
 from pathlib import Path
 from unittest.mock import patch
 
@@ -81,6 +82,26 @@ class ManagedTreeTransactionTests(unittest.TestCase):
 
         self.assertEqual(1, result)
         rollback.assert_called_once_with()
+
+    def test_future_as_of_is_rejected(self) -> None:
+        with self.assertRaisesRegex(SourceError, "cannot be in the future"):
+            update._validated_verification_date("2026-09-07", today=date(2026, 9, 6))
+
+    def test_historical_as_of_remains_supported(self) -> None:
+        self.assertEqual(
+            "2026-09-05",
+            update._validated_verification_date("2026-09-05", today=date(2026, 9, 6)),
+        )
+
+    def test_production_cli_rejects_skip_cross_check_before_live_update(self) -> None:
+        with (
+            patch.object(update, "_require_clean_managed_tree") as clean_tree,
+            patch("sys.argv", ["update.py", "--skip-cross-check"]),
+        ):
+            result = update.main()
+
+        self.assertEqual(1, result)
+        clean_tree.assert_not_called()
 
     def test_offline_failure_does_not_rewrite_working_tree_via_transaction_rollback(self) -> None:
         with (

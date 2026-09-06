@@ -108,15 +108,29 @@
       "additionalProperties": false
     },
     "nbpProvenance": {
-      "type": "object",
-      "required": ["publisher", "url", "verifiedAt"],
-      "properties": {
-        "publisher": { "const": "NBP" },
-        "url": { "const": "https://static.nbp.pl/dane/stopy/stopy_procentowe_archiwum.xml" },
-        "currentUrl": { "const": "https://static.nbp.pl/dane/stopy/stopy_procentowe.xml" },
-        "verifiedAt": { "type": "string", "format": "date-time" }
-      },
-      "additionalProperties": false
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["publisher", "url", "verifiedAt"],
+          "properties": {
+            "publisher": { "const": "NBP" },
+            "url": { "const": "https://nbp.pl/podstawowe-stopy-procentowe-archiwum/" },
+            "verifiedAt": { "type": "string", "format": "date-time" }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["publisher", "url", "currentUrl", "verifiedAt"],
+          "properties": {
+            "publisher": { "const": "NBP" },
+            "url": { "const": "https://static.nbp.pl/dane/stopy/stopy_procentowe_archiwum.xml" },
+            "currentUrl": { "const": "https://static.nbp.pl/dane/stopy/stopy_procentowe.xml" },
+            "verifiedAt": { "type": "string", "format": "date-time" }
+          },
+          "additionalProperties": false
+        }
+      ]
     },
     "catalogCoverage": {
       "type": "object",

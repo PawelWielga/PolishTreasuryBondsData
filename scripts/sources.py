@@ -149,11 +149,13 @@ def fetch(
     requested_origin = _https_origin(url)
     try:
         response = session.get(url, headers={"Accept": accept}, timeout=timeout)
-        response_url = getattr(response, "url", url)
-        if isinstance(response_url, str) and _https_origin(response_url) != requested_origin:
-            raise SourceError(
-                f"Official source redirect left trusted origin: {url} -> {response_url}"
-            )
+        redirect_chain = [*getattr(response, "history", ()), response]
+        for hop in redirect_chain:
+            response_url = getattr(hop, "url", url)
+            if isinstance(response_url, str) and _https_origin(response_url) != requested_origin:
+                raise SourceError(
+                    f"Official source redirect left trusted origin: {url} -> {response_url}"
+                )
         if allow_not_found and response.status_code == 404:
             return b""
         response.raise_for_status()
