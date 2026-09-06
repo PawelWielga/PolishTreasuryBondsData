@@ -346,15 +346,14 @@ def parse_series_html(html: str) -> dict[str, str | int | None]:
     family = series_code[:3]
     if family not in PRODUCT_RULES:
         raise SourceError(f"Unsupported Treasury Bond family on cross-check page: {family}")
-    exchange_price = None
-    if family not in {"ROS", "ROD"}:
-        exchange_price = Decimal(
-            _required(
-                r"Cena zamiany jednej obligacji:\s*([0-9]+(?:,[0-9]+)?)\s*zł",
-                text,
-                "exchange price",
-            ).replace(",", ".")
-        )
+    exchange_match = re.search(
+        r"Cena zamiany jednej obligacji:\s*([0-9]+(?:,[0-9]+)?)\s*zł",
+        text,
+        re.I,
+    )
+    exchange_price = (
+        Decimal(exchange_match.group(1).replace(",", ".")) if exchange_match else None
+    )
     rules = PRODUCT_RULES[family]
     margin_match = None
     if rules.rate_model == "NbpReferencePlusMargin":
@@ -400,8 +399,14 @@ def _parse_maturity_months(text: str) -> int | None:
 
 def cross_check_series(workbook_series: dict[str, Any], html_facts: dict[str, Any]) -> None:
     comparable = dict(workbook_series)
-    rules = PRODUCT_RULES[workbook_series["productType"]]
+    product_type = workbook_series["productType"]
+    rules = PRODUCT_RULES[product_type]
     comparable["maturityMonths"] = rules.maturity_months
+    if product_type not in {"ROS", "ROD"} and html_facts.get("exchangePriceMinorUnits") is None:
+        raise SourceError(
+            f"{workbook_series['seriesCode']}: required cross-check field "
+            "exchangePriceMinorUnits could not be parsed from official offer page"
+        )
     fields = (
         "seriesCode", "saleFrom", "saleTo", "issuePriceMinorUnits", "exchangePriceMinorUnits",
         "firstPeriodAnnualRatePercent", "marginPercent", "fixedMaturityInterestMinorUnits", "maturityMonths",
