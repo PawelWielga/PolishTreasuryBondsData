@@ -135,7 +135,10 @@ def _post_publication_history_changes(snapshot: str, first_reviewed: str, head: 
         if line.startswith("commit:"):
             commit = line.removeprefix("commit:")
             continue
-        changes.append(f"{line} (snapshot changed after publication in {commit})")
+        changes.append(
+            f"{line} (snapshot first published at {first_reviewed}; "
+            f"changed after publication in {commit})"
+        )
     return changes
 
 
