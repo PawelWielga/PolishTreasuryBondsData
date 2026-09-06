@@ -60,6 +60,7 @@ class MinistryOfFinanceTests(unittest.TestCase):
         <p>w kolejnych okresach: marża 2,00% + inflacja</p>
         <p>Sprzedaż: 01.09.2026 - 30.09.2026</p>
         <p>Cena sprzedaży jednej obligacji: 100,00 zł</p>
+        <p>Cena zamiany jednej obligacji: 99,90 zł</p>
         """
         workbook = next(x for x in self.series if x["seriesCode"] == "EDO0936")
         cross_check_series(workbook, parse_series_html(html))
