@@ -13,6 +13,16 @@ import requests
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_PUBLICATION_ROOT = ROOT / "publication" / "v1"
 DEFAULT_SCHEMAS_ROOT = ROOT / "schemas"
+LEGACY_SCHEMA_IDS = {
+    "catalog-v1.schema.json": (
+        "https://raw.githubusercontent.com/PawelWielga/PolishTreasuryBondsData/"
+        "main/schemas/catalog-v1.schema.json"
+    ),
+    "reference-data-v1.schema.json": (
+        "https://raw.githubusercontent.com/PawelWielga/PolishTreasuryBondsData/"
+        "main/schemas/reference-data-v1.schema.json"
+    ),
+}
 
 
 class SmokeError(RuntimeError):
@@ -254,9 +264,15 @@ def verify_public_schemas(
         if content != expected_content:
             raise SmokeError(f"Deployed schema bytes do not match reviewed file: {schema_url}")
         document = parse_json(content, schema_url)
-        if document.get("$id") != schema_url:
+        schema_id = document.get("$id")
+        expected_ids = {schema_url}
+        legacy_id = LEGACY_SCHEMA_IDS.get(schema_path.name)
+        if legacy_id is not None:
+            expected_ids.add(legacy_id)
+        if schema_id not in expected_ids:
             raise SmokeError(
-                f"Deployed schema $id mismatch at {schema_url}: got {document.get('$id')!r}"
+                f"Deployed schema $id mismatch at {schema_url}: got {schema_id!r}; "
+                f"expected one of {sorted(expected_ids)!r}"
             )
 
 
