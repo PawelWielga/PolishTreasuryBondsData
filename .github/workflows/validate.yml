@@ -33,6 +33,17 @@ jobs:
       - name: Protect reviewed immutable snapshots on main pushes
         if: github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000'
         run: python scripts/check_immutable_snapshots.py --base "${{ github.event.before }}"
+      - name: Protect reviewed immutable snapshots on manual validation
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          git fetch --no-tags origin main
+          reviewed_base="$(git merge-base HEAD origin/main)"
+          if [ -z "$reviewed_base" ]; then
+            echo 'Could not determine reviewed main ancestor for manual validation.' >&2
+            exit 1
+          fi
+          python scripts/check_immutable_snapshots.py --base "$reviewed_base"
       - name: Require normalized sources and public aggregates to be reproducible
         run: |
           python scripts/update.py --offline
