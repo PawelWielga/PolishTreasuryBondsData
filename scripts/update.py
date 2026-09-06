@@ -517,10 +517,11 @@ def main() -> int:
     parser.add_argument("--as-of", help="Deterministic verification date (YYYY-MM-DD)")
     args = parser.parse_args()
 
-    live_transaction = not args.offline
+    live_transaction = False
     try:
-        if live_transaction:
+        if not args.offline:
             _require_clean_managed_tree()
+            live_transaction = True
             if args.mf_only:
                 verified_date = args.as_of or date.today().isoformat()
                 sync_mf(
