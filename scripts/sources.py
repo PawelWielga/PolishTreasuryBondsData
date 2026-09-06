@@ -43,6 +43,8 @@ MF_REQUIRED_HEADERS = {
     6: "Cena zamiany",
     9: "Oprocentowanie",
 }
+_REDIRECT_STATUS_CODES = frozenset({301, 302, 303, 307, 308})
+_MAX_REDIRECTS = 10
 
 
 class SourceError(RuntimeError):
@@ -139,6 +141,46 @@ def validate_official_cross_check_url(url: str) -> str:
     return url
 
 
+def _request_same_origin(
+    session: requests.Session,
+    url: str,
+    *,
+    headers: dict[str, str],
+    timeout: tuple[int, int],
+) -> requests.Response:
+    expected_origin = _https_origin(url)
+    current_url = url
+    for redirect_count in range(_MAX_REDIRECTS + 1):
+        response = session.get(
+            current_url,
+            headers=headers,
+            timeout=timeout,
+            allow_redirects=False,
+        )
+        response_url = getattr(response, "url", current_url)
+        if not isinstance(response_url, str) or _https_origin(response_url) != expected_origin:
+            raise SourceError(
+                f"Official source redirect left trusted origin: {url} -> {response_url}"
+            )
+
+        if response.status_code not in _REDIRECT_STATUS_CODES:
+            return response
+
+        location = response.headers.get("Location")
+        if not isinstance(location, str) or not location.strip():
+            raise SourceError(f"Official source returned redirect without Location: {current_url}")
+        next_url = urljoin(response_url, location)
+        if _https_origin(next_url) != expected_origin:
+            raise SourceError(
+                f"Official source redirect left trusted origin: {url} -> {next_url}"
+            )
+        if redirect_count == _MAX_REDIRECTS:
+            raise SourceError(f"Official source exceeded {_MAX_REDIRECTS} redirects: {url}")
+        current_url = next_url
+
+    raise SourceError(f"Official source exceeded {_MAX_REDIRECTS} redirects: {url}")
+
+
 def fetch(
     session: requests.Session,
     url: str,
@@ -146,16 +188,13 @@ def fetch(
     timeout: tuple[int, int] = (10, 45),
     allow_not_found: bool = False,
 ) -> bytes:
-    requested_origin = _https_origin(url)
     try:
-        response = session.get(url, headers={"Accept": accept}, timeout=timeout)
-        redirect_chain = [*getattr(response, "history", ()), response]
-        for hop in redirect_chain:
-            response_url = getattr(hop, "url", url)
-            if isinstance(response_url, str) and _https_origin(response_url) != requested_origin:
-                raise SourceError(
-                    f"Official source redirect left trusted origin: {url} -> {response_url}"
-                )
+        response = _request_same_origin(
+            session,
+            url,
+            headers={"Accept": accept},
+            timeout=timeout,
+        )
         if allow_not_found and response.status_code == 404:
             return b""
         response.raise_for_status()
