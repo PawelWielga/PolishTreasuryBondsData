@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import argparse
-import json
-import sys
 import calendar
+import json
+import subprocess
+import sys
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -42,6 +43,7 @@ from scripts.sources import (
 )
 
 NBP_CURRENT_RATES_URL = "https://static.nbp.pl/dane/stopy/stopy_procentowe.xml"
+MANAGED_PATHS = ("data", "dist", "publication")
 COMMON_REQUIRED_CROSS_CHECK_FIELDS = (
     "seriesCode",
     "saleFrom",
@@ -436,6 +438,43 @@ def transition_source_status(item: dict[str, Any], success: bool, now: str, mess
         item["status"] = "UNAVAILABLE"
 
 
+def _managed_tree_changes() -> list[str]:
+    result = subprocess.run(
+        ["git", "status", "--porcelain=v1", "--untracked-files=all", "--", *MANAGED_PATHS],
+        cwd=ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+    return [line for line in result.stdout.splitlines() if line.strip()]
+
+
+def _require_clean_managed_tree() -> None:
+    changes = _managed_tree_changes()
+    if changes:
+        raise SourceError(
+            "Live update requires a clean managed tree so rollback cannot destroy local work: "
+            + "; ".join(changes)
+        )
+
+
+def _rollback_managed_tree() -> None:
+    subprocess.run(
+        ["git", "restore", "--worktree", "--source=HEAD", "--", *MANAGED_PATHS],
+        cwd=ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "clean", "-fd", "--", *MANAGED_PATHS],
+        cwd=ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+
 def run_live(args: argparse.Namespace) -> None:
     session = default_session()
     verified_date = args.as_of or date.today().isoformat()
@@ -478,8 +517,11 @@ def main() -> int:
     parser.add_argument("--as-of", help="Deterministic verification date (YYYY-MM-DD)")
     args = parser.parse_args()
 
+    live_transaction = False
     try:
         if not args.offline:
+            _require_clean_managed_tree()
+            live_transaction = True
             if args.mf_only:
                 verified_date = args.as_of or date.today().isoformat()
                 sync_mf(
@@ -494,7 +536,17 @@ def main() -> int:
                 run_live(args)
         revision = build_dist()
         print(f"Validated dataset revision: {revision}")
-    except (SourceError, ValueError, OSError, json.JSONDecodeError) as exc:
+    except Exception as exc:
+        if live_transaction:
+            try:
+                _rollback_managed_tree()
+            except Exception as rollback_exc:
+                print(
+                    f"ERROR: live update failed and managed-tree rollback also failed: {rollback_exc}",
+                    file=sys.stderr,
+                )
+                print(f"ORIGINAL ERROR: {exc}", file=sys.stderr)
+                return 1
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
 

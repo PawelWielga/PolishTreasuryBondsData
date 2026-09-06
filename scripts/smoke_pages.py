@@ -12,6 +12,17 @@ import requests
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_PUBLICATION_ROOT = ROOT / "publication" / "v1"
+DEFAULT_SCHEMAS_ROOT = ROOT / "schemas"
+LEGACY_SCHEMA_IDS = {
+    "catalog-v1.schema.json": (
+        "https://raw.githubusercontent.com/PawelWielga/PolishTreasuryBondsData/"
+        "main/schemas/catalog-v1.schema.json"
+    ),
+    "reference-data-v1.schema.json": (
+        "https://raw.githubusercontent.com/PawelWielga/PolishTreasuryBondsData/"
+        "main/schemas/reference-data-v1.schema.json"
+    ),
+}
 
 
 class SmokeError(RuntimeError):
@@ -231,6 +242,40 @@ def verify_manifest_and_files(
             )
 
 
+def verify_public_schemas(
+    session: requests.Session,
+    base_url: str,
+    schemas_root: Path,
+    attempts: int,
+    retry_delay_seconds: float,
+) -> None:
+    schema_paths = sorted(schemas_root.glob("*.json"))
+    if not schema_paths:
+        raise SmokeError(f"No local JSON Schemas found under {schemas_root}")
+
+    normalized_base = base_url.rstrip("/") + "/"
+    for schema_path in schema_paths:
+        schema_url = urljoin(normalized_base, f"schemas/{schema_path.name}")
+        try:
+            expected_content = schema_path.read_bytes()
+        except OSError as exc:
+            raise SmokeError(f"Could not read local schema {schema_path}: {exc}") from exc
+        content = fetch_bytes(session, schema_url, attempts, retry_delay_seconds)
+        if content != expected_content:
+            raise SmokeError(f"Deployed schema bytes do not match reviewed file: {schema_url}")
+        document = parse_json(content, schema_url)
+        schema_id = document.get("$id")
+        expected_ids = {schema_url}
+        legacy_id = LEGACY_SCHEMA_IDS.get(schema_path.name)
+        if legacy_id is not None:
+            expected_ids.add(legacy_id)
+        if schema_id not in expected_ids:
+            raise SmokeError(
+                f"Deployed schema $id mismatch at {schema_url}: got {schema_id!r}; "
+                f"expected one of {sorted(expected_ids)!r}"
+            )
+
+
 def find_prior_revision(publication_root: Path, current_revision: str) -> str | None:
     snapshots = publication_root / "snapshots"
     if not snapshots.exists():
@@ -249,6 +294,7 @@ def verify_public_contract(
     attempts: int = 6,
     retry_delay_seconds: float = 2.0,
     require_prior: bool = False,
+    schemas_root: Path | None = None,
 ) -> tuple[str, str | None]:
     normalized_base = base_url.rstrip("/") + "/"
     latest_url = urljoin(normalized_base, "v1/latest.json")
@@ -321,6 +367,15 @@ def verify_public_contract(
                 retry_delay_seconds,
             )
 
+        if schemas_root is not None:
+            verify_public_schemas(
+                session,
+                normalized_base,
+                schemas_root,
+                attempts,
+                retry_delay_seconds,
+            )
+
     return revision, prior_revision
 
 
@@ -335,6 +390,12 @@ def main() -> int:
         default=DEFAULT_PUBLICATION_ROOT,
         help="Local publication/v1 tree used to identify the expected and prior revisions",
     )
+    parser.add_argument(
+        "--schemas-root",
+        type=Path,
+        default=DEFAULT_SCHEMAS_ROOT,
+        help="Reviewed JSON Schemas that must be deployed byte-for-byte under /schemas/",
+    )
     parser.add_argument("--attempts", type=int, default=6)
     parser.add_argument("--retry-delay-seconds", type=float, default=2.0)
     parser.add_argument("--require-prior", action="store_true")
@@ -347,17 +408,21 @@ def main() -> int:
             args.attempts,
             args.retry_delay_seconds,
             args.require_prior,
+            args.schemas_root,
         )
     except (SmokeError, OSError, ValueError) as exc:
         print(f"ERROR: {exc}")
         return 1
 
     if prior:
-        print(f"Pages contract verified: current={revision}, prior={prior}, runtime-health=verified")
+        print(
+            f"Pages contract verified: current={revision}, prior={prior}, "
+            "runtime-health=verified, schemas=verified"
+        )
     else:
         print(
-            f"Pages contract verified: current={revision}; "
-            "runtime-health=verified; no earlier real datasetRevision is retained yet"
+            f"Pages contract verified: current={revision}; runtime-health=verified; "
+            "schemas=verified; no earlier real datasetRevision is retained yet"
         )
     return 0
 
