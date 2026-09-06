@@ -5,7 +5,7 @@ import calendar
 import json
 import subprocess
 import sys
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -52,6 +52,20 @@ COMMON_REQUIRED_CROSS_CHECK_FIELDS = (
     "firstPeriodAnnualRatePercent",
 )
 
+
+def _validated_verification_date(value: str | None, *, today: date | None = None) -> str:
+    reference = today or datetime.now(timezone.utc).date()
+    if value is None:
+        return reference.isoformat()
+    try:
+        verified = date.fromisoformat(value)
+    except ValueError as exc:
+        raise SourceError("--as-of must be a valid YYYY-MM-DD date") from exc
+    if verified > reference:
+        raise SourceError(
+            f"--as-of cannot be in the future: {verified.isoformat()} > {reference.isoformat()}"
+        )
+    return verified.isoformat()
 
 def required_cross_check_fields(series: dict[str, Any]) -> tuple[str, ...]:
     rules = PRODUCT_RULES[series["productType"]]
@@ -477,7 +491,7 @@ def _rollback_managed_tree() -> None:
 
 def run_live(args: argparse.Namespace) -> None:
     session = default_session()
-    verified_date = args.as_of or date.today().isoformat()
+    verified_date = _validated_verification_date(args.as_of)
     verified_at = f"{verified_date}T00:00:00Z"
     tasks = (
         (
@@ -486,7 +500,7 @@ def run_live(args: argparse.Namespace) -> None:
                 session,
                 verified_date,
                 args.mf_workbook,
-                not args.skip_cross_check,
+                True,
                 args.mf_workbook_url,
             ),
         ),
@@ -512,23 +526,28 @@ def main() -> int:
         "--mf-workbook-url",
         help="Exact official https://www.gov.pl/attachment/... provenance URL required with --mf-workbook",
     )
-    parser.add_argument("--skip-cross-check", action="store_true", help="Skip live HTML cross-check (fixtures/bootstrap only)")
+    parser.add_argument("--skip-cross-check", action="store_true", help="Unsafe legacy flag; always rejected by the production updater")
     parser.add_argument("--gus-start-year", type=int, default=int(GUS_HISTORY_START[:4]))
     parser.add_argument("--as-of", help="Deterministic verification date (YYYY-MM-DD)")
     args = parser.parse_args()
 
     live_transaction = False
     try:
+        if args.skip_cross_check:
+            raise SourceError(
+                "--skip-cross-check is disabled for the production updater; "
+                "tests and fixtures must call sync_mf(..., cross_check=False) directly"
+            )
         if not args.offline:
             _require_clean_managed_tree()
             live_transaction = True
             if args.mf_only:
-                verified_date = args.as_of or date.today().isoformat()
+                verified_date = _validated_verification_date(args.as_of)
                 sync_mf(
                     default_session(),
                     verified_date,
                     args.mf_workbook,
-                    not args.skip_cross_check,
+                    True,
                     args.mf_workbook_url,
                 )
                 mark_source_status("mf", True, "MF-only refresh succeeded")

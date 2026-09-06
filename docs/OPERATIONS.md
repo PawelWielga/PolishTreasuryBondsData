@@ -60,6 +60,8 @@ The 2026-09-05 scheduled run demonstrated this exact failure mode: MF/GUS/NBP ac
 
 Normalized MF series and generated manifests are independently constrained to the canonical MF, GUS and NBP source endpoints, while offer cross-check URLs must remain on `www.obligacjeskarbowe.pl`. A manually edited provenance object therefore cannot make an untrusted domain look official during an offline rebuild.
 
+The production updater never permits the MF HTML cross-check to be disabled. The internal `sync_mf(..., cross_check=False)` mode exists only for isolated parser fixtures and tests; `scripts/update.py --skip-cross-check` fails closed before any live source is touched. Live `--as-of` may be used for deterministic historical verification, but future dates are rejected so source provenance and `datasetRevision` cannot be stamped from a clock value later than the actual run date.
+
 The scheduled updater requires the repository-level GitHub Actions setting that permits workflows to create pull requests. Default workflow token permissions remain read-only; the updater declares its write permissions explicitly.
 
 ## Pages publication
@@ -86,11 +88,14 @@ Every successful Pages deployment is followed by a network smoke test against th
 5. verify SHA-256 against the bytes returned by Pages;
 6. parse every file as JSON and verify its declared `schemaVersion`;
 7. verify manifest counts when the document has a known collection field;
-8. fetch `v1/status.json`, require it to match the rendered deployment artifact and point at the selected dataset revision.
+8. validate the deployed manifest against the reviewed public `snapshot-manifest-v1` JSON Schema;
+9. fetch `v1/status.json`, require it to match the rendered deployment artifact and point at the selected dataset revision.
 
 The smoke tester retries public reads to tolerate short Pages propagation delays, but persistent missing files, broken paths, invalid JSON, revision disagreement, status disagreement or hash mismatch fail the workflow visibly and do not modify repository data.
 
 When at least two real snapshot revisions are retained locally, the same deployment smoke test also fetches and fully verifies the newest prior immutable snapshot. Until the first actual data revision change occurs, the repository has only one genuine snapshot and the workflow reports that fact rather than fabricating historical data for the test.
+
+Versioned public schemas must remain valid for every retained immutable artifact that advertises that schema version. The NBP v2 contract therefore accepts both the legacy official `nbp.pl` archive-page provenance already frozen in the first reviewed snapshot and the current machine-readable `static.nbp.pl` archive URL. New manifest provenance using the machine-readable NBP source additionally requires the exact reviewed current-rate XML URL; this preserves old immutable bytes without weakening current provenance.
 
 ## Dependency and workflow supply chain
 

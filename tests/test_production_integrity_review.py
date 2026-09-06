@@ -20,10 +20,17 @@ from scripts.sources import (
 
 
 class _Response:
-    def __init__(self, url: str, content: bytes = b"ok", status_code: int = 200) -> None:
+    def __init__(
+        self,
+        url: str,
+        content: bytes = b"ok",
+        status_code: int = 200,
+        history: list["_Response"] | None = None,
+    ) -> None:
         self.url = url
         self.content = content
         self.status_code = status_code
+        self.history = history or []
 
     def raise_for_status(self) -> None:
         return None
@@ -33,6 +40,18 @@ class SourceBoundaryRegressionTests(unittest.TestCase):
     def test_cross_origin_redirect_is_rejected(self) -> None:
         session = Mock()
         session.get.return_value = _Response("https://evil.example/payload")
+        with self.assertRaisesRegex(SourceError, "redirect left trusted origin"):
+            fetch(session, "https://www.gov.pl/attachment/example", "application/octet-stream")
+
+    def test_intermediate_cross_origin_redirect_is_rejected(self) -> None:
+        session = Mock()
+        session.get.return_value = _Response(
+            "https://www.gov.pl/attachment/final",
+            history=[
+                _Response("https://www.gov.pl/attachment/start"),
+                _Response("https://evil.example/intermediate"),
+            ],
+        )
         with self.assertRaisesRegex(SourceError, "redirect left trusted origin"):
             fetch(session, "https://www.gov.pl/attachment/example", "application/octet-stream")
 

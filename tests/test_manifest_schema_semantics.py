@@ -57,16 +57,40 @@ class SnapshotManifestSchemaSemanticsTests(unittest.TestCase):
 
         self.assertTrue(any("does not match" in error.message for error in self.validate(document)))
 
-    def test_nbp_current_url_is_optional_for_legacy_snapshot_and_valid_when_present(self) -> None:
+    def test_legacy_nbp_origin_is_valid_without_current_url(self) -> None:
         legacy = current_manifest()
-        legacy["provenance"]["nbp"].pop("currentUrl", None)
+        verified_at = legacy["provenance"]["nbp"]["verifiedAt"]
+        legacy["provenance"]["nbp"] = {
+            "publisher": "NBP",
+            "url": "https://nbp.pl/podstawowe-stopy-procentowe-archiwum/",
+            "verifiedAt": verified_at,
+        }
+
         self.assertEqual([], self.validate(legacy))
 
-        migrated = copy.deepcopy(legacy)
-        migrated["provenance"]["nbp"]["currentUrl"] = (
-            "https://static.nbp.pl/dane/stopy/stopy_procentowe.xml"
-        )
-        self.assertEqual([], self.validate(migrated))
+    def test_machine_readable_nbp_origin_requires_exact_current_url(self) -> None:
+        current = current_manifest()
+        self.assertEqual([], self.validate(current))
+
+        missing_current_url = copy.deepcopy(current)
+        missing_current_url["provenance"]["nbp"].pop("currentUrl", None)
+        self.assertTrue(self.validate(missing_current_url))
+
+        wrong_current_url = copy.deepcopy(current)
+        wrong_current_url["provenance"]["nbp"]["currentUrl"] = "https://static.nbp.pl/other.xml"
+        self.assertTrue(self.validate(wrong_current_url))
+
+    def test_legacy_nbp_origin_rejects_current_url_field(self) -> None:
+        legacy = current_manifest()
+        verified_at = legacy["provenance"]["nbp"]["verifiedAt"]
+        legacy["provenance"]["nbp"] = {
+            "publisher": "NBP",
+            "url": "https://nbp.pl/podstawowe-stopy-procentowe-archiwum/",
+            "currentUrl": "https://static.nbp.pl/dane/stopy/stopy_procentowe.xml",
+            "verifiedAt": verified_at,
+        }
+
+        self.assertTrue(self.validate(legacy))
 
     def test_catalog_coverage_requires_every_supported_family(self) -> None:
         document = current_manifest()

@@ -6,9 +6,10 @@ import json
 import time
 from pathlib import Path, PurePosixPath
 from typing import Any
-from urllib.parse import urljoin, urlparse
+from urllib.parse import unquote, urljoin, urlparse
 
 import requests
+from jsonschema import Draft202012Validator, FormatChecker
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_PUBLICATION_ROOT = ROOT / "publication" / "v1"
@@ -42,10 +43,22 @@ def _https_origin(url: str) -> tuple[str, str, int]:
 
 def _safe_relative_path(value: str, label: str) -> str:
     parsed = urlparse(value)
-    path = PurePosixPath(parsed.path)
-    if parsed.scheme or parsed.netloc or path.is_absolute() or ".." in path.parts:
+    decoded_path = unquote(parsed.path)
+    path = PurePosixPath(decoded_path)
+    if (
+        parsed.scheme
+        or parsed.netloc
+        or parsed.params
+        or parsed.query
+        or parsed.fragment
+        or "\\" in decoded_path
+        or decoded_path != parsed.path
+        or path.is_absolute()
+        or ".." in path.parts
+        or path.as_posix() != decoded_path
+    ):
         raise SmokeError(f"{label} must be a safe relative path, got {value!r}")
-    return value
+    return decoded_path
 
 
 def fetch_bytes(
@@ -62,11 +75,14 @@ def fetch_bytes(
                 headers={"Accept": "application/json", "Cache-Control": "no-cache"},
                 timeout=(10, 30),
             )
-            response_url = getattr(response, "url", url)
-            if isinstance(response_url, str) and _https_origin(response_url) != _https_origin(url):
-                raise SmokeError(
-                    f"Pages resource redirect left expected origin: {url} -> {response_url}"
-                )
+            expected_origin = _https_origin(url)
+            redirect_chain = [*getattr(response, "history", ()), response]
+            for hop in redirect_chain:
+                response_url = getattr(hop, "url", url)
+                if isinstance(response_url, str) and _https_origin(response_url) != expected_origin:
+                    raise SmokeError(
+                        f"Pages resource redirect left expected origin: {url} -> {response_url}"
+                    )
             if response.status_code == 200:
                 return response.content
             last_error = SmokeError(f"HTTP {response.status_code} for {url}")
@@ -180,6 +196,18 @@ def fetch_expected_status(
     raise SmokeError(f"Deployed status.json did not converge at {status_url}: {last_error}")
 
 
+def _validate_document_schema(
+    document: dict[str, Any], schema: dict[str, Any], label: str
+) -> None:
+    validator = Draft202012Validator(schema, format_checker=FormatChecker())
+    errors = sorted(validator.iter_errors(document), key=lambda error: list(error.path))
+    if errors:
+        details = "; ".join(
+            f"{'/'.join(map(str, error.path)) or '<root>'}: {error.message}" for error in errors
+        )
+        raise SmokeError(f"{label} does not satisfy its reviewed JSON Schema: {details}")
+
+
 def _document_count(document: dict[str, Any]) -> int | None:
     for key in ("series", "productDefinitions", "observations"):
         value = document.get(key)
@@ -194,8 +222,11 @@ def verify_manifest_and_files(
     expected_revision: str,
     attempts: int,
     retry_delay_seconds: float,
+    manifest_schema: dict[str, Any] | None = None,
 ) -> None:
     manifest = fetch_json(session, manifest_url, attempts, retry_delay_seconds)
+    if manifest_schema is not None:
+        _validate_document_schema(manifest, manifest_schema, manifest_url)
     if manifest.get("schemaVersion") != "1.0":
         raise SmokeError(
             f"Unexpected manifest schemaVersion at {manifest_url}: {manifest.get('schemaVersion')!r}"
@@ -301,6 +332,15 @@ def verify_public_contract(
     status_url = urljoin(normalized_base, "v1/status.json")
     expected_revision = expected_revision_from_local_publication(publication_root)
     expected_status_bytes, expected_status = expected_status_from_local_publication(publication_root)
+    manifest_schema: dict[str, Any] | None = None
+    if schemas_root is not None:
+        manifest_schema_path = schemas_root / "snapshot-manifest-v1.schema.json"
+        try:
+            manifest_schema = json.loads(manifest_schema_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise SmokeError(
+                f"Could not read reviewed manifest schema {manifest_schema_path}: {exc}"
+            ) from exc
     if expected_status.get("schemaVersion") != "1.0":
         raise SmokeError("Local rendered status.json has an unexpected schemaVersion")
     if expected_status.get("datasetRevision") != expected_revision:
@@ -341,6 +381,7 @@ def verify_public_contract(
             revision,
             attempts,
             retry_delay_seconds,
+            manifest_schema,
         )
         fetch_expected_status(
             session,
@@ -365,6 +406,7 @@ def verify_public_contract(
                 prior_revision,
                 attempts,
                 retry_delay_seconds,
+                manifest_schema,
             )
 
         if schemas_root is not None:
