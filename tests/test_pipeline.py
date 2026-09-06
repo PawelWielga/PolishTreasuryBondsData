@@ -36,6 +36,17 @@ class MinistryOfFinanceTests(unittest.TestCase):
         html = '<a class="file-download" href="/attachment/official" aria-label="Dane dotyczące obligacji detalicznych plik w formacie xls">Pobierz</a>'
         self.assertEqual("https://www.gov.pl/attachment/official", discover_mf_workbook(html))
 
+    def test_discovers_official_xls_without_presentation_css_class(self):
+        html = '<a href="/attachment/official" aria-label="Dane dotyczące obligacji detalicznych plik w formacie xls">Pobierz</a>'
+        self.assertEqual("https://www.gov.pl/attachment/official", discover_mf_workbook(html))
+
+    def test_duplicate_links_to_same_official_xls_are_not_ambiguous(self):
+        html = """
+        <a href="/attachment/official" aria-label="Dane dotyczące obligacji detalicznych plik w formacie xls">Pobierz</a>
+        <a class="file-download" href="/attachment/official">Dane dotyczące obligacji detalicznych XLS</a>
+        """
+        self.assertEqual("https://www.gov.pl/attachment/official", discover_mf_workbook(html))
+
     def test_workbook_fixture_contains_all_supported_families(self):
         self.assertEqual({"OTS", "ROR", "DOR", "TOS", "COI", "EDO", "ROS", "ROD"}, {x["productType"] for x in self.series})
 

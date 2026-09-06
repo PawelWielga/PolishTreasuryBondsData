@@ -164,15 +164,15 @@ def fetch(
 
 def discover_mf_workbook(page_html: str, page_url: str = MF_PAGE_URL) -> str:
     soup = BeautifulSoup(page_html, "html.parser")
-    candidates: list[str] = []
-    for link in soup.select("a.file-download[href]"):
+    candidates: set[str] = set()
+    for link in soup.select("a[href]"):
         label = " ".join(link.stripped_strings).lower()
         aria = (link.get("aria-label") or "").lower()
         if "obligacji detalicznych" in f"{label} {aria}" and "xls" in f"{label} {aria}":
-            candidates.append(urljoin(page_url, str(link["href"])))
+            candidates.add(urljoin(page_url, str(link["href"])))
     if len(candidates) != 1:
         raise SourceError(f"Expected one official MF retail-bond workbook, found {len(candidates)}")
-    return candidates[0]
+    return next(iter(candidates))
 
 
 @dataclass(frozen=True)
