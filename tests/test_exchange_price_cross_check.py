@@ -16,6 +16,20 @@ ROR_HTML = """
 """
 
 
+def workbook_ror(exchange_price: int = 9990) -> dict:
+    return {
+        "seriesCode": "ROR0927",
+        "productType": "ROR",
+        "saleFrom": "2026-09-01",
+        "saleTo": "2026-09-30",
+        "issuePriceMinorUnits": 10000,
+        "exchangePriceMinorUnits": exchange_price,
+        "firstPeriodAnnualRatePercent": "4.00",
+        "marginPercent": "0.00",
+        "fixedMaturityInterestMinorUnits": None,
+    }
+
+
 class ExchangePriceCrossCheckTests(unittest.TestCase):
     def test_standard_offer_parser_extracts_exchange_price(self) -> None:
         facts = parse_series_html(ROR_HTML)
@@ -26,24 +40,15 @@ class ExchangePriceCrossCheckTests(unittest.TestCase):
             '<p>Cena zamiany jednej obligacji: 99,90 zł</p>',
             '',
         )
-        with self.assertRaisesRegex(SourceError, "exchange price"):
-            parse_series_html(html)
+        facts = parse_series_html(html)
+        self.assertIsNone(facts["exchangePriceMinorUnits"])
+        with self.assertRaisesRegex(SourceError, "exchangePriceMinorUnits"):
+            cross_check_series(workbook_ror(), facts)
 
     def test_exchange_price_disagreement_fails_cross_check(self) -> None:
         facts = parse_series_html(ROR_HTML)
-        workbook_series = {
-            "seriesCode": "ROR0927",
-            "productType": "ROR",
-            "saleFrom": "2026-09-01",
-            "saleTo": "2026-09-30",
-            "issuePriceMinorUnits": 10000,
-            "exchangePriceMinorUnits": 9980,
-            "firstPeriodAnnualRatePercent": "4.00",
-            "marginPercent": "0.00",
-            "fixedMaturityInterestMinorUnits": None,
-        }
         with self.assertRaisesRegex(SourceError, "exchangePriceMinorUnits"):
-            cross_check_series(workbook_series, facts)
+            cross_check_series(workbook_ror(9980), facts)
 
 
 if __name__ == "__main__":
