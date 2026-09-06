@@ -113,7 +113,8 @@ def archive_integrity_violations(head: str = "HEAD") -> list[str]:
     a privileged/bypassed rewrite lands, a later unrelated commit would make the
     rewritten bytes part of the next push's base. Full-history validation anchors
     every snapshot directory to the first commit on the current first-parent
-    history where its manifest appears. Historical directory names are recovered
+    history where its manifest appears and requires that revision to have been
+    selected by latest.json in that same commit. Historical directory names are recovered
     from Git as well, so a snapshot that was deleted entirely cannot disappear
     from validation. This also runs on scheduled Pages deploys, so a previously
     rejected rewrite cannot become publishable merely with time.
@@ -175,6 +176,19 @@ def archive_integrity_violations(head: str = "HEAD") -> list[str]:
             continue
 
         first_reviewed = history[0]
+        try:
+            selected_at_first_appearance = _selected_snapshot(first_reviewed)
+        except (RuntimeError, ValueError) as exc:
+            violations.append(
+                f"{snapshot}: cannot prove first reviewed selection at {first_reviewed}: {exc}"
+            )
+        else:
+            if selected_at_first_appearance != snapshot:
+                violations.append(
+                    f"{snapshot}: first appeared at {first_reviewed} but was not selected by "
+                    f"{LATEST_PATH} (selected {selected_at_first_appearance})"
+                )
+
         diff = _git(
             "diff",
             "--name-status",

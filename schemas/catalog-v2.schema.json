@@ -3,67 +3,192 @@
   "$id": "https://pawelwielga.github.io/PolishTreasuryBondsData/schemas/catalog-v2.schema.json",
   "title": "Polish retail Treasury Bond series catalog v2",
   "type": "object",
-  "required": ["schemaVersion", "generatedAt", "series"],
+  "required": [
+    "schemaVersion",
+    "generatedAt",
+    "series"
+  ],
   "properties": {
-    "schemaVersion": { "const": "2.0" },
-    "generatedAt": { "type": "string", "format": "date-time" },
+    "schemaVersion": {
+      "const": "2.0"
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
     "series": {
       "type": "array",
-      "items": { "$ref": "#/$defs/seriesTerms" }
+      "items": {
+        "$ref": "#/$defs/seriesTerms"
+      },
+      "minItems": 1
     }
   },
   "$defs": {
-    "exactPercent": { "type": "string", "pattern": "^-?[0-9]+\\.[0-9]{2,4}$" },
+    "exactPercent": {
+      "type": "string",
+      "pattern": "^-?[0-9]+\\.[0-9]{2,4}$"
+    },
     "seriesTerms": {
       "type": "object",
       "required": [
-        "seriesCode", "productType", "productDefinition", "isin", "saleFrom", "saleTo", "currency",
-        "faceValueMinorUnits", "issuePriceMinorUnits", "exchangePriceMinorUnits",
-        "firstPeriodAnnualRatePercent", "marginPercent", "fixedMaturityInterestMinorUnits",
-        "termsRevision", "contentHash", "provenance"
+        "seriesCode",
+        "productType",
+        "productDefinition",
+        "isin",
+        "saleFrom",
+        "saleTo",
+        "currency",
+        "faceValueMinorUnits",
+        "issuePriceMinorUnits",
+        "exchangePriceMinorUnits",
+        "firstPeriodAnnualRatePercent",
+        "marginPercent",
+        "fixedMaturityInterestMinorUnits",
+        "termsRevision",
+        "contentHash",
+        "provenance"
       ],
       "properties": {
-        "seriesCode": { "type": "string", "pattern": "^[A-Z]{3}[0-9]{4}$" },
-        "productType": { "enum": ["OTS", "ROR", "DOR", "TOS", "COI", "EDO", "ROS", "ROD"] },
-        "productDefinition": { "type": "string", "pattern": "^[A-Z]{3}-rules-[1-9][0-9]*$" },
-        "isin": { "type": ["string", "null"], "pattern": "^PL[0-9]{10}$" },
-        "saleFrom": { "type": "string", "format": "date" },
-        "saleTo": { "type": "string", "format": "date" },
-        "currency": { "const": "PLN" },
-        "faceValueMinorUnits": { "const": 10000 },
-        "issuePriceMinorUnits": { "type": "integer", "exclusiveMinimum": 0 },
-        "exchangePriceMinorUnits": { "type": ["integer", "null"], "exclusiveMinimum": 0 },
-        "firstPeriodAnnualRatePercent": { "$ref": "#/$defs/exactPercent" },
-        "marginPercent": { "$ref": "#/$defs/exactPercent" },
-        "fixedMaturityInterestMinorUnits": { "type": ["integer", "null"], "minimum": 0 },
-        "termsRevision": { "type": "integer", "minimum": 1 },
-        "contentHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "seriesCode": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}[0-9]{4}$"
+        },
+        "productType": {
+          "enum": [
+            "OTS",
+            "ROR",
+            "DOR",
+            "TOS",
+            "COI",
+            "EDO",
+            "ROS",
+            "ROD"
+          ]
+        },
+        "productDefinition": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}-rules-[1-9][0-9]*$"
+        },
+        "isin": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^PL[0-9]{10}$"
+        },
+        "saleFrom": {
+          "type": "string",
+          "format": "date"
+        },
+        "saleTo": {
+          "type": "string",
+          "format": "date"
+        },
+        "currency": {
+          "const": "PLN"
+        },
+        "faceValueMinorUnits": {
+          "const": 10000
+        },
+        "issuePriceMinorUnits": {
+          "type": "integer",
+          "exclusiveMinimum": 0
+        },
+        "exchangePriceMinorUnits": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "exclusiveMinimum": 0
+        },
+        "firstPeriodAnnualRatePercent": {
+          "$ref": "#/$defs/exactPercent"
+        },
+        "marginPercent": {
+          "$ref": "#/$defs/exactPercent"
+        },
+        "fixedMaturityInterestMinorUnits": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "termsRevision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "contentHash": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
         "provenance": {
           "type": "object",
-          "required": ["primary", "crossCheck", "verifiedAt"],
+          "required": [
+            "primary",
+            "crossCheck",
+            "verifiedAt"
+          ],
           "properties": {
             "primary": {
               "type": "object",
-              "required": ["publisher", "url", "sha256", "sheet", "row"],
+              "required": [
+                "publisher",
+                "url",
+                "sha256",
+                "sheet",
+                "row"
+              ],
               "properties": {
-                "publisher": { "const": "Ministry of Finance" },
-                "url": { "type": "string", "format": "uri" },
-                "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
-                "sheet": { "type": "string" },
-                "row": { "type": "integer", "minimum": 1 }
+                "publisher": {
+                  "const": "Ministry of Finance"
+                },
+                "url": {
+                  "type": "string",
+                  "format": "uri",
+                  "pattern": "^https://www\\.gov\\.pl/attachment/[^?#]+$"
+                },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                "sheet": {
+                  "type": "string"
+                },
+                "row": {
+                  "type": "integer",
+                  "minimum": 1
+                }
               },
               "additionalProperties": false
             },
             "crossCheck": {
-              "type": ["object", "null"],
+              "type": [
+                "object",
+                "null"
+              ],
               "properties": {
-                "url": { "type": "string", "format": "uri" },
-                "verifiedAt": { "type": "string", "format": "date" }
+                "url": {
+                  "type": "string",
+                  "format": "uri",
+                  "pattern": "^https://www\\.obligacjeskarbowe\\.pl/oferta-obligacji/[^?#]+$"
+                },
+                "verifiedAt": {
+                  "type": "string",
+                  "format": "date"
+                }
               },
-              "required": ["url", "verifiedAt"],
+              "required": [
+                "url",
+                "verifiedAt"
+              ],
               "additionalProperties": false
             },
-            "verifiedAt": { "type": "string", "format": "date" }
+            "verifiedAt": {
+              "type": "string",
+              "format": "date"
+            }
           },
           "additionalProperties": false
         }
@@ -71,17 +196,256 @@
       "allOf": [
         {
           "if": {
-            "properties": { "productType": { "const": "OTS" } },
-            "required": ["productType"]
+            "properties": {
+              "productType": {
+                "const": "OTS"
+              }
+            },
+            "required": [
+              "productType"
+            ]
           },
           "then": {
             "properties": {
-              "fixedMaturityInterestMinorUnits": { "type": "integer", "minimum": 0 }
+              "fixedMaturityInterestMinorUnits": {
+                "type": "integer",
+                "minimum": 0
+              }
             }
           },
           "else": {
             "properties": {
-              "fixedMaturityInterestMinorUnits": { "const": null }
+              "fixedMaturityInterestMinorUnits": {
+                "const": null
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "productType": {
+                "enum": [
+                  "ROS",
+                  "ROD"
+                ]
+              }
+            },
+            "required": [
+              "productType"
+            ]
+          },
+          "then": {
+            "properties": {
+              "exchangePriceMinorUnits": {
+                "const": null
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "exchangePriceMinorUnits": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "productType": {
+                "enum": [
+                  "OTS",
+                  "TOS"
+                ]
+              }
+            },
+            "required": [
+              "productType"
+            ]
+          },
+          "then": {
+            "properties": {
+              "marginPercent": {
+                "const": "0.00"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "productType": {
+                "const": "OTS"
+              }
+            },
+            "required": [
+              "productType"
+            ]
+          },
+          "then": {
+            "properties": {
+              "seriesCode": {
+                "pattern": "^OTS[0-9]{4}$"
+              },
+              "productDefinition": {
+                "pattern": "^OTS-rules-[1-9][0-9]*$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "productType": {
+                "const": "ROR"
+              }
+            },
+            "required": [
+              "productType"
+            ]
+          },
+          "then": {
+            "properties": {
+              "seriesCode": {
+                "pattern": "^ROR[0-9]{4}$"
+              },
+              "productDefinition": {
+                "pattern": "^ROR-rules-[1-9][0-9]*$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "productType": {
+                "const": "DOR"
+              }
+            },
+            "required": [
+              "productType"
+            ]
+          },
+          "then": {
+            "properties": {
+              "seriesCode": {
+                "pattern": "^DOR[0-9]{4}$"
+              },
+              "productDefinition": {
+                "pattern": "^DOR-rules-[1-9][0-9]*$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "productType": {
+                "const": "TOS"
+              }
+            },
+            "required": [
+              "productType"
+            ]
+          },
+          "then": {
+            "properties": {
+              "seriesCode": {
+                "pattern": "^TOS[0-9]{4}$"
+              },
+              "productDefinition": {
+                "pattern": "^TOS-rules-[1-9][0-9]*$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "productType": {
+                "const": "COI"
+              }
+            },
+            "required": [
+              "productType"
+            ]
+          },
+          "then": {
+            "properties": {
+              "seriesCode": {
+                "pattern": "^COI[0-9]{4}$"
+              },
+              "productDefinition": {
+                "pattern": "^COI-rules-[1-9][0-9]*$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "productType": {
+                "const": "EDO"
+              }
+            },
+            "required": [
+              "productType"
+            ]
+          },
+          "then": {
+            "properties": {
+              "seriesCode": {
+                "pattern": "^EDO[0-9]{4}$"
+              },
+              "productDefinition": {
+                "pattern": "^EDO-rules-[1-9][0-9]*$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "productType": {
+                "const": "ROS"
+              }
+            },
+            "required": [
+              "productType"
+            ]
+          },
+          "then": {
+            "properties": {
+              "seriesCode": {
+                "pattern": "^ROS[0-9]{4}$"
+              },
+              "productDefinition": {
+                "pattern": "^ROS-rules-[1-9][0-9]*$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "productType": {
+                "const": "ROD"
+              }
+            },
+            "required": [
+              "productType"
+            ]
+          },
+          "then": {
+            "properties": {
+              "seriesCode": {
+                "pattern": "^ROD[0-9]{4}$"
+              },
+              "productDefinition": {
+                "pattern": "^ROD-rules-[1-9][0-9]*$"
+              }
             }
           }
         }

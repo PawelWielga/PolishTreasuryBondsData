@@ -9,9 +9,10 @@ import scripts.smoke_pages as smoke
 
 
 class FakeResponse:
-    def __init__(self, content: bytes, status_code: int = 200):
+    def __init__(self, content: bytes, status_code: int = 200, url: str | None = None):
         self.content = content
         self.status_code = status_code
+        self.url = url
 
 
 class FakeSession:
@@ -26,8 +27,8 @@ class FakeSession:
 
     def get(self, url, **_kwargs):
         if url not in self.resources:
-            return FakeResponse(b"", 404)
-        return FakeResponse(self.resources[url])
+            return FakeResponse(b"", 404, url)
+        return FakeResponse(self.resources[url], url=url)
 
 
 def encoded(value) -> bytes:
@@ -68,6 +69,20 @@ def snapshot_resources(base: str, revision: str, file_content: bytes) -> dict[st
 
 
 class PagesSmokeTests(unittest.TestCase):
+
+    def test_cross_origin_redirect_fails(self):
+        session = FakeSession({})
+        session.get = lambda url, **_kwargs: FakeResponse(
+            b"{}", 200, "https://evil.example/redirected.json"
+        )
+
+        with self.assertRaisesRegex(smoke.SmokeError, "redirect left expected origin"):
+            smoke.fetch_bytes(
+                session,
+                "https://example.test/project/v1/latest.json",
+                attempts=1,
+                retry_delay_seconds=0,
+            )
     def make_publication(self, root: Path, current: str, prior: str | None = None) -> Path:
         publication = root / "publication" / "v1"
         snapshots = publication / "snapshots"

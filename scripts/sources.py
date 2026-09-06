@@ -10,7 +10,7 @@ from datetime import date, datetime, timezone
 from decimal import Decimal, ROUND_HALF_UP
 from io import BytesIO
 from typing import Any, Callable, Iterable
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 import requests
 import xlrd
@@ -89,6 +89,56 @@ def default_session() -> requests.Session:
     return session
 
 
+def _https_origin(url: str) -> tuple[str, str, int]:
+    try:
+        parsed = urlparse(url)
+        port = parsed.port or 443
+    except ValueError as exc:
+        raise SourceError(f"Official source URL is malformed: {url}") from exc
+    if (
+        parsed.scheme.lower() != "https"
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+    ):
+        raise SourceError(f"Official source URL must be credential-free HTTPS: {url}")
+    return parsed.scheme.lower(), parsed.hostname.lower(), port
+
+
+def validate_official_mf_workbook_url(workbook_url: str) -> str:
+    parsed = urlparse(workbook_url)
+    if (
+        parsed.scheme != "https"
+        or parsed.netloc != "www.gov.pl"
+        or not parsed.path.startswith("/attachment/")
+        or parsed.params
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise SourceError(
+            "MF workbook provenance must be the exact official "
+            "https://www.gov.pl/attachment/... URL"
+        )
+    return workbook_url
+
+
+def validate_official_cross_check_url(url: str) -> str:
+    parsed = urlparse(url)
+    if (
+        parsed.scheme != "https"
+        or parsed.netloc != "www.obligacjeskarbowe.pl"
+        or not parsed.path.startswith("/oferta-obligacji/")
+        or parsed.params
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise SourceError(
+            "Treasury Bond cross-check provenance must stay on the exact official "
+            "https://www.obligacjeskarbowe.pl/oferta-obligacji/... URL"
+        )
+    return url
+
+
 def fetch(
     session: requests.Session,
     url: str,
@@ -96,8 +146,14 @@ def fetch(
     timeout: tuple[int, int] = (10, 45),
     allow_not_found: bool = False,
 ) -> bytes:
+    requested_origin = _https_origin(url)
     try:
         response = session.get(url, headers={"Accept": accept}, timeout=timeout)
+        response_url = getattr(response, "url", url)
+        if isinstance(response_url, str) and _https_origin(response_url) != requested_origin:
+            raise SourceError(
+                f"Official source redirect left trusted origin: {url} -> {response_url}"
+            )
         if allow_not_found and response.status_code == 404:
             return b""
         response.raise_for_status()
@@ -108,15 +164,15 @@ def fetch(
 
 def discover_mf_workbook(page_html: str, page_url: str = MF_PAGE_URL) -> str:
     soup = BeautifulSoup(page_html, "html.parser")
-    candidates: list[str] = []
-    for link in soup.select("a.file-download[href]"):
+    candidates: set[str] = set()
+    for link in soup.select("a[href]"):
         label = " ".join(link.stripped_strings).lower()
         aria = (link.get("aria-label") or "").lower()
         if "obligacji detalicznych" in f"{label} {aria}" and "xls" in f"{label} {aria}":
-            candidates.append(urljoin(page_url, str(link["href"])))
+            candidates.add(urljoin(page_url, str(link["href"])))
     if len(candidates) != 1:
         raise SourceError(f"Expected one official MF retail-bond workbook, found {len(candidates)}")
-    return candidates[0]
+    return next(iter(candidates))
 
 
 @dataclass(frozen=True)
@@ -277,9 +333,27 @@ def parse_series_html(html: str) -> dict[str, str | int | None]:
     sale = re.search(r"Sprzedaż:\s*(\d{2}\.\d{2}\.\d{4})\s*-\s*(\d{2}\.\d{2}\.\d{4})", text, re.I)
     if not sale:
         raise SourceError(f"{series_code}: sale window not found on cross-check page")
-    issue_price = Decimal(_required(r"Cena sprzedaży jednej obligacji:\s*([0-9]+(?:,[0-9]+)?)\s*zł", text, "sale price").replace(",", "."))
-    first_rate = Decimal(_required(r"Oprocentowanie:\s*([0-9]+(?:,[0-9]+)?)%", text, "first rate").replace(",", "."))
+    issue_price = Decimal(
+        _required(
+            r"Cena sprzedaży jednej obligacji:\s*([0-9]+(?:,[0-9]+)?)\s*zł",
+            text,
+            "sale price",
+        ).replace(",", ".")
+    )
+    first_rate = Decimal(
+        _required(r"Oprocentowanie:\s*([0-9]+(?:,[0-9]+)?)%", text, "first rate").replace(",", ".")
+    )
     family = series_code[:3]
+    if family not in PRODUCT_RULES:
+        raise SourceError(f"Unsupported Treasury Bond family on cross-check page: {family}")
+    exchange_match = re.search(
+        r"Cena zamiany jednej obligacji:\s*([0-9]+(?:,[0-9]+)?)\s*zł",
+        text,
+        re.I,
+    )
+    exchange_price = (
+        Decimal(exchange_match.group(1).replace(",", ".")) if exchange_match else None
+    )
     rules = PRODUCT_RULES[family]
     margin_match = None
     if rules.rate_model == "NbpReferencePlusMargin":
@@ -303,6 +377,7 @@ def parse_series_html(html: str) -> dict[str, str | int | None]:
         "saleFrom": datetime.strptime(sale.group(1), "%d.%m.%Y").date().isoformat(),
         "saleTo": datetime.strptime(sale.group(2), "%d.%m.%Y").date().isoformat(),
         "issuePriceMinorUnits": money_minor_units(issue_price),
+        "exchangePriceMinorUnits": money_minor_units(exchange_price),
         "firstPeriodAnnualRatePercent": canonical_decimal(first_rate),
         "marginPercent": margin,
         "fixedMaturityInterestMinorUnits": fixed_maturity_interest,
@@ -324,11 +399,17 @@ def _parse_maturity_months(text: str) -> int | None:
 
 def cross_check_series(workbook_series: dict[str, Any], html_facts: dict[str, Any]) -> None:
     comparable = dict(workbook_series)
-    rules = PRODUCT_RULES[workbook_series["productType"]]
+    product_type = workbook_series["productType"]
+    rules = PRODUCT_RULES[product_type]
     comparable["maturityMonths"] = rules.maturity_months
+    if product_type not in {"ROS", "ROD"} and html_facts.get("exchangePriceMinorUnits") is None:
+        raise SourceError(
+            f"{workbook_series['seriesCode']}: required cross-check field "
+            "exchangePriceMinorUnits could not be parsed from official offer page"
+        )
     fields = (
-        "seriesCode", "saleFrom", "saleTo", "issuePriceMinorUnits", "firstPeriodAnnualRatePercent",
-        "marginPercent", "fixedMaturityInterestMinorUnits", "maturityMonths",
+        "seriesCode", "saleFrom", "saleTo", "issuePriceMinorUnits", "exchangePriceMinorUnits",
+        "firstPeriodAnnualRatePercent", "marginPercent", "fixedMaturityInterestMinorUnits", "maturityMonths",
     )
     for field in fields:
         if html_facts.get(field) is None:

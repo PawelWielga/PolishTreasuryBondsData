@@ -12,6 +12,7 @@ class OtsFixedMaturityInterestCrossCheckTests(unittest.TestCase):
           <p>Oprocentowanie: 2,00%</p>
           <p>Sprzedaż: 01.09.2026 - 30.09.2026</p>
           <p>Cena sprzedaży jednej obligacji: 100,00 zł</p>
+          <p>Cena zamiany jednej obligacji: 100,00 zł</p>
           <p>Odsetki: 0,50 zł</p>
         </main>
         """
@@ -28,6 +29,7 @@ class OtsFixedMaturityInterestCrossCheckTests(unittest.TestCase):
           <p>Oprocentowanie: 2,00%</p>
           <p>Sprzedaż: 01.09.2026 - 30.09.2026</p>
           <p>Cena sprzedaży jednej obligacji: 100,00 zł</p>
+          <p>Cena zamiany jednej obligacji: 100,00 zł</p>
         </main>
         """
 
@@ -38,9 +40,13 @@ class OtsFixedMaturityInterestCrossCheckTests(unittest.TestCase):
         workbook = {
             "seriesCode": "OTS1226",
             "productType": "OTS",
+            "exchangePriceMinorUnits": 10000,
             "fixedMaturityInterestMinorUnits": 50,
         }
-        html_facts = {"fixedMaturityInterestMinorUnits": 49}
+        html_facts = {
+            "exchangePriceMinorUnits": 10000,
+            "fixedMaturityInterestMinorUnits": 49,
+        }
 
         with self.assertRaisesRegex(SourceError, "official sources disagree on fixedMaturityInterestMinorUnits"):
             cross_check_series(workbook, html_facts)
