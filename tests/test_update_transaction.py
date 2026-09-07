@@ -42,6 +42,23 @@ class ManagedTreeTransactionTests(unittest.TestCase):
             with self.assertRaisesRegex(SourceError, "requires a clean managed tree"):
                 update._require_clean_managed_tree()
 
+    def test_dirty_tree_precondition_failure_never_runs_rollback(self) -> None:
+        with (
+            patch.object(
+                update,
+                "_require_clean_managed_tree",
+                side_effect=SourceError("dirty managed tree"),
+            ),
+            patch.object(update, "_rollback_managed_tree") as rollback,
+            patch.object(update, "build_dist") as build_dist,
+            patch("sys.argv", ["update.py"]),
+        ):
+            result = update.main()
+
+        self.assertEqual(1, result)
+        rollback.assert_not_called()
+        build_dist.assert_not_called()
+
     def test_rollback_restores_tracked_files_and_removes_generated_untracked_files(self) -> None:
         (self.root / "data" / "tracked.txt").write_text("partial refresh\n", encoding="utf-8")
         generated = self.root / "publication" / "generated.json"
