@@ -122,6 +122,10 @@ A correction never edits a published record in place. It appends a new terms/ref
 
 The updater is an acquisition job, not a production publisher. It fetches and cross-checks official sources, captures evidence, updates canonical facts, builds a deterministic candidate and opens a pull request.
 
+The updater intentionally uses the repository `GITHUB_TOKEN` instead of a long-lived credential. GitHub therefore holds `pull_request` workflows created by the updater in an approval-required state. The maintainer reviews the generated data-only diff and selects **Approve workflows to run**; branch protection then requires the real pull-request validation to pass before merge. A separately dispatched validation run is not a substitute for this gate.
+
+If fully unattended pull-request CI becomes necessary, use a narrowly scoped GitHub App installation token or fine-grained personal access token for PR creation rather than weakening branch protection.
+
 ### Validate data
 
 `Validate data` is the review gate. It runs the test suite, compares immutable snapshot namespaces with the reviewed base and proves that an offline rebuild reproduces the committed candidate.
