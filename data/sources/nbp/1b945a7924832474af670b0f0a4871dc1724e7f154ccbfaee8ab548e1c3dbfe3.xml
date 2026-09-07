@@ -1,0 +1,78 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<stopy_procentowe data_publikacji="2026-03-05">
+    <tabela
+        id="stoproc"
+        naglowek="Stopa procentowa:"
+        header="NBP base rates:">
+        <pozycja
+            id="ref"
+            nazwa="Stopa referencyjna"
+            name="Reference rate (minimum money market intervention rate)"
+            odnosnik="1"
+            oprocentowanie="3,75"
+            trend = "spadek"
+            obowiazuje_od="2026-03-05" />
+        <pozycja
+            id="lom"
+            nazwa="Stopa lombardowa"
+            name="Lombard rate"
+            oprocentowanie="4,25"
+            trend = "spadek"
+            obowiazuje_od="2026-03-05" />
+        <pozycja
+            id="dep"
+            nazwa="Stopa depozytowa"
+            name="NBP deposit rate"
+            oprocentowanie="3,25"
+            trend = "spadek"
+            obowiazuje_od="2026-03-05" />
+        <pozycja
+            id="red"
+            nazwa="Stopa redyskontowa weksli"
+            name="Rediscount rate"
+            oprocentowanie="3,80"
+            trend = "spadek"
+            obowiazuje_od="2026-03-05" />
+        <pozycja
+            id="dys"
+            nazwa="Stopa dyskontowa weksli"
+            name="Discount rate"
+            oprocentowanie="3,85"
+            trend = "spadek"
+            obowiazuje_od="2026-03-05" />
+    </tabela>
+    <tabela
+        id="storo"
+        naglowek="Stopa rezerwy obowiązkowej:"
+        header="Reserve requirement:">
+        <pozycja
+            id="rozwpw"
+            nazwa="- od środków złotowych i środków w walutach obcych zgromadzonych na rachunkach bankowych, od środków uzyskanych z tytułu emisji papierów wartościowych "
+            name="- on zloty funds and foreign currency funds held in bank accounts, on funds received from issuance of securities"
+            oprocentowanie="3,50"
+            obowiazuje_od="2022-03-31" />
+        <pozycja
+            id="rorepo"
+            nazwa="- od środków uzyskanych z tytułu operacji repo i sell-buy-back oraz środków pozyskanych co najmniej na 2 lata"
+            name="- on funds received from repo and sell-buy-back operations and those acquired for at least 2 years"
+            oprocentowanie="0,00"
+            obowiazuje_od="2018-03-01" />
+        <pozycja
+            id="rowred"
+            nazwa="Oprocentowanie środków rezerwy obowiązkowej"
+            name="Remuneration of holdings of required reserves"
+            odnosnik="2"
+            oprocentowanie="3,75"
+            obowiazuje_od="2026-03-05" />
+    </tabela>
+    <odnosniki>
+        <odnosnik
+            id="1"
+            odnosnik="rentowność 7-dniowych bonów pieniężnych"
+            note="yield on 7-day NBP money market bills" />
+        <odnosnik
+            id="2"
+            odnosnik="na poziomie stopy referencyjnej"
+            note="the same as the reference rate" />
+    </odnosniki>
+</stopy_procentowe>
