@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import calendar
+import gzip
 import hashlib
 import json
 import subprocess
@@ -239,17 +240,41 @@ def _write_content_addressed_evidence(
     return digest
 
 
+def _write_gzip_content_addressed_evidence(
+    provider: str,
+    content: bytes,
+    suffix: str,
+) -> str:
+    digest = sha256_bytes(content)
+    path = DATA / "sources" / provider / f"{digest}{suffix}"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists():
+        if path.is_symlink() or not path.is_file():
+            raise SourceError(f"Content-addressed evidence is not a regular file: {path}")
+        try:
+            existing = gzip.decompress(path.read_bytes())
+        except (OSError, EOFError) as exc:
+            raise SourceError(f"Compressed evidence is invalid: {path}") from exc
+        if existing != content:
+            raise SourceError(f"Content-addressed evidence collision or corruption: {path}")
+    else:
+        path.write_bytes(gzip.compress(content, compresslevel=9, mtime=0))
+    return digest
+
+
 def _write_gus_evidence(entries: list[tuple[str, bytes]]) -> str:
     if not entries:
         raise SourceError("GUS refresh produced no raw evidence")
 
     manifest_entries: list[dict[str, str]] = []
     for url, content in entries:
-        digest = _write_content_addressed_evidence("gus", content, ".json")
-        manifest_entries.append({"url": url, "sha256": digest})
+        digest = _write_gzip_content_addressed_evidence("gus", content, ".json.gz")
+        manifest_entries.append(
+            {"url": url, "sha256": digest, "contentEncoding": "gzip"}
+        )
 
     manifest = {
-        "schemaVersion": "1.0",
+        "schemaVersion": "2.0",
         "publisher": "GUS",
         "responses": sorted(manifest_entries, key=lambda item: (item["url"], item["sha256"])),
     }

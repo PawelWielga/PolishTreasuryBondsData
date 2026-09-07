@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gzip
 import hashlib
 import json
 from collections import defaultdict
@@ -460,6 +461,18 @@ def _verify_content_addressed_file(path: Path, digest: str, label: str) -> None:
         raise ValueError(f"{label}: evidence SHA-256 mismatch; expected {digest}, got {actual}")
 
 
+def _verify_gzip_content_addressed_file(path: Path, digest: str, label: str) -> None:
+    if path.is_symlink() or not path.is_file():
+        raise ValueError(f"{label}: referenced evidence is missing: {path}")
+    try:
+        content = gzip.decompress(path.read_bytes())
+    except (OSError, EOFError) as exc:
+        raise ValueError(f"{label}: compressed evidence is invalid: {path}") from exc
+    actual = sha256(content)
+    if actual != digest:
+        raise ValueError(f"{label}: evidence SHA-256 mismatch; expected {digest}, got {actual}")
+
+
 def _validate_evidence(
     series: list[dict[str, Any]],
     gus: dict[str, Any],
@@ -479,7 +492,7 @@ def _validate_evidence(
         bundle_path = DATA / "sources" / "gus" / f"{bundle_digest}.manifest.json"
         _verify_content_addressed_file(bundle_path, bundle_digest, "GUS evidence bundle")
         bundle = load_json(bundle_path)
-        if bundle.get("publisher") != "GUS" or bundle.get("schemaVersion") != "1.0":
+        if bundle.get("publisher") != "GUS" or bundle.get("schemaVersion") != "2.0":
             raise ValueError("GUS evidence bundle has invalid metadata")
         responses = bundle.get("responses")
         if not isinstance(responses, list) or not responses:
@@ -490,8 +503,10 @@ def _validate_evidence(
             _validate_https_uri(url, "GUS evidence URL")
             if not isinstance(digest, str) or len(digest) != 64:
                 raise ValueError(f"GUS evidence bundle contains invalid SHA-256: {digest!r}")
-            _verify_content_addressed_file(
-                DATA / "sources" / "gus" / f"{digest}.json",
+            if entry.get("contentEncoding") != "gzip":
+                raise ValueError("GUS evidence bundle must declare gzip content encoding")
+            _verify_gzip_content_addressed_file(
+                DATA / "sources" / "gus" / f"{digest}.json.gz",
                 digest,
                 "GUS raw response",
             )
