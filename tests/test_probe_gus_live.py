@@ -1,29 +1,32 @@
 from __future__ import annotations
 
-import json
 import unittest
 
 import requests
 
 
 class GusLiveProbe(unittest.TestCase):
-    def test_probe_indicator_1832_for_2025_and_2026(self) -> None:
+    def test_probe_variable_year_without_period(self) -> None:
         base = "https://api-sdp.stat.gov.pl/api/1.1.0"
         session = requests.Session()
         session.headers.update({"User-Agent": "PolishTreasuryBondsData-live-probe"})
 
-        for year in (2025, 2026):
-            response = session.get(
-                f"{base}/indicators/indicator-data-indicator",
-                params={"id-wskaznik": 1832, "id-rok": year, "lang": "pl"},
-                timeout=20,
-            )
-            print(
-                f"GUS_PROBE_1832 year={year} status={response.status_code} bytes={len(response.content)}"
-            )
-            body = response.text
-            print(f"GUS_PROBE_1832_BODY year={year}=" + body[:20000])
-
+        response = session.get(
+            f"{base}/variable/variable-data-section",
+            params={
+                "id-zmienna": 305,
+                "id-przekroj": 1698,
+                "id-rok": 2026,
+                "page-size": 1,
+                "page": 1,
+                "lang": "pl",
+            },
+            timeout=20,
+        )
+        print(
+            f"GUS_PROBE_NO_PERIOD status={response.status_code} bytes={len(response.content)}"
+        )
+        print("GUS_PROBE_NO_PERIOD_BODY=" + response.text[:20000])
         self.assertTrue(True)
 
 
