@@ -48,7 +48,6 @@ class NbpXmlSourceTests(unittest.TestCase):
         rates = parse_nbp_rates(
             self._archive(("2025-12-04", "4,00"), ("2026-03-05", "3,75"))
         )
-
         self.assertEqual(
             [("2025-12-04", "4.00"), ("2026-03-05", "3.75")],
             [(item["effectiveFrom"], item["annualRatePercent"]) for item in rates],
@@ -56,13 +55,12 @@ class NbpXmlSourceTests(unittest.TestCase):
 
     def test_parses_official_current_rate_shape(self):
         rates = parse_nbp_rates(self._current("2026-03-05", "3,75"))
-
         self.assertEqual(
             [("2026-03-05", "3.75")],
             [(item["effectiveFrom"], item["annualRatePercent"]) for item in rates],
         )
 
-    def test_sync_cross_checks_sources_without_backfilling_pre_ror_history(self):
+    def test_sync_cross_checks_sources_and_backfills_evidence_without_old_rates(self):
         archive_xml = self._archive(
             ("1998-02-26", "24,00"),
             ("2022-05-06", "5,25"),
@@ -82,13 +80,16 @@ class NbpXmlSourceTests(unittest.TestCase):
             ],
         }
         session = object()
-
         with (
             patch("scripts.update.load_json", return_value=source),
             patch(
                 "scripts.update.fetch",
                 side_effect=[archive_xml.encode("utf-8"), current_xml.encode("utf-8")],
             ) as fetch_mock,
+            patch(
+                "scripts.update._write_content_addressed_evidence",
+                side_effect=["a" * 64, "b" * 64],
+            ),
             patch("scripts.update.write_json") as write_mock,
         ):
             self.assertEqual(0, sync_nbp(session, "2026-09-04T00:00:00Z"))
@@ -100,7 +101,13 @@ class NbpXmlSourceTests(unittest.TestCase):
             ],
             fetch_mock.call_args_list,
         )
-        write_mock.assert_not_called()
+        written = write_mock.call_args.args[1]
+        self.assertEqual("a" * 64, written["source"]["archiveSha256"])
+        self.assertEqual("b" * 64, written["source"]["currentSha256"])
+        self.assertEqual(
+            ["2022-05-06", "2026-03-05"],
+            [item["effectiveFrom"] for item in written["observations"]],
+        )
         self.assertEqual("2022-05-06", NBP_HISTORY_START)
 
     def test_sync_migrates_source_provenance_without_financial_change(self):
@@ -124,12 +131,15 @@ class NbpXmlSourceTests(unittest.TestCase):
             },
             "observations": observations,
         }
-
         with (
             patch("scripts.update.load_json", return_value=source),
             patch(
                 "scripts.update.fetch",
                 side_effect=[archive_xml.encode("utf-8"), current_xml.encode("utf-8")],
+            ),
+            patch(
+                "scripts.update._write_content_addressed_evidence",
+                side_effect=["c" * 64, "d" * 64],
             ),
             patch("scripts.update.write_json") as write_mock,
         ):
@@ -138,87 +148,60 @@ class NbpXmlSourceTests(unittest.TestCase):
         written = write_mock.call_args.args[1]
         self.assertEqual(NBP_RATES_URL, written["source"]["url"])
         self.assertEqual(NBP_CURRENT_RATES_URL, written["source"]["currentUrl"])
+        self.assertEqual("c" * 64, written["source"]["archiveSha256"])
+        self.assertEqual("d" * 64, written["source"]["currentSha256"])
         self.assertEqual("2026-09-04T00:00:00Z", written["verifiedAt"])
         self.assertEqual(2, len(written["observations"]))
         self.assertTrue(all(item["revision"] == 1 for item in written["observations"]))
         self.assertTrue(all(item["source"] == NBP_RATES_URL for item in written["observations"]))
+        self.assertEqual(["5.25", "3.75"], [item["annualRatePercent"] for item in written["observations"]])
+
+    def _assert_sync_fails_without_write(
+        self,
+        source: dict,
+        archive_xml: str,
+        current_xml: str,
+        error_pattern: str,
+    ) -> None:
+        with (
+            patch("scripts.update.load_json", return_value=source),
+            patch(
+                "scripts.update.fetch",
+                side_effect=[archive_xml.encode("utf-8"), current_xml.encode("utf-8")],
+            ),
+            patch("scripts.update._write_content_addressed_evidence") as evidence_write,
+            patch("scripts.update.write_json") as write_mock,
+        ):
+            with self.assertRaisesRegex(SourceError, error_pattern):
+                sync_nbp(object(), "2026-09-04T00:00:00Z")
+        evidence_write.assert_not_called()
+        write_mock.assert_not_called()
 
     def test_sync_fails_closed_when_current_file_is_newer_than_archive(self):
-        archive_xml = self._archive(
-            ("2022-05-06", "5,25"),
-            ("2026-03-05", "3,75"),
+        self._assert_sync_fails_without_write(
+            {"observations": [self._observation("2022-05-06", "5.25")]},
+            self._archive(("2022-05-06", "5,25"), ("2026-03-05", "3,75")),
+            self._current("2026-09-04", "3,50"),
+            "not synchronized",
         )
-        current_xml = self._current("2026-09-04", "3,50")
-
-        with (
-            patch(
-                "scripts.update.load_json",
-                return_value={"observations": [self._observation("2022-05-06", "5.25")]},
-            ),
-            patch(
-                "scripts.update.fetch",
-                side_effect=[archive_xml.encode("utf-8"), current_xml.encode("utf-8")],
-            ),
-            patch("scripts.update.write_json") as write_mock,
-        ):
-            with self.assertRaisesRegex(SourceError, "not synchronized"):
-                sync_nbp(object(), "2026-09-04T00:00:00Z")
-
-        write_mock.assert_not_called()
 
     def test_sync_fails_closed_when_current_file_is_older_than_archive(self):
-        archive_xml = self._archive(
-            ("2022-05-06", "5,25"),
-            ("2026-09-04", "3,50"),
+        self._assert_sync_fails_without_write(
+            {"observations": [self._observation("2022-05-06", "5.25")]},
+            self._archive(("2022-05-06", "5,25"), ("2026-09-04", "3,50")),
+            self._current("2026-03-05", "3,75"),
+            "not synchronized",
         )
-        current_xml = self._current("2026-03-05", "3,75")
-
-        with (
-            patch(
-                "scripts.update.load_json",
-                return_value={"observations": [self._observation("2022-05-06", "5.25")]},
-            ),
-            patch(
-                "scripts.update.fetch",
-                side_effect=[archive_xml.encode("utf-8"), current_xml.encode("utf-8")],
-            ),
-            patch("scripts.update.write_json") as write_mock,
-        ):
-            with self.assertRaisesRegex(SourceError, "not synchronized"):
-                sync_nbp(object(), "2026-09-04T00:00:00Z")
-
-        write_mock.assert_not_called()
 
     def test_sync_fails_closed_when_current_and_archive_disagree(self):
-        archive_xml = self._archive(
-            ("2022-05-06", "5,25"),
-            ("2026-03-05", "3,75"),
+        self._assert_sync_fails_without_write(
+            {"observations": [self._observation("2022-05-06", "5.25")]},
+            self._archive(("2022-05-06", "5,25"), ("2026-03-05", "3,75")),
+            self._current("2026-03-05", "9,99"),
+            "disagree",
         )
-        current_xml = self._current("2026-03-05", "9,99")
-
-        with (
-            patch(
-                "scripts.update.load_json",
-                return_value={"observations": [self._observation("2022-05-06", "5.25")]},
-            ),
-            patch(
-                "scripts.update.fetch",
-                side_effect=[archive_xml.encode("utf-8"), current_xml.encode("utf-8")],
-            ),
-            patch("scripts.update.write_json") as write_mock,
-        ):
-            with self.assertRaisesRegex(SourceError, "disagree"):
-                sync_nbp(object(), "2026-09-04T00:00:00Z")
-
-        write_mock.assert_not_called()
 
     def test_sync_fails_closed_when_archive_loses_previously_published_date(self):
-        archive_xml = self._archive(
-            ("2022-05-06", "5,25"),
-            ("2025-12-04", "4,00"),
-            ("2026-03-05", "3,75"),
-        )
-        current_xml = self._current("2026-03-05", "3,75")
         source = {
             "observations": [
                 self._observation("2022-05-06", "5.25"),
@@ -227,26 +210,18 @@ class NbpXmlSourceTests(unittest.TestCase):
                 self._observation("2026-03-05", "3.75"),
             ]
         }
-
-        with (
-            patch("scripts.update.load_json", return_value=source),
-            patch(
-                "scripts.update.fetch",
-                side_effect=[archive_xml.encode("utf-8"), current_xml.encode("utf-8")],
+        self._assert_sync_fails_without_write(
+            source,
+            self._archive(
+                ("2022-05-06", "5,25"),
+                ("2025-12-04", "4,00"),
+                ("2026-03-05", "3,75"),
             ),
-            patch("scripts.update.write_json") as write_mock,
-        ):
-            with self.assertRaisesRegex(SourceError, "lost previously published.*2022-06-09"):
-                sync_nbp(object(), "2026-09-04T00:00:00Z")
-
-        write_mock.assert_not_called()
+            self._current("2026-03-05", "3,75"),
+            "lost previously published.*2022-06-09",
+        )
 
     def test_sync_fails_closed_when_both_feeds_regress_to_same_older_state(self):
-        archive_xml = self._archive(
-            ("2022-05-06", "5,25"),
-            ("2025-12-04", "4,00"),
-        )
-        current_xml = self._current("2025-12-04", "4,00")
         source = {
             "observations": [
                 self._observation("2022-05-06", "5.25"),
@@ -254,39 +229,20 @@ class NbpXmlSourceTests(unittest.TestCase):
                 self._observation("2026-03-05", "3.75"),
             ]
         }
-
-        with (
-            patch("scripts.update.load_json", return_value=source),
-            patch(
-                "scripts.update.fetch",
-                side_effect=[archive_xml.encode("utf-8"), current_xml.encode("utf-8")],
-            ),
-            patch("scripts.update.write_json") as write_mock,
-        ):
-            with self.assertRaisesRegex(SourceError, "lost previously published.*2026-03-05"):
-                sync_nbp(object(), "2026-09-04T00:00:00Z")
-
-        write_mock.assert_not_called()
+        self._assert_sync_fails_without_write(
+            source,
+            self._archive(("2022-05-06", "5,25"), ("2025-12-04", "4,00")),
+            self._current("2025-12-04", "4,00"),
+            "lost previously published.*2026-03-05",
+        )
 
     def test_sync_fails_closed_when_archive_no_longer_starts_at_required_boundary(self):
-        archive_xml = self._archive(
-            ("2022-06-09", "6,00"),
-            ("2026-03-05", "3,75"),
+        self._assert_sync_fails_without_write(
+            {"observations": []},
+            self._archive(("2022-06-09", "6,00"), ("2026-03-05", "3,75")),
+            self._current("2026-03-05", "3,75"),
+            "no longer covers required history",
         )
-        current_xml = self._current("2026-03-05", "3,75")
-
-        with (
-            patch("scripts.update.load_json", return_value={"observations": []}),
-            patch(
-                "scripts.update.fetch",
-                side_effect=[archive_xml.encode("utf-8"), current_xml.encode("utf-8")],
-            ),
-            patch("scripts.update.write_json") as write_mock,
-        ):
-            with self.assertRaisesRegex(SourceError, "no longer covers required history"):
-                sync_nbp(object(), "2026-09-04T00:00:00Z")
-
-        write_mock.assert_not_called()
 
 
 if __name__ == "__main__":
