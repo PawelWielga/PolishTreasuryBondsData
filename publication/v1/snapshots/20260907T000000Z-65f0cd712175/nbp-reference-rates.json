@@ -1,13 +1,6 @@
 {
-  "verifiedAt": "2026-09-07T00:00:00Z",
-  "source": {
-    "publisher": "NBP",
-    "url": "https://static.nbp.pl/dane/stopy/stopy_procentowe_archiwum.xml",
-    "currentUrl": "https://static.nbp.pl/dane/stopy/stopy_procentowe.xml",
-    "verifiedAt": "2026-09-07T00:00:00Z",
-    "archiveSha256": "504907de03af5663c840c1209cfcb2c0f0d7cf4bbbeadc2d1e51cb6dbb6b84f8",
-    "currentSha256": "1b945a7924832474af670b0f0a4871dc1724e7f154ccbfaee8ab548e1c3dbfe3"
-  },
+  "schemaVersion": "2.0",
+  "generatedAt": "2026-09-07T00:00:00Z",
   "observations": [
     {
       "effectiveFrom": "2022-05-06",

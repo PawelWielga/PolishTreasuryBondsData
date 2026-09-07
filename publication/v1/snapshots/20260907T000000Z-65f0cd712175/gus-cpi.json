@@ -1,12 +1,6 @@
 {
-  "verifiedAt": "2026-09-07T00:00:00Z",
-  "source": {
-    "publisher": "GUS",
-    "api": "SDP",
-    "baseUrl": "https://api-sdp.stat.gov.pl/api/1.1.0",
-    "verifiedAt": "2026-09-07T00:00:00Z",
-    "evidenceBundleSha256": "0c98c0375c6e579d5eca8bb84694a4d60a54dd2585064bd4b02ceb288f498ae1"
-  },
+  "schemaVersion": "2.0",
+  "generatedAt": "2026-09-07T00:00:00Z",
   "observations": [
     {
       "period": "2014-01",

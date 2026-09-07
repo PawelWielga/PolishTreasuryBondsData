@@ -1,0 +1,171 @@
+{
+  "schemaVersion": "2.0",
+  "publisher": "GUS",
+  "responses": [
+    {
+      "url": "https://api-sdp.stat.gov.pl/api/1.1.0/indicators/indicator-data-indicator?id-wskaznik=1832&id-rok=2014&lang=pl",
+      "sha256": "7b537bf072475d11a44ad2b7ff7392c46bb1ad42d9678fa2e25d187ad8b6abc3",
+      "contentEncoding": "gzip"
+    },
+    {
+      "url": "https://api-sdp.stat.gov.pl/api/1.1.0/indicators/indicator-data-indicator?id-wskaznik=1832&id-rok=2015&lang=pl",
+      "sha256": "fbbf83a7f4fdba286fa7f6436b21e4f055d5cb60ab4593933e4414c6a8719898",
+      "contentEncoding": "gzip"
+    },
+    {
+      "url": "https://api-sdp.stat.gov.pl/api/1.1.0/indicators/indicator-data-indicator?id-wskaznik=1832&id-rok=2016&lang=pl",
+      "sha256": "ec8025432343f1b685a74ef5f47481892f8816f48b8db2ed5a000d403176af5d",
+      "contentEncoding": "gzip"
+    },
+    {
+      "url": "https://api-sdp.stat.gov.pl/api/1.1.0/indicators/indicator-data-indicator?id-wskaznik=1832&id-rok=2017&lang=pl",
+      "sha256": "b36805abc05bb2a0fce56a8f5571efc58b3c162c61e8647a8e770b41998fa4ee",
+      "contentEncoding": "gzip"
+    },
+    {
+      "url": "https://api-sdp.stat.gov.pl/api/1.1.0/indicators/indicator-data-indicator?id-wskaznik=1832&id-rok=2018&lang=pl",
+      "sha256": "9d9485f03e798625df94113a82023c161e5ab7e725065328f67f1640ba001279",
+      "contentEncoding": "gzip"
+    },
+    {
+      "url": "https://api-sdp.stat.gov.pl/api/1.1.0/indicators/indicator-data-indicator?id-wskaznik=1832&id-rok=2019&lang=pl",
+      "sha256": "646aef32a24e85bd05e8c83108ad48a76ba7ce3314ff3d97a2e21da300eb8268",
+      "contentEncoding": "gzip"
+    },
+    {
+      "url": "https://api-sdp.stat.gov.pl/api/1.1.0/indicators/indicator-data-indicator?id-wskaznik=1832&id-rok=2020&lang=pl",
+      "sha256": "fe888eca3d78e4fa546a4058cb636c9c93a723887553e0c072a134594a1ae977",
+      "contentEncoding": "gzip"
+    },
+    {
+      "url": "https://api-sdp.stat.gov.pl/api/1.1.0/indicators/indicator-data-indicator?id-wskaznik=1832&id-rok=2021&lang=pl",
+      "sha256": "c8bf5583f076e771bfb292354798f61db983be013ecdd8a215a8b5ea2126e6ae",
+      "contentEncoding": "gzip"
+    },
+    {
+      "url": "https://api-sdp.stat.gov.pl/api/1.1.0/indicators/indicator-data-indicator?id-wskaznik=1832&id-rok=2022&lang=pl",
+      "sha256": "14bdc668fb7f5b1009b8f81129edd87301414fd899bf2fb7fc9a9b87dd05b02f",
+      "contentEncoding": "gzip"
+    },
+    {
+      "url": "https://api-sdp.stat.gov.pl/api/1.1.0/indicators/indicator-data-indicator?id-wskaznik=1832&id-rok=2023&lang=pl",
+      "sha256": "5d4868e1113a3e90fb03fc8d81da79ed2f042229da18c217c2e80ad9b82726c3",
+      "contentEncoding": "gzip"
+    },
+    {
+      "url": "https://api-sdp.stat.gov.pl/api/1.1.0/indicators/indicator-data-indicator?id-wskaznik=1832&id-rok=2024&lang=pl",
+      "sha256": "daab71cb66493f0a500181304726b712438395906238140e245a3b7dca725f7e",
+      "contentEncoding": "gzip"
+    },
+    {
+      "url": "https://api-sdp.stat.gov.pl/api/1.1.0/indicators/indicator-data-indicator?id-wskaznik=1832&id-rok=2025&lang=pl",
+      "sha256": "fbe5ccb8c39e8baca631b704ead9bc8c56b26964e768df4a8bf8d0e0bc13c4ca",
+      "contentEncoding": "gzip"
+    },
+    {
+      "url": "https://api-sdp.stat.gov.pl/api/1.1.0/variable/variable-data-section?id-zmienna=305&id-przekroj=1698&id-rok=2026&id-okres=247&page-size=5000&page=1&lang=pl",
+      "sha256": "86065514f49e287e2d755a73bf54dfcf905daa07e90758aa1af2e89a7441168c",
+      "contentEncoding": "gzip"
+    },
+    {
+      "url": "https://api-sdp.stat.gov.pl/api/1.1.0/variable/variable-data-section?id-zmienna=305&id-przekroj=1698&id-rok=2026&id-okres=247&page-size=5000&page=2&lang=pl",
+      "sha256": "6e1a7503d498f6f93bec76ccafda06124901f3c453b3ebcdbf5cd2b538c20ae7",
+      "contentEncoding": "gzip"
+    },
+    {
+      "url": "https://api-sdp.stat.gov.pl/api/1.1.0/variable/variable-data-section?id-zmienna=305&id-przekroj=1698&id-rok=2026&id-okres=247&page-size=5000&page=3&lang=pl",
+      "sha256": "4121c01a508b900440d17487d9c261767c29b36b90452787eac28c6f55d46d63",
+      "contentEncoding": "gzip"
+    },
+    {
+      "url": "https://api-sdp.stat.gov.pl/api/1.1.0/variable/variable-data-section?id-zmienna=305&id-przekroj=1698&id-rok=2026&id-okres=248&page-size=5000&page=1&lang=pl",
+      "sha256": "e80b82ffd81b1c7d94e016263b74cd14f65c8b6d1972c2265242735daf6e8b09",
+      "contentEncoding": "gzip"
+    },
+    {
+      "url": "https://api-sdp.stat.gov.pl/api/1.1.0/variable/variable-data-section?id-zmienna=305&id-przekroj=1698&id-rok=2026&id-okres=248&page-size=5000&page=2&lang=pl",
+      "sha256": "71ea30fbfe080deb4f0971b326cfb9301a18bb636a85bbc33ea2b86b0513ed3b",
+      "contentEncoding": "gzip"
+    },
+    {
+      "url": "https://api-sdp.stat.gov.pl/api/1.1.0/variable/variable-data-section?id-zmienna=305&id-przekroj=1698&id-rok=2026&id-okres=248&page-size=5000&page=3&lang=pl",
+      "sha256": "69786d15c9af7bc1379c1bd001733f2977d1a05e07709e945d21a0cea5419d58",
+      "contentEncoding": "gzip"
+    },
+    {
+      "url": "https://api-sdp.stat.gov.pl/api/1.1.0/variable/variable-data-section?id-zmienna=305&id-przekroj=1698&id-rok=2026&id-okres=249&page-size=5000&page=1&lang=pl",
+      "sha256": "59ccf0066f2de629ac9ac3b5984d721d7d859d137882f2c6ce1e235df6688966",
+      "contentEncoding": "gzip"
+    },
+    {
+      "url": "https://api-sdp.stat.gov.pl/api/1.1.0/variable/variable-data-section?id-zmienna=305&id-przekroj=1698&id-rok=2026&id-okres=249&page-size=5000&page=2&lang=pl",
+      "sha256": "fee075756df6713c26662ca7df5f610a9576b21307681942841970ff8e785400",
+      "contentEncoding": "gzip"
+    },
+    {
+      "url": "https://api-sdp.stat.gov.pl/api/1.1.0/variable/variable-data-section?id-zmienna=305&id-przekroj=1698&id-rok=2026&id-okres=249&page-size=5000&page=3&lang=pl",
+      "sha256": "58b42f97e38da9ab6ebfbb4cd6a97d97fb87e39296de2786910a498d11e12a8d",
+      "contentEncoding": "gzip"
+    },
+    {
+      "url": "https://api-sdp.stat.gov.pl/api/1.1.0/variable/variable-data-section?id-zmienna=305&id-przekroj=1698&id-rok=2026&id-okres=250&page-size=5000&page=1&lang=pl",
+      "sha256": "f2512ddcf670f43d285a5235892d296a4fa413080624cc0677f9984dd83233a0",
+      "contentEncoding": "gzip"
+    },
+    {
+      "url": "https://api-sdp.stat.gov.pl/api/1.1.0/variable/variable-data-section?id-zmienna=305&id-przekroj=1698&id-rok=2026&id-okres=250&page-size=5000&page=2&lang=pl",
+      "sha256": "f68c8f42f08b05f5e13b628e36770d92986f4d44be795ab3d24b0c790d0d8eab",
+      "contentEncoding": "gzip"
+    },
+    {
+      "url": "https://api-sdp.stat.gov.pl/api/1.1.0/variable/variable-data-section?id-zmienna=305&id-przekroj=1698&id-rok=2026&id-okres=250&page-size=5000&page=3&lang=pl",
+      "sha256": "27771fd65786f4d2006359dad7c3a6edc880920176d61cedb704a9123dd1e79f",
+      "contentEncoding": "gzip"
+    },
+    {
+      "url": "https://api-sdp.stat.gov.pl/api/1.1.0/variable/variable-data-section?id-zmienna=305&id-przekroj=1698&id-rok=2026&id-okres=251&page-size=5000&page=1&lang=pl",
+      "sha256": "7cfba13f5087d5ddeb515dcbc7e93ab092abb5ba40dc73edd3d3d2a523db649f",
+      "contentEncoding": "gzip"
+    },
+    {
+      "url": "https://api-sdp.stat.gov.pl/api/1.1.0/variable/variable-data-section?id-zmienna=305&id-przekroj=1698&id-rok=2026&id-okres=251&page-size=5000&page=2&lang=pl",
+      "sha256": "bed4f6b45cefa3055405dfee151548743e0c024bd523c34a97cbacc49125e0ec",
+      "contentEncoding": "gzip"
+    },
+    {
+      "url": "https://api-sdp.stat.gov.pl/api/1.1.0/variable/variable-data-section?id-zmienna=305&id-przekroj=1698&id-rok=2026&id-okres=251&page-size=5000&page=3&lang=pl",
+      "sha256": "6a4da7f872ba18c4dc397f78d1bd0e671d99c5f7f450efb4b3705009c919738d",
+      "contentEncoding": "gzip"
+    },
+    {
+      "url": "https://api-sdp.stat.gov.pl/api/1.1.0/variable/variable-data-section?id-zmienna=305&id-przekroj=1698&id-rok=2026&id-okres=252&page-size=5000&page=1&lang=pl",
+      "sha256": "58f26ec70b6de2829928c9f11c95238e5f07f1393b749348271e8d815e3eb009",
+      "contentEncoding": "gzip"
+    },
+    {
+      "url": "https://api-sdp.stat.gov.pl/api/1.1.0/variable/variable-data-section?id-zmienna=305&id-przekroj=1698&id-rok=2026&id-okres=252&page-size=5000&page=2&lang=pl",
+      "sha256": "d0eb674867550cf561045caa1d173a1c7af25543fb9912e2db2355e89900fae5",
+      "contentEncoding": "gzip"
+    },
+    {
+      "url": "https://api-sdp.stat.gov.pl/api/1.1.0/variable/variable-data-section?id-zmienna=305&id-przekroj=1698&id-rok=2026&id-okres=252&page-size=5000&page=3&lang=pl",
+      "sha256": "eb226a3c64b4f9c41c89cd9f34ab8962b8f57cdefd6da828b6b2f0c11be48d41",
+      "contentEncoding": "gzip"
+    },
+    {
+      "url": "https://api-sdp.stat.gov.pl/api/1.1.0/variable/variable-data-section?id-zmienna=305&id-przekroj=1698&id-rok=2026&id-okres=253&page-size=5000&page=1&lang=pl",
+      "sha256": "900f50a02b48a41e9dd60a5dea4f8bbecfc438c40e0cb769cd5077ef5f9211e2",
+      "contentEncoding": "gzip"
+    },
+    {
+      "url": "https://api-sdp.stat.gov.pl/api/1.1.0/variable/variable-data-section?id-zmienna=305&id-przekroj=1698&id-rok=2026&id-okres=253&page-size=5000&page=2&lang=pl",
+      "sha256": "1e316d283f97437c999afab2358a5c29605ce644caca999ed7fde0e1fb4f6288",
+      "contentEncoding": "gzip"
+    },
+    {
+      "url": "https://api-sdp.stat.gov.pl/api/1.1.0/variable/variable-data-section?id-zmienna=305&id-przekroj=1698&id-rok=2026&id-okres=253&page-size=5000&page=3&lang=pl",
+      "sha256": "cb9d6e33e20d8d0608e5cfe5a713f7e537a9cf3855e9c37b7663b3d7e359d6d0",
+      "contentEncoding": "gzip"
+    }
+  ]
+}
