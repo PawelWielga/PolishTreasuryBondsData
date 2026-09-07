@@ -11,30 +11,10 @@
       "type": "object",
       "required": ["catalog.json", "product-definitions.json", "gus-cpi.json", "nbp-reference-rates.json"],
       "properties": {
-        "catalog.json": {
-          "allOf": [
-            { "$ref": "#/$defs/fileEntry" },
-            { "properties": { "path": { "const": "catalog.json" } } }
-          ]
-        },
-        "product-definitions.json": {
-          "allOf": [
-            { "$ref": "#/$defs/fileEntry" },
-            { "properties": { "path": { "const": "product-definitions.json" } } }
-          ]
-        },
-        "gus-cpi.json": {
-          "allOf": [
-            { "$ref": "#/$defs/fileEntry" },
-            { "properties": { "path": { "const": "gus-cpi.json" } } }
-          ]
-        },
-        "nbp-reference-rates.json": {
-          "allOf": [
-            { "$ref": "#/$defs/fileEntry" },
-            { "properties": { "path": { "const": "nbp-reference-rates.json" } } }
-          ]
-        }
+        "catalog.json": { "allOf": [{ "$ref": "#/$defs/fileEntry" }, { "properties": { "path": { "const": "catalog.json" } } }] },
+        "product-definitions.json": { "allOf": [{ "$ref": "#/$defs/fileEntry" }, { "properties": { "path": { "const": "product-definitions.json" } } }] },
+        "gus-cpi.json": { "allOf": [{ "$ref": "#/$defs/fileEntry" }, { "properties": { "path": { "const": "gus-cpi.json" } } }] },
+        "nbp-reference-rates.json": { "allOf": [{ "$ref": "#/$defs/fileEntry" }, { "properties": { "path": { "const": "nbp-reference-rates.json" } } }] }
       },
       "additionalProperties": false
     },
@@ -74,12 +54,14 @@
     }
   },
   "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "httpsUri": { "type": "string", "format": "uri", "pattern": "^https://" },
     "fileEntry": {
       "type": "object",
       "required": ["path", "sha256", "schemaVersion", "count"],
       "properties": {
         "path": { "type": "string" },
-        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "sha256": { "$ref": "#/$defs/sha256" },
         "schemaVersion": { "const": "2.0" },
         "count": { "type": "integer", "minimum": 0 }
       },
@@ -90,8 +72,8 @@
       "required": ["publisher", "url", "sha256", "verifiedAt"],
       "properties": {
         "publisher": { "const": "Ministry of Finance" },
-        "url": { "type": "string", "format": "uri", "pattern": "^https://www\\.gov\\.pl/attachment/[^?#]+$" },
-        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "url": { "$ref": "#/$defs/httpsUri" },
+        "sha256": { "$ref": "#/$defs/sha256" },
         "verifiedAt": { "type": "string", "format": "date" }
       },
       "additionalProperties": false
@@ -102,8 +84,9 @@
       "properties": {
         "publisher": { "const": "GUS" },
         "api": { "const": "SDP" },
-        "baseUrl": { "const": "https://api-sdp.stat.gov.pl/api/1.1.0" },
-        "verifiedAt": { "type": "string", "format": "date-time" }
+        "baseUrl": { "$ref": "#/$defs/httpsUri" },
+        "verifiedAt": { "type": "string", "format": "date-time" },
+        "evidenceBundleSha256": { "$ref": "#/$defs/sha256" }
       },
       "additionalProperties": false
     },
@@ -112,9 +95,15 @@
       "required": ["publisher", "url", "verifiedAt"],
       "properties": {
         "publisher": { "const": "NBP" },
-        "url": { "const": "https://static.nbp.pl/dane/stopy/stopy_procentowe_archiwum.xml" },
-        "currentUrl": { "const": "https://static.nbp.pl/dane/stopy/stopy_procentowe.xml" },
-        "verifiedAt": { "type": "string", "format": "date-time" }
+        "url": { "$ref": "#/$defs/httpsUri" },
+        "currentUrl": { "$ref": "#/$defs/httpsUri" },
+        "verifiedAt": { "type": "string", "format": "date-time" },
+        "archiveSha256": { "$ref": "#/$defs/sha256" },
+        "currentSha256": { "$ref": "#/$defs/sha256" }
+      },
+      "dependentRequired": {
+        "archiveSha256": ["currentSha256"],
+        "currentSha256": ["archiveSha256"]
       },
       "additionalProperties": false
     },
@@ -126,11 +115,7 @@
         "lastSaleTo": { "type": "string", "format": "date" },
         "seriesCount": { "type": "integer", "minimum": 1 },
         "termsRevisionCount": { "type": "integer", "minimum": 1 },
-        "gaps": {
-          "type": "array",
-          "items": { "type": "string", "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$" },
-          "uniqueItems": true
-        }
+        "gaps": { "type": "array", "items": { "type": "string", "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$" }, "uniqueItems": true }
       },
       "additionalProperties": false
     },

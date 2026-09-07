@@ -7,21 +7,19 @@ from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 from jsonschema import Draft202012Validator, FormatChecker
 
 from scripts.sources import (
-    PRODUCT_RULES,
-    SourceError,
+    SUPPORTED_PRODUCT_TYPES,
     canonical_decimal,
     terms_content_hash,
-    validate_official_cross_check_url,
-    validate_official_mf_workbook_url,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
-DIST = ROOT / "dist"
+DIST = ROOT / "dist"  # frozen legacy v1 only
 PUBLICATION = ROOT / "publication" / "v1"
 SCHEMAS = ROOT / "schemas"
 GUS_HISTORY_START = "2014-01"
@@ -34,7 +32,10 @@ def load_json(path: Path) -> Any:
 
 def write_json(path: Path, value: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(value, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
 
 
 def canonical_json_bytes(value: Any) -> bytes:
@@ -46,20 +47,33 @@ def sha256(content: bytes) -> str:
 
 
 def load_product_definitions() -> list[dict[str, Any]]:
-    definitions = [load_json(path) for path in sorted((DATA / "products").glob("*/rules-v*.json"))]
-    return sorted(definitions, key=lambda item: (item["productType"], item["rulesRevision"]))
+    definitions = [
+        load_json(path)
+        for path in sorted((DATA / "products").glob("*/rules-v*.json"))
+    ]
+    return sorted(
+        definitions,
+        key=lambda item: (item["productType"], item["rulesRevision"]),
+    )
 
 
 def load_series() -> list[dict[str, Any]]:
-    series = [load_json(path) for path in sorted((DATA / "series").glob("*/*/terms-v*.json"))]
-    return sorted(series, key=lambda item: (item["saleFrom"], item["seriesCode"], item["termsRevision"]))
+    series = [
+        load_json(path)
+        for path in sorted((DATA / "series").glob("*/*/terms-v*.json"))
+    ]
+    return sorted(
+        series,
+        key=lambda item: (item["saleFrom"], item["seriesCode"], item["termsRevision"]),
+    )
 
 
 def load_reference_source(name: str) -> dict[str, Any]:
     return load_json(DATA / "reference" / f"{name}.json")
 
 
-def build_dist() -> str:
+def build_publication() -> str:
+    """Validate canonical facts and build the single supported public snapshot tree."""
     products = load_product_definitions()
     series = load_series()
     gus = load_reference_source("gus-cpi")
@@ -70,19 +84,30 @@ def build_dist() -> str:
     _validate_series(series, products)
     _validate_gus(gus)
     _validate_nbp(nbp)
+    _validate_evidence(series, gus, nbp)
     _validate_append_only_history(products, series, gus, nbp)
 
     generated_at = _generated_at(series, gus, nbp)
     documents = {
-        "catalog.json": {"schemaVersion": "2.0", "generatedAt": generated_at, "series": series},
+        "catalog.json": {
+            "schemaVersion": "2.0",
+            "generatedAt": generated_at,
+            "series": series,
+        },
         "product-definitions.json": {
-            "schemaVersion": "2.0", "generatedAt": generated_at, "productDefinitions": products
+            "schemaVersion": "2.0",
+            "generatedAt": generated_at,
+            "productDefinitions": products,
         },
         "gus-cpi.json": {
-            "schemaVersion": "2.0", "generatedAt": gus["verifiedAt"], "observations": gus["observations"]
+            "schemaVersion": "2.0",
+            "generatedAt": gus["verifiedAt"],
+            "observations": gus["observations"],
         },
         "nbp-reference-rates.json": {
-            "schemaVersion": "2.0", "generatedAt": nbp["verifiedAt"], "observations": nbp["observations"]
+            "schemaVersion": "2.0",
+            "generatedAt": nbp["verifiedAt"],
+            "observations": nbp["observations"],
         },
     }
     schemas = {
@@ -91,19 +116,19 @@ def build_dist() -> str:
         "gus-cpi.json": "gus-cpi-v2.schema.json",
         "nbp-reference-rates.json": "nbp-reference-rates-v2.schema.json",
     }
-    dist_names = {
-        "catalog.json": "catalog-v2.json",
-        "product-definitions.json": "product-definitions-v2.json",
-        "gus-cpi.json": "gus-cpi-v2.json",
-        "nbp-reference-rates.json": "nbp-reference-rates-v2.json",
-    }
     for filename, document in documents.items():
         _validate_schema(document, load_json(SCHEMAS / schemas[filename]), filename)
-        write_json(DIST / dist_names[filename], document)
 
-    document_bytes = {name: canonical_json_bytes(document) for name, document in documents.items()}
-    combined = b"".join(name.encode() + content for name, content in sorted(document_bytes.items()))
-    dataset_revision = f"{generated_at[:10].replace('-', '')}T000000Z-{sha256(combined)[:12]}"
+    document_bytes = {
+        name: canonical_json_bytes(document) for name, document in documents.items()
+    }
+    combined = b"".join(
+        name.encode("utf-8") + content
+        for name, content in sorted(document_bytes.items())
+    )
+    dataset_revision = (
+        f"{generated_at[:10].replace('-', '')}T000000Z-{sha256(combined)[:12]}"
+    )
     snapshot = PUBLICATION / "snapshots" / dataset_revision
     manifest = {
         "schemaVersion": "1.0",
@@ -123,10 +148,21 @@ def build_dist() -> str:
             "gus": gus["source"],
             "nbp": nbp["source"],
         },
-        "coverage": _coverage(series, gus["observations"], nbp["observations"]),
+        "coverage": _coverage(
+            series,
+            gus["observations"],
+            nbp["observations"],
+        ),
     }
-    _validate_schema(manifest, load_json(SCHEMAS / "snapshot-manifest-v1.schema.json"), "manifest.json")
-    _write_immutable_snapshot(snapshot, {**document_bytes, "manifest.json": canonical_json_bytes(manifest)})
+    _validate_schema(
+        manifest,
+        load_json(SCHEMAS / "snapshot-manifest-v1.schema.json"),
+        "manifest.json",
+    )
+    _write_immutable_snapshot(
+        snapshot,
+        {**document_bytes, "manifest.json": canonical_json_bytes(manifest)},
+    )
 
     latest = {
         "schemaVersion": "1.0",
@@ -134,10 +170,23 @@ def build_dist() -> str:
         "manifest": f"snapshots/{dataset_revision}/manifest.json",
     }
     status = _build_status(dataset_revision, status_source)
-    _validate_schema(status, load_json(SCHEMAS / "source-status-v1.schema.json"), "status.json")
+    _validate_schema(
+        status,
+        load_json(SCHEMAS / "source-status-v1.schema.json"),
+        "status.json",
+    )
     write_json(PUBLICATION / "latest.json", latest)
     write_json(PUBLICATION / "status.json", status)
     return dataset_revision
+
+
+def build_dist() -> str:
+    """Internal compatibility name for the v2 publication builder.
+
+    The function no longer writes v2 files to dist/. Frozen v1 artifacts are the
+    only remaining contents of that directory.
+    """
+    return build_publication()
 
 
 def _write_immutable_snapshot(snapshot: Path, files: dict[str, bytes]) -> None:
@@ -170,45 +219,67 @@ def _validate_schema(document: dict[str, Any], schema: dict[str, Any], label: st
     validator = Draft202012Validator(schema, format_checker=FormatChecker())
     errors = sorted(validator.iter_errors(document), key=lambda error: list(error.path))
     if errors:
-        details = "\n".join(f"- {'/'.join(map(str, error.path))}: {error.message}" for error in errors)
+        details = "\n".join(
+            f"- {'/'.join(map(str, error.path))}: {error.message}" for error in errors
+        )
         raise ValueError(f"{label} does not satisfy its schema:\n{details}")
 
 
 def _validate_product_definitions(products: list[dict[str, Any]]) -> None:
-    identities = {item["id"] for item in products}
-    if len(identities) != len(products):
-        raise ValueError("Duplicate product definition")
-    expected = {f"{code}-rules-1" for code in PRODUCT_RULES}
-    if identities != expected:
-        raise ValueError(f"Expected product definitions {sorted(expected)}, got {sorted(identities)}")
+    if not products:
+        raise ValueError("Product definitions are empty")
 
-    rule_fields = {
-        "maturityMonths": "maturity_months",
-        "interestPeriodMonths": "interest_period_months",
-        "rateModel": "rate_model",
-        "capitalizationRule": "capitalization_rule",
-        "interestPaymentRule": "interest_payment_rule",
-        "accrualRule": "accrual_rule",
-    }
+    identities = [item["id"] for item in products]
+    if len(identities) != len(set(identities)):
+        raise ValueError("Duplicate product definition")
+
+    by_type: dict[str, list[int]] = defaultdict(list)
     for product in products:
         product_type = product["productType"]
-        rules = PRODUCT_RULES.get(product_type)
-        if rules is None:
-            raise ValueError(f"{product['id']}: unknown product type {product_type}")
-        expected_id = f"{product_type}-rules-{product['rulesRevision']}"
+        if product_type not in SUPPORTED_PRODUCT_TYPES:
+            raise ValueError(f"Unsupported product type: {product_type}")
+        revision = int(product["rulesRevision"])
+        expected_id = f"{product_type}-rules-{revision}"
         if product["id"] != expected_id:
             raise ValueError(
                 f"{product['id']}: id does not match productType/rulesRevision ({expected_id})"
             )
-        for document_field, rules_field in rule_fields.items():
-            expected_value = getattr(rules, rules_field)
-            if product[document_field] != expected_value:
-                raise ValueError(
-                    f"{product['id']}: {document_field} disagrees with parser rules: "
-                    f"{product[document_field]!r} != {expected_value!r}"
-                )
+        by_type[product_type].append(revision)
         if product["maturityMonths"] % product["interestPeriodMonths"]:
             raise ValueError(f"{product['id']}: maturity must be divisible by interest period")
+
+    if set(by_type) != set(SUPPORTED_PRODUCT_TYPES):
+        missing = sorted(set(SUPPORTED_PRODUCT_TYPES) - set(by_type))
+        extra = sorted(set(by_type) - set(SUPPORTED_PRODUCT_TYPES))
+        raise ValueError(
+            f"Product definitions must cover exactly supported families; missing={missing}, extra={extra}"
+        )
+
+    for product_type, revisions in by_type.items():
+        ordered = sorted(revisions)
+        expected = list(range(1, ordered[-1] + 1))
+        if ordered != expected:
+            raise ValueError(
+                f"{product_type}: rule revisions must be contiguous from 1; got {ordered}"
+            )
+
+
+def _validate_https_uri(value: Any, label: str) -> None:
+    if not isinstance(value, str):
+        raise ValueError(f"{label} must be an HTTPS URI")
+    try:
+        parsed = urlparse(value)
+        port = parsed.port or 443
+    except ValueError as exc:
+        raise ValueError(f"{label} is malformed: {value!r}") from exc
+    if (
+        parsed.scheme.lower() != "https"
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or port <= 0
+    ):
+        raise ValueError(f"{label} must be a credential-free HTTPS URI")
 
 
 def _validate_series(series: list[dict[str, Any]], products: list[dict[str, Any]]) -> None:
@@ -235,7 +306,8 @@ def _validate_series(series: list[dict[str, Any]], products: list[dict[str, Any]
             )
         if item["seriesCode"][:3] != item["productType"]:
             raise ValueError(
-                f"{item['seriesCode']}: series code prefix does not match productType {item['productType']}"
+                f"{item['seriesCode']}: series code prefix does not match "
+                f"productType {item['productType']}"
             )
         if item["saleFrom"] > item["saleTo"]:
             raise ValueError(f"{item['seriesCode']}: invalid sale window")
@@ -249,16 +321,16 @@ def _validate_series(series: list[dict[str, Any]], products: list[dict[str, Any]
                 f"expected {expected_suffix}"
             )
         primary = item["provenance"]["primary"]
-        try:
-            validate_official_mf_workbook_url(primary["url"])
-            cross_check = item["provenance"].get("crossCheck")
-            if cross_check is not None:
-                validate_official_cross_check_url(cross_check["url"])
-        except SourceError as exc:
-            raise ValueError(f"{item['seriesCode']}: invalid official provenance: {exc}") from exc
+        _validate_https_uri(primary["url"], f"{item['seriesCode']} primary provenance")
+        cross_check = item["provenance"].get("crossCheck")
+        if cross_check is not None:
+            _validate_https_uri(
+                cross_check["url"], f"{item['seriesCode']} cross-check provenance"
+            )
         if primary["sheet"] != item["productType"]:
             raise ValueError(
-                f"{item['seriesCode']}: MF provenance sheet {primary['sheet']} does not match productType"
+                f"{item['seriesCode']}: MF provenance sheet {primary['sheet']} "
+                "does not match productType"
             )
         if item["contentHash"] != terms_content_hash(item):
             raise ValueError(f"{item['seriesCode']}: invalid contentHash")
@@ -325,7 +397,8 @@ def _validate_gus(gus: dict[str, Any]) -> None:
         expected_period_id = 246 + month
         if source.get("year") != year or source.get("periodId") != expected_period_id:
             raise ValueError(
-                f"GUS {item['period']} revision {item['revision']}: source metadata does not match period"
+                f"GUS {item['period']} revision {item['revision']}: "
+                "source metadata does not match period"
             )
 
     current = _current_reference_observations(observations, "period")
@@ -370,9 +443,7 @@ def _validate_nbp(nbp: dict[str, Any]) -> None:
         raise ValueError("NBP reference-rate observations are empty")
     first_date = current[0]["effectiveFrom"]
     if first_date != NBP_HISTORY_START:
-        raise ValueError(
-            f"NBP history must start at {NBP_HISTORY_START}, got {first_date}"
-        )
+        raise ValueError(f"NBP history must start at {NBP_HISTORY_START}, got {first_date}")
     verified_date = nbp["verifiedAt"][:10]
     if current[-1]["effectiveFrom"] > verified_date:
         raise ValueError(
@@ -381,91 +452,163 @@ def _validate_nbp(nbp: dict[str, Any]) -> None:
         )
 
 
+def _verify_content_addressed_file(path: Path, digest: str, label: str) -> None:
+    if path.is_symlink() or not path.is_file():
+        raise ValueError(f"{label}: referenced evidence is missing: {path}")
+    actual = sha256(path.read_bytes())
+    if actual != digest:
+        raise ValueError(f"{label}: evidence SHA-256 mismatch; expected {digest}, got {actual}")
+
+
+def _validate_evidence(
+    series: list[dict[str, Any]],
+    gus: dict[str, Any],
+    nbp: dict[str, Any],
+) -> None:
+    mf_digests = {item["provenance"]["primary"]["sha256"] for item in series}
+    for digest in sorted(mf_digests):
+        _verify_content_addressed_file(
+            DATA / "sources" / "mf" / f"{digest}.xls",
+            digest,
+            "MF",
+        )
+
+    gus_source = gus.get("source", {})
+    bundle_digest = gus_source.get("evidenceBundleSha256")
+    if bundle_digest is not None:
+        bundle_path = DATA / "sources" / "gus" / f"{bundle_digest}.manifest.json"
+        _verify_content_addressed_file(bundle_path, bundle_digest, "GUS evidence bundle")
+        bundle = load_json(bundle_path)
+        if bundle.get("publisher") != "GUS" or bundle.get("schemaVersion") != "1.0":
+            raise ValueError("GUS evidence bundle has invalid metadata")
+        responses = bundle.get("responses")
+        if not isinstance(responses, list) or not responses:
+            raise ValueError("GUS evidence bundle has no responses")
+        for entry in responses:
+            url = entry.get("url")
+            digest = entry.get("sha256")
+            _validate_https_uri(url, "GUS evidence URL")
+            if not isinstance(digest, str) or len(digest) != 64:
+                raise ValueError(f"GUS evidence bundle contains invalid SHA-256: {digest!r}")
+            _verify_content_addressed_file(
+                DATA / "sources" / "gus" / f"{digest}.json",
+                digest,
+                "GUS raw response",
+            )
+
+    nbp_source = nbp.get("source", {})
+    archive_digest = nbp_source.get("archiveSha256")
+    current_digest = nbp_source.get("currentSha256")
+    if (archive_digest is None) != (current_digest is None):
+        raise ValueError("NBP evidence must provide archiveSha256 and currentSha256 together")
+    if archive_digest is not None and current_digest is not None:
+        _verify_content_addressed_file(
+            DATA / "sources" / "nbp" / f"{archive_digest}.xml",
+            archive_digest,
+            "NBP archive",
+        )
+        _verify_content_addressed_file(
+            DATA / "sources" / "nbp" / f"{current_digest}.xml",
+            current_digest,
+            "NBP current rates",
+        )
+
+
+def _selected_snapshot() -> Path | None:
+    latest_path = PUBLICATION / "latest.json"
+    if not latest_path.is_file():
+        return None
+    latest = load_json(latest_path)
+    revision = latest.get("datasetRevision")
+    manifest = latest.get("manifest")
+    if not isinstance(revision, str) or not revision:
+        raise ValueError("latest.json has no valid datasetRevision")
+    expected_manifest = f"snapshots/{revision}/manifest.json"
+    if manifest != expected_manifest:
+        raise ValueError(
+            f"latest.json manifest must be {expected_manifest!r}, got {manifest!r}"
+        )
+    snapshot = PUBLICATION / "snapshots" / revision
+    if snapshot.is_symlink() or not snapshot.is_dir():
+        raise ValueError(f"Selected historical snapshot is missing: {revision}")
+    return snapshot
+
+
 def _validate_append_only_history(
     products: list[dict[str, Any]],
     series: list[dict[str, Any]],
     gus: dict[str, Any],
     nbp: dict[str, Any],
 ) -> None:
-    snapshots_root = PUBLICATION / "snapshots"
-    if not snapshots_root.exists():
+    """Require current canonical facts to extend the last reviewed public dataset.
+
+    Because every accepted dataset is cumulative and corrections append revisions,
+    comparing with the currently selected snapshot is sufficient. Older immutable
+    snapshots are retained for audit/reproduction and are protected separately by
+    the publication namespace guard.
+    """
+    snapshot = _selected_snapshot()
+    if snapshot is None:
         return
 
+    files = {
+        "products": snapshot / "product-definitions.json",
+        "series": snapshot / "catalog.json",
+        "gus": snapshot / "gus-cpi.json",
+        "nbp": snapshot / "nbp-reference-rates.json",
+    }
+    missing_files = [path.name for path in files.values() if not path.is_file()]
+    if missing_files:
+        raise ValueError(
+            f"Selected historical snapshot {snapshot.name} is incomplete: "
+            f"missing {sorted(missing_files)}"
+        )
+
     current_products = {item["id"]: item for item in products}
+    for previous in load_json(files["products"])["productDefinitions"]:
+        current = current_products.get(previous["id"])
+        if current is None:
+            raise ValueError(f"Product definition {previous['id']} was deleted")
+        if current != previous:
+            raise ValueError(f"Product definition {previous['id']} was mutated")
+
     current_series = {(item["seriesCode"], item["termsRevision"]): item for item in series}
-    current_gus = {(item["period"], item["revision"]): item for item in gus.get("observations", [])}
+    for previous in load_json(files["series"])["series"]:
+        identity = (previous["seriesCode"], previous["termsRevision"])
+        current = current_series.get(identity)
+        if current is None:
+            raise ValueError(f"Series revision {identity} was deleted")
+        if current["contentHash"] != previous["contentHash"]:
+            raise ValueError(f"Series revision {identity} was mutated in place")
+
+    current_gus = {
+        (item["period"], item["revision"]): item for item in gus.get("observations", [])
+    }
+    for previous in load_json(files["gus"])["observations"]:
+        identity = (previous["period"], previous["revision"])
+        current = current_gus.get(identity)
+        if current is None:
+            raise ValueError(f"GUS observation {identity} was deleted")
+        if current["indexPreviousYear100"] != previous["indexPreviousYear100"]:
+            raise ValueError(f"GUS observation {identity} was mutated in place")
+
     current_nbp = {
         (item["effectiveFrom"], item["revision"]): item
         for item in nbp.get("observations", [])
     }
-
-    for snapshot in sorted(path for path in snapshots_root.iterdir() if path.is_dir()):
-        files = {
-            "products": snapshot / "product-definitions.json",
-            "series": snapshot / "catalog.json",
-            "gus": snapshot / "gus-cpi.json",
-            "nbp": snapshot / "nbp-reference-rates.json",
-        }
-        missing_files = [path.name for path in files.values() if not path.is_file()]
-        if missing_files:
-            raise ValueError(
-                f"Historical snapshot {snapshot.name} is incomplete: missing {sorted(missing_files)}"
-            )
-
-        previous_products = load_json(files["products"])["productDefinitions"]
-        for previous in previous_products:
-            current = current_products.get(previous["id"])
-            if current is None:
-                raise ValueError(
-                    f"Product definition {previous['id']} from historical snapshot {snapshot.name} was deleted"
-                )
-            if current != previous:
-                raise ValueError(
-                    f"Product definition {previous['id']} from historical snapshot {snapshot.name} was mutated"
-                )
-
-        previous_series = load_json(files["series"])["series"]
-        for previous in previous_series:
-            identity = (previous["seriesCode"], previous["termsRevision"])
-            current = current_series.get(identity)
-            if current is None:
-                raise ValueError(
-                    f"Series revision {identity} from historical snapshot {snapshot.name} was deleted"
-                )
-            if current["contentHash"] != previous["contentHash"]:
-                raise ValueError(
-                    f"Series revision {identity} from historical snapshot {snapshot.name} was mutated in place"
-                )
-
-        previous_gus = load_json(files["gus"])["observations"]
-        for previous in previous_gus:
-            identity = (previous["period"], previous["revision"])
-            current = current_gus.get(identity)
-            if current is None:
-                raise ValueError(
-                    f"GUS observation {identity} from historical snapshot {snapshot.name} was deleted"
-                )
-            if current["indexPreviousYear100"] != previous["indexPreviousYear100"]:
-                raise ValueError(
-                    f"GUS observation {identity} from historical snapshot {snapshot.name} was mutated in place"
-                )
-
-        previous_nbp = load_json(files["nbp"])["observations"]
-        for previous in previous_nbp:
-            identity = (previous["effectiveFrom"], previous["revision"])
-            current = current_nbp.get(identity)
-            if current is None:
-                raise ValueError(
-                    f"NBP observation {identity} from historical snapshot {snapshot.name} was deleted"
-                )
-            if current["annualRatePercent"] != previous["annualRatePercent"]:
-                raise ValueError(
-                    f"NBP observation {identity} from historical snapshot {snapshot.name} was mutated in place"
-                )
+    for previous in load_json(files["nbp"])["observations"]:
+        identity = (previous["effectiveFrom"], previous["revision"])
+        current = current_nbp.get(identity)
+        if current is None:
+            raise ValueError(f"NBP observation {identity} was deleted")
+        if current["annualRatePercent"] != previous["annualRatePercent"]:
+            raise ValueError(f"NBP observation {identity} was mutated in place")
 
 
 def _generated_at(series: list[dict[str, Any]], gus: dict[str, Any], nbp: dict[str, Any]) -> str:
-    candidates = [item["provenance"]["verifiedAt"] + "T00:00:00Z" for item in series]
+    candidates = [
+        item["provenance"]["verifiedAt"] + "T00:00:00Z" for item in series
+    ]
     candidates.extend([gus["verifiedAt"], nbp["verifiedAt"]])
     return max(candidates)
 
@@ -489,7 +632,11 @@ def _mf_provenance(series: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def _coverage(series: list[dict[str, Any]], gus: list[dict[str, Any]], nbp: list[dict[str, Any]]) -> dict[str, Any]:
+def _coverage(
+    series: list[dict[str, Any]],
+    gus: list[dict[str, Any]],
+    nbp: list[dict[str, Any]],
+) -> dict[str, Any]:
     by_family: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for item in series:
         by_family[item["productType"]].append(item)
@@ -536,7 +683,11 @@ def _monthly_gaps(items: list[dict[str, Any]]) -> list[str]:
 
 
 def _build_status(dataset_revision: str, source: dict[str, Any]) -> dict[str, Any]:
-    result: dict[str, Any] = {"schemaVersion": "1.0", "datasetRevision": dataset_revision, "sources": {}}
+    result: dict[str, Any] = {
+        "schemaVersion": "1.0",
+        "datasetRevision": dataset_revision,
+        "sources": {},
+    }
     for name in ("mf", "gus", "nbp"):
         item = source["sources"][name]
         result["sources"][name] = {
@@ -551,6 +702,6 @@ def _build_status(dataset_revision: str, source: dict[str, Any]) -> dict[str, An
 
 
 def migration_records_from_catalog_v1() -> list[dict[str, Any]]:
-    """Read-only migration helper retained for auditing the original v1 seed."""
+    """Read-only helper retained solely to audit the frozen legacy v1 seed."""
     path = DIST / "catalog-v1.json"
     return load_json(path)["series"] if path.exists() else []

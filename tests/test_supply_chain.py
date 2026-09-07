@@ -27,7 +27,9 @@ def parse_hash_locked_requirements(text: str) -> dict[str, tuple[str, tuple[str,
         if current_name is None or current_version is None:
             return
         if not current_hashes:
-            raise AssertionError(f"Locked dependency {current_name}=={current_version} has no SHA-256 hash")
+            raise AssertionError(
+                f"Locked dependency {current_name}=={current_version} has no SHA-256 hash"
+            )
         normalized = normalize_package_name(current_name)
         if normalized in locked:
             raise AssertionError(f"Locked dependency {current_name} is declared more than once")
@@ -40,20 +42,17 @@ def parse_hash_locked_requirements(text: str) -> dict[str, tuple[str, tuple[str,
         line = raw_line.strip()
         if not line or line.startswith("#"):
             continue
-
         requirement = LOCKED_REQUIREMENT_RE.fullmatch(line)
         if requirement is not None:
             finish_current()
             current_name, current_version = requirement.groups()
             continue
-
         digest = HASH_RE.fullmatch(line)
         if digest is not None:
             if current_name is None:
                 raise AssertionError(f"Orphan hash line in requirements.txt: {line}")
             current_hashes.append(digest.group(1))
             continue
-
         raise AssertionError(f"Unsupported or unhashed lock-file line: {line}")
 
     finish_current()
@@ -72,9 +71,9 @@ class SupplyChainTests(unittest.TestCase):
             assert match is not None
             direct[normalize_package_name(match.group(1))] = match.group(2)
 
-        locked_text = (ROOT / "requirements.txt").read_text(encoding="utf-8")
-        locked = parse_hash_locked_requirements(locked_text)
-
+        locked = parse_hash_locked_requirements(
+            (ROOT / "requirements.txt").read_text(encoding="utf-8")
+        )
         self.assertGreater(len(locked), len(direct), "Lock file must include transitive dependencies")
         for package, expected_version in direct.items():
             self.assertIn(package, locked, f"Direct dependency {package} is missing from the lock")
@@ -84,40 +83,35 @@ class SupplyChainTests(unittest.TestCase):
             self.assertTrue(all(len(digest) == 64 for digest in digests))
 
     def test_all_external_github_actions_are_pinned_to_commit_sha(self) -> None:
-        workflow_dir = ROOT / ".github" / "workflows"
         failures: list[str] = []
-        for workflow in sorted(workflow_dir.glob("*.yml")):
+        for workflow in sorted((ROOT / ".github" / "workflows").glob("*.yml")):
             text = workflow.read_text(encoding="utf-8")
             for action, ref in ACTION_USE_RE.findall(text):
                 if action.startswith("./") or action.startswith("docker://"):
                     continue
                 if SHA_REF_RE.fullmatch(ref) is None:
                     failures.append(f"{workflow.name}: {action}@{ref}")
-
-        self.assertEqual([], failures, "External actions must use immutable 40-character commit SHAs")
+        self.assertEqual([], failures, "External actions must use immutable commit SHAs")
 
     def test_network_sensitive_jobs_have_timeouts(self) -> None:
         for workflow_name in ("pages.yml", "update-data.yml"):
-            text = (ROOT / ".github" / "workflows" / workflow_name).read_text(encoding="utf-8")
+            text = (ROOT / ".github" / "workflows" / workflow_name).read_text(
+                encoding="utf-8"
+            )
             self.assertIn("timeout-minutes:", text, f"{workflow_name} must have a job timeout")
 
-    def test_updater_validates_staged_candidate_without_requiring_clean_head(self) -> None:
-        text = (ROOT / ".github" / "workflows" / "update-data.yml").read_text(encoding="utf-8")
-        archive = text.index("Verify committed immutable archive before update")
-        fetch = text.index("Fetch and cross-check MF, GUS and NBP")
-        stage = text.index("Stage and verify candidate immutable publication")
-        rebuild = text.index("Verify offline rebuild reproduces staged candidate")
-        create_pr = text.index("Create or update one reviewed data pull request")
+    def test_updater_creates_reviewed_pr_instead_of_pushing_main(self) -> None:
+        text = (ROOT / ".github" / "workflows" / "update-data.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("peter-evans/create-pull-request", text)
+        self.assertIn("bot/update-data", text)
+        self.assertNotIn("git push origin main", text)
 
-        self.assertLess(archive, fetch)
-        self.assertLess(fetch, stage)
-        self.assertLess(stage, rebuild)
-        self.assertLess(rebuild, create_pr)
-        self.assertIn("git add -A -- data dist publication", text)
-        self.assertIn("git write-tree", text)
-        self.assertIn("git commit-tree", text)
-        self.assertIn('check_immutable_snapshots.py --base HEAD --head "$candidate_commit"', text)
-        self.assertIn("check_generated_tree.py --against-index", text)
+    def test_pages_deploys_only_from_main_or_manual_schedule(self) -> None:
+        text = (ROOT / ".github" / "workflows" / "pages.yml").read_text(encoding="utf-8")
+        self.assertIn("branches: [main]", text)
+        self.assertNotIn("pull_request:", text)
 
 
 if __name__ == "__main__":

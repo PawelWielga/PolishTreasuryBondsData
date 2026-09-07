@@ -1,108 +1,162 @@
-# Operations and publication controls
+# Operations
 
-This repository publishes financial source data, so `main` is treated as the reviewed production branch.
+## Branch and review policy
 
-## Production readiness
+`main` is the production source of truth and must remain protected. Changes should flow through pull requests with the required `validate` check. Do not disable branch protection, force-push `main` or bypass required checks to publish data faster.
 
-**Status: PRODUCTION READY as of 2026-09-03.**
+The repository trust boundary is the reviewed PR base plus the candidate tree. It does not attempt to self-protect against an administrator who can rewrite data, validation code, workflows and Git history together.
 
-The production-readiness decision covers the public read-only data publication service consumed through GitHub Pages and the repository pipeline that acquires, validates, reviews and publishes that data. The decision is based on the following controls being active and verified on `main`:
+## Automated updater
 
-- all supported bond families are represented through versioned schemas and deterministic aggregates;
-- MF offer data is cross-checked against an independent official offer page and calculation-relevant parse failures stop publication;
-- GUS CPI and NBP reference-rate observations preserve historical corrections as append-only revisions;
-- immutable snapshots are content-addressed, protected by manifest SHA-256 hashes and rechecked against their first reviewed Git bytes on every Pages deployment;
-- legacy v1 compatibility artifacts are frozen byte-for-byte by regression tests;
-- the public Pages consumer path is exercised after every deployment by an end-to-end smoke test;
-- source freshness is published independently from immutable financial snapshots and ages fail-closed;
-- `main` is protected and requires the `validate` check before merge;
-- update automation proposes pull requests instead of publishing financial changes directly;
-- Python dependencies are exact/hash-locked, external Actions are pinned to immutable commit SHAs and Dependabot supplies reviewable maintenance PRs;
-- network-sensitive workflows have bounded retries/timeouts and deterministic validation remains offline after dependency installation.
+`.github/workflows/update-data.yml` acquires official data and opens or updates `bot/update-data`.
 
-Production readiness does not mean that this repository becomes an official MF, NBP or GUS service, nor does it move portfolio valuation logic into this repository. Consumers remain responsible for validating the manifest/schema contract, retaining a last-known-good local cache and applying bond-interest rules correctly.
+The updater:
 
-A future change that breaks a supported schema, removes fail-closed validation, bypasses protected `main`, weakens immutable snapshot guarantees or disables public post-deployment verification should be treated as a production-readiness regression and must not be merged without an explicit replacement control.
+1. checks out reviewed `main`;
+2. installs hash-locked dependencies;
+3. verifies the committed publication archive;
+4. fetches and cross-checks MF, GUS and NBP;
+5. captures raw evidence where supported;
+6. updates canonical facts using append-only revisions;
+7. builds the candidate immutable snapshot;
+8. performs an offline deterministic rebuild check;
+9. opens a pull request;
+10. dispatches the required validation workflow for the bot-created PR when needed.
 
-## Main branch protection
+The updater never pushes production data directly to `main`.
 
-`main` is protected with the following policy:
+### Failure behavior
 
-- all normal changes must arrive through a pull request;
-- the GitHub Actions `validate` check is required before merge;
-- the pull-request branch must be up to date with `main` before merge;
-- zero approving reviews are required, which keeps the workflow practical for a single maintainer;
-- all review conversations must be resolved;
-- linear history is required;
-- force pushes are disabled;
-- deletion of `main` is disabled;
-- branch protection is enforced for repository administrators as well.
+A live update starts only from a clean managed tree. On an acquisition/build failure it restores the checked-in `data/` and `publication/` state and removes partial generated output.
 
-There is no standing administrator bypass. If protection itself must ever be changed for repository recovery, that is an explicit administrative action outside the normal publication path and the protection should be restored before financial-data work resumes.
+Source disagreements, missing historical coverage, unsafe redirects, malformed source payloads, missing current offerings or future-dated observations fail closed.
 
-## Automated data updater
+`--skip-cross-check` is not available to the production CLI. Tests that intentionally exercise an MF fixture can call `sync_mf(..., cross_check=False)` directly.
 
-The scheduled updater has `contents: write` and `pull-requests: write`, but it does not push financial changes to `main`. It writes only to `bot/update-data` through `peter-evans/create-pull-request` and proposes a pull request.
+A future `--as-of` date is rejected.
 
-Because branch protection targets `main`, the bot can continue creating and updating its proposal branch while the eventual merge remains subject to the same required `validate` check as every other pull request.
+## Evidence maintenance
 
-### Required repository setting
+### MF
 
-GitHub's repository-level Actions policy must allow workflows to create pull requests. In **Settings → Actions → General → Workflow permissions**, enable **Allow GitHub Actions to create and approve pull requests**. The workflow-level `pull-requests: write` permission is necessary but is not sufficient when that repository switch is disabled.
+MF evidence is stored as:
 
-If the repository setting is disabled, source acquisition and deterministic tests can still succeed and `peter-evans/create-pull-request` can push the generated `bot/update-data` branch, but the final REST request that opens the review pull request is rejected by GitHub. The workflow intentionally remains failed in that state because a candidate branch without its required review surface is not a successful production update cycle. The existing candidate can be recovered by opening a pull request from `bot/update-data` to `main`; financial data must still never be copied directly to `main`.
+```text
+data/sources/mf/<sha256>.xls
+```
 
-The 2026-09-05 scheduled run demonstrated this exact failure mode: MF/GUS/NBP acquisition and the regression suite succeeded, then GitHub rejected only PR creation because the repository-level switch was disabled. Treat that setting as part of the production control plane, not as an optional convenience.
+Every referenced digest must match the exact bytes. Existing financial terms are reconstructed from the workbook during tests.
 
-### Local MF workbook override
+### GUS
 
-`--mf-workbook` is a reproducibility/debugging input, not a provenance bypass. It requires the exact canonical `https://www.gov.pl/attachment/...` URL and the updater downloads that URL during the run. The local workbook is accepted only when its SHA-256 matches the bytes fetched from that official URL. Redirects may remain only within the original HTTPS origin; a redirect to another host or port fails closed.
+New live refreshes write exact JSON response bytes as:
 
-Normalized MF series and generated manifests are independently constrained to the canonical MF, GUS and NBP source endpoints, while offer cross-check URLs must remain on `www.obligacjeskarbowe.pl`. A manually edited provenance object therefore cannot make an untrusted domain look official during an offline rebuild.
+```text
+data/sources/gus/<sha256>.json
+```
 
-The scheduled updater requires the repository-level GitHub Actions setting that permits workflows to create pull requests. Default workflow token permissions remain read-only; the updater declares its write permissions explicitly.
+A content-addressed `*.manifest.json` lists official request URLs and the response hashes used during that refresh.
 
-## Pages publication
+### NBP
 
-GitHub Pages deploys from reviewed `main` only. The Pages workflow validates the checked-in financial publication before upload. Its independent six-hour schedule may recalculate mutable `status.json` from durable source-success timestamps, but it does not fetch new financial facts or advance `latest.json`.
+New live refreshes write exact XML bytes as:
 
-Before every Pages upload, including scheduled freshness-only runs, `scripts/check_immutable_snapshots.py` verifies every retained snapshot directory against the bytes from its first appearance on the current first-parent Git history and requires that snapshot to have been selected by `latest.json` at that first appearance. This is deliberately stronger than checking only the latest push diff: if an immutable snapshot rewrite ever reached `main` through an exceptional protection bypass, a later unrelated commit or scheduled deployment still cannot make those rewritten bytes publishable.
+```text
+data/sources/nbp/<sha256>.xml
+```
 
-The archive verifier also requires each retained snapshot to keep exactly the five canonical top-level files and rejects symlinked/non-regular snapshot entries. Pull-request and push validation additionally compare the candidate against its reviewed base so a new snapshot may be introduced only as the single complete revision selected by `latest.json`.
+Canonical NBP provenance records both archive and current-rate SHA-256 values.
 
-This keeps the two responsibilities separate:
+Do not invent evidence for older normalized facts. If raw bytes were not retained historically, leave the historical provenance as-is until a real official re-verification captures evidence.
 
-1. financial data changes require a validated pull request into protected `main`;
-2. operational freshness can age independently without selecting an unreviewed dataset revision.
+## Validate data
 
-## Post-deployment smoke test
+`.github/workflows/validate.yml` is the authoritative PR gate. It performs:
 
-Every successful Pages deployment is followed by a network smoke test against the public Pages URL. `scripts/smoke_pages.py` follows the same retrieval chain expected from Inspector Budget:
+- the complete unit/regression suite;
+- immutable-snapshot comparison against the reviewed `main` merge base;
+- an offline rebuild/check of canonical facts and publication output.
 
-1. fetch `v1/latest.json`;
-2. resolve its relative manifest path;
-3. require the manifest `datasetRevision` to match `latest.json`;
-4. fetch every file declared in the manifest;
-5. verify SHA-256 against the bytes returned by Pages;
-6. parse every file as JSON and verify its declared `schemaVersion`;
-7. verify manifest counts when the document has a known collection field;
-8. fetch `v1/status.json`, require it to match the rendered deployment artifact and point at the selected dataset revision.
+This workflow protects invariants rather than the textual implementation of other workflows.
 
-The smoke tester retries public reads to tolerate short Pages propagation delays, but persistent missing files, broken paths, invalid JSON, revision disagreement, status disagreement or hash mismatch fail the workflow visibly and do not modify repository data.
+## Pages deployment
 
-When at least two real snapshot revisions are retained locally, the same deployment smoke test also fetches and fully verifies the newest prior immutable snapshot. Until the first actual data revision change occurs, the repository has only one genuine snapshot and the workflow reports that fact rather than fabricating historical data for the test.
+`.github/workflows/pages.yml` publishes only approved `main` (plus explicit scheduled/manual freshness runs).
 
-## Dependency and workflow supply chain
+It:
 
-Runtime Python dependencies are split into two files:
+1. verifies that the checked-in canonical/publication tree rebuilds cleanly;
+2. renders current `v1/status.json` from durable source-success timestamps;
+3. stages the immutable publication, public schemas and frozen legacy v1 aliases;
+4. deploys GitHub Pages;
+5. runs the public smoke test against the deployed contract.
 
-- `requirements.in` is the small human-reviewed list of direct dependencies;
-- `requirements.txt` is the CI lock for CPython 3.12.12 on GitHub-hosted Ubuntu x86_64 and contains every direct and transitive package at an exact version with a SHA-256 hash for the wheel used by CI.
+Pages does not fetch new financial data. A deployment therefore cannot silently introduce an upstream data change that bypassed review.
 
-CI, Pages publication and the scheduled updater install with `--require-hashes --only-binary=:all:`. That makes package resolution fail closed if a pinned artifact changes, disappears, or no longer matches the reviewed hash. The normal offline validation remains network-independent after the install step.
+## Public contract smoke test
 
-All external GitHub Actions in `.github/workflows` are pinned to immutable 40-character commit SHAs. The adjacent version comments record the reviewed upstream release that each SHA represents. `tests/test_supply_chain.py` prevents floating action tags or an unlocked direct dependency from being reintroduced accidentally.
+The smoke test checks at least:
 
-Dependabot checks both the `github-actions` and `pip` ecosystems every Monday and proposes dependency changes as ordinary reviewable pull requests. Minor and patch updates are grouped; major updates remain separate so breaking changes are explicit. Dependency PRs are subject to the same protected-`main` validation gate as other changes.
+- `v1/latest.json`;
+- the selected manifest;
+- every manifest-bound snapshot file and its SHA-256;
+- `v1/status.json`;
+- public JSON Schema aliases;
+- frozen v1 compatibility aliases.
 
-Network-sensitive jobs have explicit workflow timeouts: Pages deployment is capped at 15 minutes and the official-source updater at 20 minutes. Validation itself is capped at 10 minutes. These limits bound failures without changing any public dataset contract.
+A failed smoke test is an operational deployment failure, not permission to rewrite an immutable snapshot.
+
+## Local commands
+
+Install dependencies:
+
+```bash
+python -m pip install --require-hashes -r requirements.txt
+```
+
+Run the complete test suite:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+Validate the current immutable archive:
+
+```bash
+python scripts/check_immutable_snapshots.py
+```
+
+Verify deterministic offline state:
+
+```bash
+python scripts/update.py --offline --check
+```
+
+Run a live update candidate locally:
+
+```bash
+python scripts/update.py
+```
+
+For a reviewed-base comparison equivalent to PR validation:
+
+```bash
+python scripts/check_immutable_snapshots.py --base <reviewed-base-sha>
+```
+
+## Frozen legacy v1
+
+`dist/catalog-v1.json`, `dist/reference-data-v1.json` and `dist/metadata.json` are compatibility artifacts and must remain byte-identical. The current builder never rewrites them.
+
+There are no current v2 generated files under `dist/`.
+
+## Recovery principles
+
+If an official source fails or changes unexpectedly:
+
+- do not guess missing financial values;
+- do not weaken validation merely to make the updater green;
+- keep the last reviewed immutable snapshot available;
+- mark source freshness conservatively through status;
+- adapt the source-specific importer only after confirming the new official format/endpoint;
+- preserve previously published history and create new revisions for genuine corrections.
