@@ -25,6 +25,18 @@ class ChangeSummaryTests(unittest.TestCase):
         self.assertIn(f"- NBP source: {NBP_RATES_URL}", result.stdout)
         self.assertNotIn(f"- NBP source: {LEGACY_NBP_PAGE}", result.stdout)
 
+    def test_script_does_not_claim_pull_request_gate_already_passed(self) -> None:
+        result = subprocess.run(
+            [sys.executable, "scripts/change_summary.py"],
+            cwd=ROOT,
+            check=True,
+            text=True,
+            capture_output=True,
+        )
+
+        self.assertIn("The required `Validate data` pull-request gate runs separately", result.stdout)
+        self.assertNotIn("golden-fixture and immutable-snapshot checks passed", result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

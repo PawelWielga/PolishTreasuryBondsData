@@ -36,8 +36,14 @@ def main() -> None:
     print("- CPI source: https://api-sdp.stat.gov.pl")
     print(f"- NBP source: {NBP_RATES_URL}")
     print()
-    print("All cross-source, schema, semantic, golden-fixture and immutable-snapshot checks passed.")
-    print("Any source disagreement stops the workflow before this pull request is created.")
+    print(
+        "The updater completed official-source acquisition, source consistency checks, "
+        "schema/semantic validation and offline reproducibility for this candidate."
+    )
+    print(
+        "The required `Validate data` pull-request gate runs separately and must pass before merge; "
+        "it covers invariant/parser tests, immutable-snapshot protection and a deterministic rebuild."
+    )
 
 
 if __name__ == "__main__":
