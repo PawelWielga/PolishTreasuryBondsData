@@ -31,7 +31,7 @@ It does not attempt to defend against a repository administrator who can modify 
 | GUS CPI facts | `data/reference/gus-cpi.json` |
 | NBP reference-rate facts | `data/reference/nbp-reference-rates.json` |
 | Raw MF evidence | `data/sources/mf/<sha256>.xls` |
-| Raw GUS evidence for new refreshes | `data/sources/gus/<sha256>.json` plus a content-addressed manifest |
+| Raw GUS evidence for new refreshes | `data/sources/gus/<sha256>.json.gz` plus a content-addressed manifest |
 | Raw NBP evidence for new refreshes | `data/sources/nbp/<sha256>.xml` |
 | Durable source verification state | `data/source-status.json` |
 | Public immutable data | `publication/v1/snapshots/<datasetRevision>/` |
@@ -70,7 +70,7 @@ GitHub Pages
 
 MF rows are reproducible from the referenced content-addressed XLS, including sheet and row coordinates.
 
-New GUS refreshes retain the exact response bodies used by the importer. A content-addressed manifest records their official request URLs and SHA-256 hashes.
+New GUS refreshes retain the exact response bodies used by the importer, stored as gzip-compressed artifacts to avoid enormous text diffs. The filename and manifest SHA-256 are calculated from the original uncompressed response bytes, so decompression reproduces the exact official payload. A content-addressed manifest records the official request URL, raw-content SHA-256 and `contentEncoding: gzip`.
 
 New NBP refreshes retain exact archive and current-rate XML bytes and record both hashes in canonical provenance.
 
