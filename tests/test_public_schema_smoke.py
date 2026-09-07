@@ -80,7 +80,7 @@ class PublicSchemaSmokeTests(unittest.TestCase):
             path.write_bytes(content)
             session = FakeSession({f"{base}schemas/catalog-v2.schema.json": content})
 
-            with self.assertRaisesRegex(smoke_pages.SmokeError, "\$id mismatch"):
+            with self.assertRaisesRegex(smoke_pages.SmokeError, r"\$id mismatch"):
                 smoke_pages.verify_public_schemas(session, base, root, 1, 0)
 
     def test_pages_workflow_uploads_publication_and_schemas_as_one_site(self) -> None:
