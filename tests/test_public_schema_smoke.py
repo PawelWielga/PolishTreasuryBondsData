@@ -83,6 +83,34 @@ class PublicSchemaSmokeTests(unittest.TestCase):
             with self.assertRaisesRegex(smoke_pages.SmokeError, r"\$id mismatch"):
                 smoke_pages.verify_public_schemas(session, base, root, 1, 0)
 
+    def test_frozen_legacy_schema_id_is_valid_at_pages_alias(self) -> None:
+        base = "https://example.test/project/"
+        name = "catalog-v1.schema.json"
+        legacy_id = smoke_pages.LEGACY_SCHEMA_IDS[name]
+        content = (
+            json.dumps(
+                {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$id": legacy_id,
+                    "type": "object",
+                },
+                indent=2,
+            )
+            + "\n"
+        ).encode("utf-8")
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / name).write_bytes(content)
+            alias = f"{base}schemas/{name}"
+            smoke_pages.verify_public_schemas(
+                FakeSession({alias: content}),
+                base,
+                root,
+                attempts=1,
+                retry_delay_seconds=0,
+            )
+
     def test_pages_workflow_uploads_publication_and_schemas_as_one_site(self) -> None:
         workflow = (
             Path(__file__).resolve().parents[1] / ".github" / "workflows" / "pages.yml"
