@@ -14,14 +14,14 @@ The updater:
 
 1. checks out reviewed `main`;
 2. installs hash-locked dependencies;
-3. verifies the committed publication archive;
-4. fetches and cross-checks MF, GUS and NBP;
-5. captures raw evidence where supported;
-6. updates canonical facts using append-only revisions;
-7. builds the candidate immutable snapshot;
-8. performs an offline deterministic rebuild check;
-9. opens a pull request;
-10. dispatches the required validation workflow for the bot-created PR when needed.
+3. fetches and cross-checks MF, GUS and NBP;
+4. captures content-addressed official evidence required by newly published provenance;
+5. updates canonical facts using append-only revisions and builds the candidate immutable snapshot;
+6. stages the exact candidate and proves that an offline rebuild reproduces it;
+7. builds a factual pull-request summary;
+8. opens or updates the data pull request.
+
+The updater intentionally uses the repository `GITHUB_TOKEN` rather than a long-lived credential. GitHub therefore holds the `pull_request` workflow for a bot-created data PR until a maintainer approves it. Review the generated data-only diff, select **Approve workflows to run**, and merge only after the real required `validate` check passes. A separately dispatched workflow run is not a substitute for the protected-branch check.
 
 The updater never pushes production data directly to `main`.
 
@@ -49,13 +49,13 @@ Every referenced digest must match the exact bytes. Existing financial terms are
 
 ### GUS
 
-New live refreshes write exact JSON response bytes as:
+New live refreshes retain exact GUS response bytes as deterministically compressed artifacts:
 
 ```text
-data/sources/gus/<sha256>.json
+data/sources/gus/<sha256>.json.gz
 ```
 
-A content-addressed `*.manifest.json` lists official request URLs and the response hashes used during that refresh.
+The filename SHA-256 is calculated from the original uncompressed official response bytes. A content-addressed `*.manifest.json` records each official request URL, the raw-content SHA-256 and `contentEncoding: gzip`; validation decompresses the artifact and checks the hash against the original bytes.
 
 ### NBP
 
@@ -81,13 +81,13 @@ This workflow protects invariants rather than the textual implementation of othe
 
 ## Pages deployment
 
-`.github/workflows/pages.yml` publishes only approved `main` (plus explicit scheduled/manual freshness runs).
+`.github/workflows/pages.yml` publishes only approved `main` (plus scheduled/manual freshness runs). Push deployments are path-filtered to changes that can affect the public site or its publication tooling.
 
 It:
 
-1. verifies that the checked-in canonical/publication tree rebuilds cleanly;
+1. verifies the checked-in immutable snapshot and manifest hashes;
 2. renders current `v1/status.json` from durable source-success timestamps;
-3. stages the immutable publication, public schemas and frozen legacy v1 aliases;
+3. stages the immutable publication and public JSON Schemas;
 4. deploys GitHub Pages;
 5. runs the public smoke test against the deployed contract.
 
@@ -101,8 +101,8 @@ The smoke test checks at least:
 - the selected manifest;
 - every manifest-bound snapshot file and its SHA-256;
 - `v1/status.json`;
-- public JSON Schema aliases;
-- frozen v1 compatibility aliases.
+- public JSON Schemas byte-for-byte;
+- a retained prior immutable snapshot when one exists.
 
 A failed smoke test is an operational deployment failure, not permission to rewrite an immutable snapshot.
 
@@ -146,7 +146,7 @@ python scripts/check_immutable_snapshots.py --base <reviewed-base-sha>
 
 ## Frozen legacy v1
 
-`dist/catalog-v1.json`, `dist/reference-data-v1.json` and `dist/metadata.json` are compatibility artifacts and must remain byte-identical. The current builder never rewrites them.
+`dist/catalog-v1.json`, `dist/reference-data-v1.json` and `dist/metadata.json` are repository compatibility artifacts and must remain byte-identical. The current builder never rewrites them, and they are not part of the current GitHub Pages consumer contract.
 
 There are no current v2 generated files under `dist/`.
 
