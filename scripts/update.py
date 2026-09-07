@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import argparse
 import calendar
+import hashlib
 import json
 import subprocess
 import sys
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -18,12 +19,14 @@ from scripts.pipeline import (
     ROOT,
     GUS_HISTORY_START,
     NBP_HISTORY_START,
-    build_dist,
+    build_publication,
+    canonical_json_bytes,
     load_json,
     load_series,
     write_json,
 )
 from scripts.sources import (
+    GUS_BASE_URL,
     MF_PAGE_URL,
     NBP_RATES_URL,
     PRODUCT_RULES,
@@ -42,8 +45,12 @@ from scripts.sources import (
     validate_official_mf_workbook_url,
 )
 
+
+# Internal compatibility alias. The builder no longer writes current v2 files to dist/.
+build_dist = build_publication
+
 NBP_CURRENT_RATES_URL = "https://static.nbp.pl/dane/stopy/stopy_procentowe.xml"
-MANAGED_PATHS = ("data", "dist", "publication")
+MANAGED_PATHS = ("data", "publication")
 COMMON_REQUIRED_CROSS_CHECK_FIELDS = (
     "seriesCode",
     "saleFrom",
@@ -51,6 +58,21 @@ COMMON_REQUIRED_CROSS_CHECK_FIELDS = (
     "issuePriceMinorUnits",
     "firstPeriodAnnualRatePercent",
 )
+
+
+def _validated_verification_date(value: str | None, *, today: date | None = None) -> str:
+    reference = today or datetime.now(timezone.utc).date()
+    if value is None:
+        return reference.isoformat()
+    try:
+        verified = date.fromisoformat(value)
+    except ValueError as exc:
+        raise SourceError("--as-of must be a valid YYYY-MM-DD date") from exc
+    if verified > reference:
+        raise SourceError(
+            f"--as-of cannot be in the future: {verified.isoformat()} > {reference.isoformat()}"
+        )
+    return verified.isoformat()
 
 
 def required_cross_check_fields(series: dict[str, Any]) -> tuple[str, ...]:
@@ -66,7 +88,8 @@ def validate_cross_check_facts(
     for field in required_cross_check_fields(series):
         if html_facts.get(field) is None:
             raise SourceError(
-                f"{series['seriesCode']}: required cross-check field {field} could not be parsed from {source_url}"
+                f"{series['seriesCode']}: required cross-check field {field} "
+                f"could not be parsed from {source_url}"
             )
 
 
@@ -88,7 +111,10 @@ def sync_series(parsed: list[dict[str, Any]]) -> tuple[int, int]:
         else:
             added += 1
         path = (
-            DATA / "series" / candidate["productType"] / candidate["seriesCode"]
+            DATA
+            / "series"
+            / candidate["productType"]
+            / candidate["seriesCode"]
             / f"terms-v{candidate['termsRevision']}.json"
         )
         write_json(path, candidate)
@@ -96,7 +122,12 @@ def sync_series(parsed: list[dict[str, Any]]) -> tuple[int, int]:
     return added, corrected
 
 
-def _merge_revisions(existing: list[dict[str, Any]], incoming: list[dict[str, Any]], identity: str, value: str) -> list[dict[str, Any]]:
+def _merge_revisions(
+    existing: list[dict[str, Any]],
+    incoming: list[dict[str, Any]],
+    identity: str,
+    value: str,
+) -> list[dict[str, Any]]:
     result = [dict(item) for item in existing]
     by_identity: dict[str, list[dict[str, Any]]] = {}
     for item in result:
@@ -147,18 +178,23 @@ def _validated_gus_observations(
         raise SourceError(f"GUS source returned future year {latest_year} beyond requested {end_year}")
     if latest_year < end_year - 1:
         raise SourceError(
-            f"GUS source has no recent coverage for {end_year - 1} or {end_year}; latest year is {latest_year}"
+            f"GUS source has no recent coverage for {end_year - 1} or {end_year}; "
+            f"latest year is {latest_year}"
         )
     if as_of is not None and end_year >= as_of.year - 1:
-        latest_period_year, latest_period_month = (int(part) for part in periods[-1].split("-"))
+        latest_period_year, latest_period_month = (
+            int(part) for part in periods[-1].split("-")
+        )
         lag_months = (as_of.year - latest_period_year) * 12 + as_of.month - latest_period_month
         if lag_months < 0:
             raise SourceError(
-                f"GUS source returned future CPI period {periods[-1]} for verification date {as_of.isoformat()}"
+                f"GUS source returned future CPI period {periods[-1]} "
+                f"for verification date {as_of.isoformat()}"
             )
         if lag_months > 2:
             raise SourceError(
-                f"GUS source latest CPI period {periods[-1]} is too old for verification date {as_of.isoformat()}"
+                f"GUS source latest CPI period {periods[-1]} is too old "
+                f"for verification date {as_of.isoformat()}"
             )
 
     expected_years = [str(year) for year in range(start_year, latest_year + 1)]
@@ -187,29 +223,90 @@ def _validated_gus_observations(
     return incoming
 
 
+def _write_content_addressed_evidence(
+    provider: str,
+    content: bytes,
+    suffix: str,
+) -> str:
+    digest = sha256_bytes(content)
+    path = DATA / "sources" / provider / f"{digest}{suffix}"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists():
+        if path.is_symlink() or not path.is_file() or path.read_bytes() != content:
+            raise SourceError(f"Content-addressed evidence collision or corruption: {path}")
+    else:
+        path.write_bytes(content)
+    return digest
+
+
+def _write_gus_evidence(entries: list[tuple[str, bytes]]) -> str:
+    if not entries:
+        raise SourceError("GUS refresh produced no raw evidence")
+
+    manifest_entries: list[dict[str, str]] = []
+    for url, content in entries:
+        digest = _write_content_addressed_evidence("gus", content, ".json")
+        manifest_entries.append({"url": url, "sha256": digest})
+
+    manifest = {
+        "schemaVersion": "1.0",
+        "publisher": "GUS",
+        "responses": sorted(manifest_entries, key=lambda item: (item["url"], item["sha256"])),
+    }
+    manifest_bytes = canonical_json_bytes(manifest)
+    bundle_digest = sha256_bytes(manifest_bytes)
+    bundle_path = DATA / "sources" / "gus" / f"{bundle_digest}.manifest.json"
+    if bundle_path.exists():
+        if (
+            bundle_path.is_symlink()
+            or not bundle_path.is_file()
+            or bundle_path.read_bytes() != manifest_bytes
+        ):
+            raise SourceError(f"GUS evidence bundle collision or corruption: {bundle_path}")
+    else:
+        bundle_path.write_bytes(manifest_bytes)
+    return bundle_digest
+
+
 def sync_gus(session: Any, start_year: int, end_year: int, verified_at: str) -> int:
     path = DATA / "reference" / "gus-cpi.json"
     source = load_json(path)
+    evidence: list[tuple[str, bytes]] = []
     incoming = _validated_gus_observations(
-        fetch_gus_history(session, start_year, end_year),
+        fetch_gus_history(
+            session,
+            start_year,
+            end_year,
+            evidence=evidence,
+        ),
         source["observations"],
         start_year,
         end_year,
         date.fromisoformat(verified_at[:10]),
     )
-    merged = _merge_revisions(source["observations"], incoming, "period", "indexPreviousYear100")
+    merged = _merge_revisions(
+        source["observations"], incoming, "period", "indexPreviousYear100"
+    )
     added = len(merged) - len(source["observations"])
-    if added:
-        source.update({
-            "verifiedAt": verified_at,
-            "source": {
-                "publisher": "GUS",
-                "api": "SDP",
-                "baseUrl": "https://api-sdp.stat.gov.pl/api/1.1.0",
+    current_source = source.get("source", {})
+    needs_evidence = not current_source.get("evidenceBundleSha256")
+    source_policy_changed = current_source.get("baseUrl") != GUS_BASE_URL
+
+    if added or needs_evidence or source_policy_changed:
+        evidence_bundle = _write_gus_evidence(evidence)
+        source.update(
+            {
                 "verifiedAt": verified_at,
-            },
-            "observations": merged,
-        })
+                "source": {
+                    "publisher": "GUS",
+                    "api": "SDP",
+                    "baseUrl": GUS_BASE_URL,
+                    "verifiedAt": verified_at,
+                    "evidenceBundleSha256": evidence_bundle,
+                },
+                "observations": merged,
+            }
+        )
         write_json(path, source)
     return added
 
@@ -224,7 +321,9 @@ def _validated_nbp_observations(
     if not scoped_archive or scoped_archive[0]["effectiveFrom"] != NBP_HISTORY_START:
         raise SourceError(f"NBP archive no longer covers required history from {NBP_HISTORY_START}")
     if len(current) != 1:
-        raise SourceError(f"NBP current-rate file must contain exactly one reference rate, got {len(current)}")
+        raise SourceError(
+            f"NBP current-rate file must contain exactly one reference rate, got {len(current)}"
+        )
 
     latest_archive = scoped_archive[-1]
     if as_of is not None and date.fromisoformat(latest_archive["effectiveFrom"]) > as_of:
@@ -241,7 +340,8 @@ def _validated_nbp_observations(
     missing_dates = sorted(previously_published_dates - archive_dates)
     if missing_dates:
         raise SourceError(
-            "NBP archive lost previously published reference-rate dates: " + ", ".join(missing_dates)
+            "NBP archive lost previously published reference-rate dates: "
+            + ", ".join(missing_dates)
         )
 
     current_rate = current[0]
@@ -253,7 +353,8 @@ def _validated_nbp_observations(
     if current_rate["annualRatePercent"] != latest_archive["annualRatePercent"]:
         raise SourceError(
             "NBP archive and current-rate file disagree on the latest reference rate: "
-            f"archive={latest_archive['annualRatePercent']}, current={current_rate['annualRatePercent']}"
+            f"archive={latest_archive['annualRatePercent']}, "
+            f"current={current_rate['annualRatePercent']}"
         )
     return scoped_archive
 
@@ -261,14 +362,19 @@ def _validated_nbp_observations(
 def sync_nbp(session: Any, verified_at: str) -> int:
     path = DATA / "reference" / "nbp-reference-rates.json"
     source = load_json(path)
-    archive_xml = fetch(session, NBP_RATES_URL, "application/xml,text/xml").decode("utf-8-sig")
-    current_xml = fetch(session, NBP_CURRENT_RATES_URL, "application/xml,text/xml").decode("utf-8-sig")
-    archive = parse_nbp_rates(archive_xml)
-    current = parse_nbp_rates(current_xml)
+    archive_bytes = fetch(session, NBP_RATES_URL, "application/xml,text/xml")
+    current_bytes = fetch(session, NBP_CURRENT_RATES_URL, "application/xml,text/xml")
+    archive = parse_nbp_rates(archive_bytes.decode("utf-8-sig"))
+    current = parse_nbp_rates(current_bytes.decode("utf-8-sig"))
     incoming = _validated_nbp_observations(
-        archive, current, source["observations"], date.fromisoformat(verified_at[:10])
+        archive,
+        current,
+        source["observations"],
+        date.fromisoformat(verified_at[:10]),
     )
-    merged = _merge_revisions(source["observations"], incoming, "effectiveFrom", "annualRatePercent")
+    merged = _merge_revisions(
+        source["observations"], incoming, "effectiveFrom", "annualRatePercent"
+    )
     added = len(merged) - len(source["observations"])
     provenance_changed = False
     for observation in merged:
@@ -276,23 +382,32 @@ def sync_nbp(session: Any, verified_at: str) -> int:
             observation["source"] = NBP_RATES_URL
             provenance_changed = True
 
-    expected_source = {
-        "publisher": "NBP",
-        "url": NBP_RATES_URL,
-        "currentUrl": NBP_CURRENT_RATES_URL,
-        "verifiedAt": verified_at,
-    }
     current_source = source.get("source", {})
     source_urls_changed = (
         current_source.get("url") != NBP_RATES_URL
         or current_source.get("currentUrl") != NBP_CURRENT_RATES_URL
     )
-    if added or source_urls_changed or provenance_changed:
-        source.update({
-            "verifiedAt": verified_at,
-            "source": expected_source,
-            "observations": merged,
-        })
+    needs_evidence = (
+        not current_source.get("archiveSha256") or not current_source.get("currentSha256")
+    )
+
+    if added or source_urls_changed or provenance_changed or needs_evidence:
+        archive_sha = _write_content_addressed_evidence("nbp", archive_bytes, ".xml")
+        current_sha = _write_content_addressed_evidence("nbp", current_bytes, ".xml")
+        source.update(
+            {
+                "verifiedAt": verified_at,
+                "source": {
+                    "publisher": "NBP",
+                    "url": NBP_RATES_URL,
+                    "currentUrl": NBP_CURRENT_RATES_URL,
+                    "verifiedAt": verified_at,
+                    "archiveSha256": archive_sha,
+                    "currentSha256": current_sha,
+                },
+                "observations": merged,
+            }
+        )
         write_json(path, source)
     return added
 
@@ -300,9 +415,7 @@ def sync_nbp(session: Any, verified_at: str) -> int:
 def _validate_mf_current_offerings(parsed: list[dict[str, Any]], as_of: date) -> None:
     current_month = as_of.strftime("%Y-%m")
     current_families = {
-        item["productType"]
-        for item in parsed
-        if item["saleFrom"][:7] == current_month
+        item["productType"] for item in parsed if item["saleFrom"][:7] == current_month
     }
     missing_families = sorted(set(PRODUCT_RULES) - current_families)
     if missing_families:
@@ -335,7 +448,8 @@ def _validated_mf_series(
     missing_codes = sorted(required_codes - set(parsed_codes))
     if missing_codes:
         raise SourceError(
-            "MF workbook lost previously published outstanding series: " + ", ".join(missing_codes)
+            "MF workbook lost previously published outstanding series: "
+            + ", ".join(missing_codes)
         )
     return parsed
 
@@ -359,7 +473,9 @@ def sync_mf(
         workbook_url = _validate_official_mf_workbook_url(workbook_url)
         workbook_content = workbook_path.read_bytes()
         official_content = fetch(
-            session, workbook_url, "application/vnd.ms-excel,application/octet-stream"
+            session,
+            workbook_url,
+            "application/vnd.ms-excel,application/octet-stream",
         )
         if sha256_bytes(workbook_content) != sha256_bytes(official_content):
             raise SourceError(
@@ -370,10 +486,15 @@ def sync_mf(
             raise SourceError("--mf-workbook-url can only be used together with --mf-workbook")
         page = fetch(session, MF_PAGE_URL, "text/html,application/xhtml+xml").decode("utf-8")
         workbook_url = _validate_official_mf_workbook_url(discover_mf_workbook(page))
-        workbook_content = fetch(session, workbook_url, "application/vnd.ms-excel,application/octet-stream")
+        workbook_content = fetch(
+            session,
+            workbook_url,
+            "application/vnd.ms-excel,application/octet-stream",
+        )
     as_of = date.fromisoformat(verified_date)
     parsed = [
-        item for item in parse_mf_workbook(workbook_content, workbook_url, verified_date)
+        item
+        for item in parse_mf_workbook(workbook_content, workbook_url, verified_date)
         if _can_still_be_outstanding(item, as_of)
     ]
     parsed = _validated_mf_series(parsed, load_series(), as_of)
@@ -395,7 +516,14 @@ def sync_mf(
     if added or corrected:
         artifact = DATA / "sources" / "mf" / f"{sha256_bytes(workbook_content)}.xls"
         artifact.parent.mkdir(parents=True, exist_ok=True)
-        if not artifact.exists():
+        if artifact.exists():
+            if (
+                artifact.is_symlink()
+                or not artifact.is_file()
+                or artifact.read_bytes() != workbook_content
+            ):
+                raise SourceError(f"MF content-addressed evidence is corrupted: {artifact}")
+        else:
             artifact.write_bytes(workbook_content)
     return added, corrected
 
@@ -403,10 +531,7 @@ def sync_mf(
 def _can_still_be_outstanding(series: dict[str, Any], as_of: date) -> bool:
     if date.fromisoformat(series["saleFrom"]) > as_of:
         return False
-    months = {
-        "OTS": 3, "ROR": 12, "DOR": 24, "TOS": 36,
-        "COI": 48, "EDO": 120, "ROS": 72, "ROD": 144,
-    }[series["productType"]]
+    months = PRODUCT_RULES[series["productType"]].maturity_months
     sold_to = date.fromisoformat(series["saleTo"])
     month_index = sold_to.month - 1 + months
     year = sold_to.year + month_index // 12
@@ -423,7 +548,12 @@ def mark_source_status(source_name: str, success: bool, message: str | None = No
     write_json(path, document)
 
 
-def transition_source_status(item: dict[str, Any], success: bool, now: str, message: str | None = None) -> None:
+def transition_source_status(
+    item: dict[str, Any],
+    success: bool,
+    now: str,
+    message: str | None = None,
+) -> None:
     item["lastAttemptAt"] = now
     item["lastAttemptStatus"] = "SUCCESS" if success else "FAILED"
     item["message"] = message
@@ -440,7 +570,14 @@ def transition_source_status(item: dict[str, Any], success: bool, now: str, mess
 
 def _managed_tree_changes() -> list[str]:
     result = subprocess.run(
-        ["git", "status", "--porcelain=v1", "--untracked-files=all", "--", *MANAGED_PATHS],
+        [
+            "git",
+            "status",
+            "--porcelain=v1",
+            "--untracked-files=all",
+            "--",
+            *MANAGED_PATHS,
+        ],
         cwd=ROOT,
         check=True,
         text=True,
@@ -477,7 +614,7 @@ def _rollback_managed_tree() -> None:
 
 def run_live(args: argparse.Namespace) -> None:
     session = default_session()
-    verified_date = args.as_of or date.today().isoformat()
+    verified_date = _validated_verification_date(args.as_of)
     verified_at = f"{verified_date}T00:00:00Z"
     tasks = (
         (
@@ -486,11 +623,19 @@ def run_live(args: argparse.Namespace) -> None:
                 session,
                 verified_date,
                 args.mf_workbook,
-                not args.skip_cross_check,
+                True,
                 args.mf_workbook_url,
             ),
         ),
-        ("gus", lambda: sync_gus(session, args.gus_start_year, int(verified_date[:4]), verified_at)),
+        (
+            "gus",
+            lambda: sync_gus(
+                session,
+                args.gus_start_year,
+                int(verified_date[:4]),
+                verified_at,
+            ),
+        ),
         ("nbp", lambda: sync_nbp(session, verified_at)),
     )
     for source_name, operation in tasks:
@@ -499,36 +644,61 @@ def run_live(args: argparse.Namespace) -> None:
             mark_source_status(source_name, True, f"Update result: {result}")
         except Exception as exc:
             mark_source_status(source_name, False, str(exc))
-            raise SourceError(f"{source_name.upper()} refresh failed; financial data was not published: {exc}") from exc
+            raise SourceError(
+                f"{source_name.upper()} refresh failed; financial data was not published: {exc}"
+            ) from exc
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Update and validate Polish Treasury Bonds datasets")
-    parser.add_argument("--offline", action="store_true", help="Rebuild only from checked-in normalized sources")
-    parser.add_argument("--check", action="store_true", help="Fail if generated output or normalized layout is stale")
+    parser = argparse.ArgumentParser(
+        description="Update and validate Polish Treasury Bonds datasets"
+    )
+    parser.add_argument(
+        "--offline",
+        action="store_true",
+        help="Rebuild only from checked-in canonical facts",
+    )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Fail if canonical/generated repository state is stale",
+    )
     parser.add_argument("--mf-only", action="store_true", help="Refresh only the MF workbook/catalog")
-    parser.add_argument("--mf-workbook", type=Path, help="Use a local official MF workbook instead of downloading it")
+    parser.add_argument(
+        "--mf-workbook",
+        type=Path,
+        help="Use a local official MF workbook instead of downloading it",
+    )
     parser.add_argument(
         "--mf-workbook-url",
         help="Exact official https://www.gov.pl/attachment/... provenance URL required with --mf-workbook",
     )
-    parser.add_argument("--skip-cross-check", action="store_true", help="Skip live HTML cross-check (fixtures/bootstrap only)")
+    parser.add_argument(
+        "--skip-cross-check",
+        action="store_true",
+        help="Unsafe legacy flag; rejected by the production updater",
+    )
     parser.add_argument("--gus-start-year", type=int, default=int(GUS_HISTORY_START[:4]))
     parser.add_argument("--as-of", help="Deterministic verification date (YYYY-MM-DD)")
     args = parser.parse_args()
 
     live_transaction = False
     try:
+        if args.skip_cross_check:
+            raise SourceError(
+                "--skip-cross-check is disabled for the production updater; "
+                "tests and fixtures must call sync_mf(..., cross_check=False) directly"
+            )
         if not args.offline:
             _require_clean_managed_tree()
             live_transaction = True
             if args.mf_only:
-                verified_date = args.as_of or date.today().isoformat()
+                verified_date = _validated_verification_date(args.as_of)
                 sync_mf(
                     default_session(),
                     verified_date,
                     args.mf_workbook,
-                    not args.skip_cross_check,
+                    True,
                     args.mf_workbook_url,
                 )
                 mark_source_status("mf", True, "MF-only refresh succeeded")

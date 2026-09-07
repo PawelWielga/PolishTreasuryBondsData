@@ -8,7 +8,7 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from decimal import Decimal, ROUND_HALF_UP
-from io import BytesIO
+from pathlib import Path
 from typing import Any, Callable, Iterable
 from urllib.parse import urljoin, urlparse
 
@@ -17,6 +17,9 @@ import xlrd
 from bs4 import BeautifulSoup
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+
+ROOT = Path(__file__).resolve().parents[1]
+PRODUCTS_ROOT = ROOT / "data" / "products"
 
 MF_PAGE_URL = "https://www.gov.pl/web/finanse/obligacje-detaliczne1"
 NBP_RATES_URL = "https://static.nbp.pl/dane/stopy/stopy_procentowe_archiwum.xml"
@@ -33,6 +36,7 @@ GUS_ANNUAL_MEASURE_ID = 5
 GUS_JANUARY_PERIOD_ID = 247
 GUS_DECEMBER_PERIOD_ID = 258
 
+SUPPORTED_PRODUCT_TYPES = ("OTS", "ROR", "DOR", "TOS", "COI", "EDO", "ROS", "ROD")
 RETAIL_BOND_FACE_VALUE_MINOR_UNITS = 10_000
 MF_REQUIRED_HEADERS = {
     0: "Seria",
@@ -43,6 +47,8 @@ MF_REQUIRED_HEADERS = {
     6: "Cena zamiany",
     9: "Oprocentowanie",
 }
+_REDIRECT_STATUS_CODES = frozenset({301, 302, 303, 307, 308})
+_MAX_REDIRECTS = 10
 
 
 class SourceError(RuntimeError):
@@ -139,6 +145,46 @@ def validate_official_cross_check_url(url: str) -> str:
     return url
 
 
+def _request_same_origin(
+    session: requests.Session,
+    url: str,
+    *,
+    headers: dict[str, str],
+    timeout: tuple[int, int],
+) -> requests.Response:
+    expected_origin = _https_origin(url)
+    current_url = url
+    for redirect_count in range(_MAX_REDIRECTS + 1):
+        response = session.get(
+            current_url,
+            headers=headers,
+            timeout=timeout,
+            allow_redirects=False,
+        )
+        response_url = getattr(response, "url", current_url)
+        if not isinstance(response_url, str) or _https_origin(response_url) != expected_origin:
+            raise SourceError(
+                f"Official source redirect left trusted origin: {url} -> {response_url}"
+            )
+
+        if response.status_code not in _REDIRECT_STATUS_CODES:
+            return response
+
+        location = response.headers.get("Location")
+        if not isinstance(location, str) or not location.strip():
+            raise SourceError(f"Official source returned redirect without Location: {current_url}")
+        next_url = urljoin(response_url, location)
+        if _https_origin(next_url) != expected_origin:
+            raise SourceError(
+                f"Official source redirect left trusted origin: {url} -> {next_url}"
+            )
+        if redirect_count == _MAX_REDIRECTS:
+            raise SourceError(f"Official source exceeded {_MAX_REDIRECTS} redirects: {url}")
+        current_url = next_url
+
+    raise SourceError(f"Official source exceeded {_MAX_REDIRECTS} redirects: {url}")
+
+
 def fetch(
     session: requests.Session,
     url: str,
@@ -146,14 +192,13 @@ def fetch(
     timeout: tuple[int, int] = (10, 45),
     allow_not_found: bool = False,
 ) -> bytes:
-    requested_origin = _https_origin(url)
     try:
-        response = session.get(url, headers={"Accept": accept}, timeout=timeout)
-        response_url = getattr(response, "url", url)
-        if isinstance(response_url, str) and _https_origin(response_url) != requested_origin:
-            raise SourceError(
-                f"Official source redirect left trusted origin: {url} -> {response_url}"
-            )
+        response = _request_same_origin(
+            session,
+            url,
+            headers={"Accept": accept},
+            timeout=timeout,
+        )
         if allow_not_found and response.status_code == 404:
             return b""
         response.raise_for_status()
@@ -178,6 +223,7 @@ def discover_mf_workbook(page_html: str, page_url: str = MF_PAGE_URL) -> str:
 @dataclass(frozen=True)
 class ProductRules:
     product_type: str
+    rules_revision: int
     maturity_months: int
     interest_period_months: int
     rate_model: str
@@ -185,17 +231,46 @@ class ProductRules:
     interest_payment_rule: str
     accrual_rule: str
 
+    @property
+    def id(self) -> str:
+        return f"{self.product_type}-rules-{self.rules_revision}"
 
-PRODUCT_RULES: dict[str, ProductRules] = {
-    "OTS": ProductRules("OTS", 3, 3, "Fixed", "None", "AtMaturity", "FixedMaturityOnly"),
-    "ROR": ProductRules("ROR", 12, 1, "NbpReferencePlusMargin", "None", "AtPeriodEnd", "ActualPeriodProRata"),
-    "DOR": ProductRules("DOR", 24, 1, "NbpReferencePlusMargin", "None", "AtPeriodEnd", "ActualPeriodProRata"),
-    "TOS": ProductRules("TOS", 36, 12, "Fixed", "EndOfPeriod", "AtMaturity", "ActualPeriodProRata"),
-    "COI": ProductRules("COI", 48, 12, "InflationPlusMargin", "None", "AtPeriodEnd", "ActualPeriodProRata"),
-    "EDO": ProductRules("EDO", 120, 12, "InflationPlusMargin", "EndOfPeriod", "AtMaturity", "ActualPeriodProRata"),
-    "ROS": ProductRules("ROS", 72, 12, "InflationPlusMargin", "EndOfPeriod", "AtMaturity", "ActualPeriodProRata"),
-    "ROD": ProductRules("ROD", 144, 12, "InflationPlusMargin", "EndOfPeriod", "AtMaturity", "ActualPeriodProRata"),
-}
+
+def _load_product_rules() -> dict[str, ProductRules]:
+    latest: dict[str, ProductRules] = {}
+    if not PRODUCTS_ROOT.is_dir():
+        raise RuntimeError(f"Canonical product rules directory is missing: {PRODUCTS_ROOT}")
+
+    for path in sorted(PRODUCTS_ROOT.glob("*/rules-v*.json")):
+        document = json.loads(path.read_text(encoding="utf-8"))
+        product_type = document["productType"]
+        revision = int(document["rulesRevision"])
+        expected_id = f"{product_type}-rules-{revision}"
+        if document.get("id") != expected_id:
+            raise RuntimeError(f"{path}: id must be {expected_id}")
+        rules = ProductRules(
+            product_type=product_type,
+            rules_revision=revision,
+            maturity_months=int(document["maturityMonths"]),
+            interest_period_months=int(document["interestPeriodMonths"]),
+            rate_model=document["rateModel"],
+            capitalization_rule=document["capitalizationRule"],
+            interest_payment_rule=document["interestPaymentRule"],
+            accrual_rule=document["accrualRule"],
+        )
+        previous = latest.get(product_type)
+        if previous is None or rules.rules_revision > previous.rules_revision:
+            latest[product_type] = rules
+
+    if set(latest) != set(SUPPORTED_PRODUCT_TYPES):
+        raise RuntimeError(
+            "Canonical product rules must define exactly the supported product families: "
+            f"expected {list(SUPPORTED_PRODUCT_TYPES)}, got {sorted(latest)}"
+        )
+    return {product_type: latest[product_type] for product_type in SUPPORTED_PRODUCT_TYPES}
+
+
+PRODUCT_RULES = _load_product_rules()
 
 
 def _excel_date(book: xlrd.book.Book, raw: Any) -> str:
@@ -265,7 +340,7 @@ def parse_mf_workbook(content: bytes, workbook_url: str, verified_at: str) -> li
             series: dict[str, Any] = {
                 "seriesCode": series_code,
                 "productType": family_code,
-                "productDefinition": f"{family_code}-rules-1",
+                "productDefinition": rules.id,
                 "isin": str(sheet.cell_value(row_index, 1)).strip() or None,
                 "saleFrom": sale_from,
                 "saleTo": _excel_date(book, sheet.cell_value(row_index, 4)),
@@ -321,7 +396,12 @@ def terms_financial_view(series: dict[str, Any]) -> dict[str, Any]:
 
 
 def terms_content_hash(series: dict[str, Any]) -> str:
-    payload = json.dumps(terms_financial_view(series), ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    payload = json.dumps(
+        terms_financial_view(series),
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
     return "sha256:" + hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
@@ -330,7 +410,11 @@ def parse_series_html(html: str) -> dict[str, str | int | None]:
     content = soup.select_one("main") or soup
     text = " ".join(content.stripped_strings)
     series_code = _required(r"\bSeria:\s*([A-Z]{3}\d{4})\b", text, "series code").upper()
-    sale = re.search(r"Sprzedaż:\s*(\d{2}\.\d{2}\.\d{4})\s*-\s*(\d{2}\.\d{2}\.\d{4})", text, re.I)
+    sale = re.search(
+        r"Sprzedaż:\s*(\d{2}\.\d{2}\.\d{4})\s*-\s*(\d{2}\.\d{2}\.\d{4})",
+        text,
+        re.I,
+    )
     if not sale:
         raise SourceError(f"{series_code}: sale window not found on cross-check page")
     issue_price = Decimal(
@@ -387,9 +471,14 @@ def parse_series_html(html: str) -> dict[str, str | int | None]:
 
 def _parse_maturity_months(text: str) -> int | None:
     patterns = (
-        (r"\b3[- ]miesięcz", 3), (r"\broczn", 12), (r"\b2[- ]letni", 24),
-        (r"\b3[- ]letni", 36), (r"\b4[- ]letni", 48), (r"\b6[- ]letni", 72),
-        (r"\b10[- ]letni", 120), (r"\b12[- ]letni", 144),
+        (r"\b3[- ]miesięcz", 3),
+        (r"\broczn", 12),
+        (r"\b2[- ]letni", 24),
+        (r"\b3[- ]letni", 36),
+        (r"\b4[- ]letni", 48),
+        (r"\b6[- ]letni", 72),
+        (r"\b10[- ]letni", 120),
+        (r"\b12[- ]letni", 144),
     )
     for pattern, months in patterns:
         if re.search(pattern, text, re.I):
@@ -408,8 +497,15 @@ def cross_check_series(workbook_series: dict[str, Any], html_facts: dict[str, An
             "exchangePriceMinorUnits could not be parsed from official offer page"
         )
     fields = (
-        "seriesCode", "saleFrom", "saleTo", "issuePriceMinorUnits", "exchangePriceMinorUnits",
-        "firstPeriodAnnualRatePercent", "marginPercent", "fixedMaturityInterestMinorUnits", "maturityMonths",
+        "seriesCode",
+        "saleFrom",
+        "saleTo",
+        "issuePriceMinorUnits",
+        "exchangePriceMinorUnits",
+        "firstPeriodAnnualRatePercent",
+        "marginPercent",
+        "fixedMaturityInterestMinorUnits",
+        "maturityMonths",
     )
     for field in fields:
         if html_facts.get(field) is None:
@@ -435,13 +531,16 @@ def parse_gus_indicator_response(payload: Any, year: int) -> list[dict[str, Any]
     return _validate_gus_year(points, year, require_complete=True)
 
 
-def parse_gus_variable_responses(payloads: Iterable[Any], year: int, require_complete: bool = False) -> list[dict[str, Any]]:
+def parse_gus_variable_responses(
+    payloads: Iterable[Any], year: int, require_complete: bool = False
+) -> list[dict[str, Any]]:
     points: list[dict[str, Any]] = []
     for payload in payloads:
         if not isinstance(payload, dict) or not isinstance(payload.get("data"), list):
             raise SourceError(f"GUS {year}: invalid variable response")
         matches = [
-            row for row in payload["data"]
+            row
+            for row in payload["data"]
             if row.get("id-pozycja-2") == GUS_COICOP_2018_TOTAL_POSITION
             and row.get("id-pozycja-3") == GUS_HOUSEHOLD_TOTAL_POSITION
             and row.get("id-sposob-prezentacji-miara") == GUS_ANNUAL_MEASURE_ID
@@ -475,8 +574,13 @@ def _gus_observation(row: dict[str, Any], year: int) -> dict[str, Any]:
     }
 
 
-def _validate_gus_year(points: list[dict[str, Any]], year: int, require_complete: bool) -> list[dict[str, Any]]:
-    result = sorted({point["period"]: point for point in points}.values(), key=lambda point: point["period"])
+def _validate_gus_year(
+    points: list[dict[str, Any]], year: int, require_complete: bool
+) -> list[dict[str, Any]]:
+    result = sorted(
+        {point["period"]: point for point in points}.values(),
+        key=lambda point: point["period"],
+    )
     if len(result) != len(points):
         raise SourceError(f"GUS {year}: duplicate monthly observations")
     if require_complete and len(result) != 12:
@@ -489,11 +593,21 @@ def _validate_gus_year(points: list[dict[str, Any]], year: int, require_complete
     return result
 
 
+def _capture_evidence(
+    evidence: list[tuple[str, bytes]] | None,
+    url: str,
+    content: bytes,
+) -> None:
+    if evidence is not None:
+        evidence.append((url, content))
+
+
 def fetch_gus_history(
     session: requests.Session,
     start_year: int,
     end_year: int,
     sleep: Callable[[float], None] = time.sleep,
+    evidence: list[tuple[str, bytes]] | None = None,
 ) -> list[dict[str, Any]]:
     observations: list[dict[str, Any]] = []
     for year in range(start_year, end_year + 1):
@@ -502,7 +616,9 @@ def fetch_gus_history(
                 f"{GUS_BASE_URL}/indicators/indicator-data-indicator"
                 f"?id-wskaznik={GUS_ANNUAL_INDICATOR_ID}&id-rok={year}&lang=pl"
             )
-            payload = json.loads(fetch(session, url, "application/json"))
+            content = fetch(session, url, "application/json")
+            _capture_evidence(evidence, url, content)
+            payload = json.loads(content)
             observations.extend(parse_gus_indicator_response(payload, year))
             sleep(0.2)
             continue
@@ -519,6 +635,7 @@ def fetch_gus_history(
                 content = fetch(session, url, "application/json", allow_not_found=True)
                 if not content:
                     break
+                _capture_evidence(evidence, url, content)
                 payload = json.loads(content)
                 payloads.append(payload)
                 if page >= int(payload.get("page-count", page)):

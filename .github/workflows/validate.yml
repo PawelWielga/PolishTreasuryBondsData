@@ -25,26 +25,17 @@ jobs:
       - name: Install hash-locked Python dependencies
         run: >-
           python -m pip install --require-hashes --only-binary=:all: -r requirements.txt
-      - name: Run offline parser and publication tests
+      - name: Run invariant and parser tests
         run: python -m unittest discover -s tests -v
-      - name: Protect reviewed immutable snapshots on pull requests
-        if: github.event_name == 'pull_request'
-        run: python scripts/check_immutable_snapshots.py --base "${{ github.event.pull_request.base.sha }}"
-      - name: Protect reviewed immutable snapshots on main pushes
-        if: github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000'
-        run: python scripts/check_immutable_snapshots.py --base "${{ github.event.before }}"
-      - name: Protect reviewed immutable snapshots on manual validation
-        if: github.event_name == 'workflow_dispatch'
+      - name: Protect immutable publication namespace
         shell: bash
         run: |
-          git fetch --no-tags origin main
-          reviewed_base="$(git merge-base HEAD origin/main)"
-          if [ -z "$reviewed_base" ]; then
-            echo 'Could not determine reviewed main ancestor for manual validation.' >&2
-            exit 1
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            python scripts/check_immutable_snapshots.py --base "${{ github.event.pull_request.base.sha }}"
+          elif [ "${{ github.event_name }}" = "push" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+            python scripts/check_immutable_snapshots.py --base "${{ github.event.before }}"
+          else
+            python scripts/check_immutable_snapshots.py
           fi
-          python scripts/check_immutable_snapshots.py --base "$reviewed_base"
-      - name: Require normalized sources and public aggregates to be reproducible
-        run: |
-          python scripts/update.py --offline
-          python scripts/check_generated_tree.py
+      - name: Rebuild publication deterministically
+        run: python scripts/update.py --offline --check
