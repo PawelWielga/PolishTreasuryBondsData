@@ -593,7 +593,7 @@ def _validate_append_only_history(
         current = current_series.get(identity)
         if current is None:
             raise ValueError(f"Series revision {identity} was deleted")
-        if current["contentHash"] != previous["contentHash"]:
+        if current != previous:
             raise ValueError(f"Series revision {identity} was mutated in place")
 
     current_gus = {
