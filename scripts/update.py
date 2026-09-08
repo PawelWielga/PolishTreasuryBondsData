@@ -403,11 +403,6 @@ def sync_nbp(session: Any, verified_at: str) -> int:
         source["observations"], incoming, "effectiveFrom", "annualRatePercent"
     )
     added = len(merged) - len(source["observations"])
-    provenance_changed = False
-    for observation in merged:
-        if observation.get("source") != NBP_RATES_URL:
-            observation["source"] = NBP_RATES_URL
-            provenance_changed = True
 
     current_source = source.get("source", {})
     source_urls_changed = (
@@ -418,7 +413,7 @@ def sync_nbp(session: Any, verified_at: str) -> int:
         not current_source.get("archiveSha256") or not current_source.get("currentSha256")
     )
 
-    if added or source_urls_changed or provenance_changed or needs_evidence:
+    if added or source_urls_changed or needs_evidence:
         archive_sha = _write_content_addressed_evidence("nbp", archive_bytes, ".xml")
         current_sha = _write_content_addressed_evidence("nbp", current_bytes, ".xml")
         source.update(
