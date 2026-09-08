@@ -70,6 +70,14 @@ class CatalogSchemaSemanticsTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.validate_item(item)
 
+    def test_schema_does_not_encode_current_importer_host_policy(self) -> None:
+        item = copy.deepcopy(self.series[0])
+        item["provenance"]["primary"]["url"] = (
+            "https://archive.example.test/official-artifact.xls"
+        )
+
+        self.validate_item(item)
+
     def test_offline_semantics_reject_impossible_maturity_suffix(self) -> None:
         item = copy.deepcopy(next(row for row in self.series if row["productType"] == "ROR"))
         month = int(item["seriesCode"][3:5])
