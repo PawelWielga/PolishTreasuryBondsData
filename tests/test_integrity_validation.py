@@ -116,6 +116,29 @@ class NormalizedIntegrityValidationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "must start at 2022-05-06"):
             pipeline._validate_nbp(source)
 
+    def test_nbp_schema_accepts_historical_https_source_uri(self):
+        latest = pipeline.load_json(pipeline.PUBLICATION / "latest.json")
+        document = pipeline.load_json(
+            pipeline.PUBLICATION
+            / "snapshots"
+            / latest["datasetRevision"]
+            / "nbp-reference-rates.json"
+        )
+        candidate = copy.deepcopy(document)
+        candidate["observations"][0]["source"] = "https://archive.example.test/nbp.xml"
+        schema = pipeline.load_json(pipeline.SCHEMAS / "nbp-reference-rates-v2.schema.json")
+
+        pipeline._validate_schema(candidate, schema, "nbp-reference-rates.json")
+
+    def test_offline_nbp_rejects_future_effective_date(self):
+        candidate = copy.deepcopy(
+            pipeline.load_json(pipeline.DATA / "reference" / "nbp-reference-rates.json")
+        )
+        candidate["verifiedAt"] = "2022-05-06T00:00:00Z"
+
+        with self.assertRaisesRegex(ValueError, "future effective date"):
+            pipeline._validate_nbp(candidate)
+
     def test_immutable_snapshot_rejects_unexpected_directory(self):
         with TemporaryDirectory() as temp:
             snapshot = Path(temp) / "revision-a"
