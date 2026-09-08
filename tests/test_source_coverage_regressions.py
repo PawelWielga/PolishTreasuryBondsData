@@ -8,6 +8,7 @@ from scripts.update import (
     _validate_mf_current_offerings,
     _validated_gus_observations,
     _validated_mf_series,
+    _validated_nbp_observations,
     sync_gus,
 )
 
@@ -108,6 +109,22 @@ class GusCoverageRegressionTests(unittest.TestCase):
         self.assertEqual(update.GUS_HISTORY_START, pipeline.GUS_HISTORY_START)
 
 
+class NbpCoverageRegressionTests(unittest.TestCase):
+    def test_live_nbp_rejects_future_effective_date(self):
+        archive = [
+            {"effectiveFrom": "2022-05-06", "annualRatePercent": "5.25"},
+            {"effectiveFrom": "2026-09-06", "annualRatePercent": "4.00"},
+        ]
+
+        with self.assertRaisesRegex(SourceError, "future reference-rate date"):
+            _validated_nbp_observations(
+                archive,
+                [archive[-1].copy()],
+                [],
+                date(2026, 9, 5),
+            )
+
+
 class MinistryCoverageRegressionTests(unittest.TestCase):
     @staticmethod
     def _series(
@@ -162,6 +179,20 @@ class MinistryCoverageRegressionTests(unittest.TestCase):
 
         with self.assertRaisesRegex(SourceError, "duplicate supported series codes"):
             _validated_mf_series(parsed, [], date(2026, 9, 4))
+
+    def test_future_sale_cannot_be_outstanding_yet(self):
+        series = self._series(
+            "ROR1027",
+            "ROR",
+            "2026-10-31",
+            sale_from="2026-10-01",
+        )
+
+        self.assertFalse(update._can_still_be_outstanding(series, date(2026, 9, 5)))
+
+    def test_future_verification_date_is_rejected(self):
+        with self.assertRaisesRegex(SourceError, "cannot be in the future"):
+            update._validated_verification_date("2026-09-06", today=date(2026, 9, 5))
 
 
 if __name__ == "__main__":
