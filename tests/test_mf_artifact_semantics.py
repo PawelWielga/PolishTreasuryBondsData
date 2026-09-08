@@ -7,6 +7,7 @@ from pathlib import Path
 
 from scripts import pipeline
 from scripts.sources import parse_mf_workbook, terms_financial_view
+from scripts.update import _preserve_existing_product_definitions
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -15,6 +16,10 @@ ROOT = Path(__file__).resolve().parents[1]
 class MinistryArtifactSemanticIntegrityTests(unittest.TestCase):
     def test_every_terms_revision_matches_its_referenced_official_workbook_row(self) -> None:
         parsed_by_source: dict[tuple[str, str, str], dict[str, dict]] = {}
+        existing_series = pipeline.load_series()
+        product_definitions = {
+            item["id"]: item for item in pipeline.load_product_definitions()
+        }
         checked = 0
 
         for terms_path in sorted((ROOT / "data" / "series").glob("*/*/terms-v*.json")):
@@ -35,6 +40,11 @@ class MinistryArtifactSemanticIntegrityTests(unittest.TestCase):
             cache_key = (digest, primary["url"], provenance["verifiedAt"])
             if cache_key not in parsed_by_source:
                 parsed = parse_mf_workbook(content, primary["url"], provenance["verifiedAt"])
+                parsed = _preserve_existing_product_definitions(
+                    parsed,
+                    existing_series,
+                    product_definitions,
+                )
                 parsed_by_source[cache_key] = {item["seriesCode"]: item for item in parsed}
 
             parsed_by_code = parsed_by_source[cache_key]
