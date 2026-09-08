@@ -5,6 +5,7 @@ from unittest.mock import patch
 from scripts import pipeline, update
 from scripts.sources import SourceError, fetch_gus_history
 from scripts.update import (
+    _preserve_existing_product_definitions,
     _validate_mf_current_offerings,
     _validated_gus_observations,
     _validated_mf_series,
@@ -137,6 +138,7 @@ class MinistryCoverageRegressionTests(unittest.TestCase):
         return {
             "seriesCode": code,
             "productType": product_type,
+            "productDefinition": f"{product_type}-rules-1",
             "saleFrom": sale_from,
             "saleTo": sale_to,
             "termsRevision": revision,
@@ -159,6 +161,63 @@ class MinistryCoverageRegressionTests(unittest.TestCase):
         ]
 
         _validate_mf_current_offerings(parsed, date(2026, 9, 4))
+
+    def test_existing_series_keeps_assigned_product_definition(self):
+        existing = [self._series("ROR0927", "ROR", "2026-09-30")]
+        parsed = [dict(existing[0], productDefinition="ROR-rules-2", contentHash="stale")]
+        definitions = {
+            "ROR-rules-1": {
+                "productType": "ROR",
+                "rateModel": "NbpReferencePlusMargin",
+                "maturityMonths": 12,
+            },
+            "ROR-rules-2": {
+                "productType": "ROR",
+                "rateModel": "NbpReferencePlusMargin",
+                "maturityMonths": 24,
+            },
+        }
+
+        result = _preserve_existing_product_definitions(parsed, existing, definitions)
+
+        self.assertEqual("ROR-rules-1", result[0]["productDefinition"])
+        self.assertRegex(result[0]["contentHash"], r"^sha256:[a-f0-9]{64}$")
+
+    def test_existing_series_rate_model_change_fails_closed(self):
+        existing = [self._series("ROR0927", "ROR", "2026-09-30")]
+        parsed = [dict(existing[0], productDefinition="ROR-rules-2", contentHash="stale")]
+        definitions = {
+            "ROR-rules-1": {
+                "productType": "ROR",
+                "rateModel": "NbpReferencePlusMargin",
+                "maturityMonths": 12,
+            },
+            "ROR-rules-2": {
+                "productType": "ROR",
+                "rateModel": "Fixed",
+                "maturityMonths": 12,
+            },
+        }
+
+        with self.assertRaisesRegex(SourceError, "product rate model changed"):
+            _preserve_existing_product_definitions(parsed, existing, definitions)
+
+    def test_outstanding_window_uses_series_product_definition(self):
+        series = self._series("ROR0927", "ROR", "2026-09-30")
+        definitions = {
+            "ROR-rules-1": {
+                "productType": "ROR",
+                "maturityMonths": 12,
+            },
+            "ROR-rules-2": {
+                "productType": "ROR",
+                "maturityMonths": 120,
+            },
+        }
+
+        self.assertFalse(
+            update._can_still_be_outstanding(series, date(2027, 10, 1), definitions)
+        )
 
     def test_missing_previously_published_outstanding_series_fails_closed(self):
         existing = [self._series("ROR0927", "ROR", "2026-09-30")]
