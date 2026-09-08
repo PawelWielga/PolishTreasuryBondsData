@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import json
 import subprocess
-import sys
-from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -62,44 +60,42 @@ def heartbeat_due(previous: dict[str, Any], candidate: dict[str, Any]) -> bool:
     )
 
 
-def compact_status_heartbeat(
+def should_publish_status_candidate(
     previous: dict[str, Any], candidate: dict[str, Any]
-) -> dict[str, Any]:
+) -> bool:
+    """Keep a status-only candidate when it is meaningful or its heartbeat is due."""
     if set(previous) != set(candidate) or set(previous) != {"sources"}:
-        return candidate
+        return True
 
     previous_sources = previous.get("sources")
     candidate_sources = candidate.get("sources")
     if not isinstance(previous_sources, dict) or not isinstance(candidate_sources, dict):
-        return candidate
+        return True
     if set(previous_sources) != set(candidate_sources):
-        return candidate
+        return True
 
-    compacted = deepcopy(previous)
+    heartbeat_is_due = False
     for source_name in sorted(previous_sources):
         old_item = previous_sources[source_name]
         new_item = candidate_sources[source_name]
         if not isinstance(old_item, dict) or not isinstance(new_item, dict):
-            return candidate
+            return True
         if old_item == new_item:
             continue
 
-        # Any policy/configuration change belongs in the PR immediately. Only the
-        # volatile verification checkpoint may be throttled.
+        # Configuration/policy changes are substantive even inside source-status.json.
         if _non_heartbeat_fields(old_item) != _non_heartbeat_fields(new_item):
-            return candidate
+            return True
 
-        # Never hide a failed/ambiguous verification result. The production updater
-        # normally rolls failures back before this script runs, but fail closed here too.
+        # Never suppress failures or ambiguous transitions.
         if new_item.get("lastAttemptStatus") != "SUCCESS":
-            return candidate
+            return True
         if new_item.get("lastAttemptAt") != new_item.get("lastSuccessAt"):
-            return candidate
+            return True
 
-        if heartbeat_due(old_item, new_item):
-            compacted["sources"][source_name] = deepcopy(new_item)
+        heartbeat_is_due = heartbeat_is_due or heartbeat_due(old_item, new_item)
 
-    return compacted
+    return heartbeat_is_due
 
 
 def is_status_only_candidate(changed_paths: set[str]) -> bool:
@@ -162,38 +158,20 @@ def _restore_status_files() -> None:
     )
 
 
-def _render_public_status() -> None:
-    subprocess.run(
-        [sys.executable, "scripts/status.py"],
-        cwd=ROOT,
-        check=True,
-    )
-
-
 def main() -> int:
     changed_paths = _changed_managed_paths()
     if not is_status_only_candidate(changed_paths):
-        print("Heartbeat compaction skipped: candidate contains substantive managed changes.")
+        print("Heartbeat pruning skipped: candidate contains substantive managed changes.")
         return 0
 
     previous = _load_head_status()
     candidate = json.loads(STATUS_PATH.read_text(encoding="utf-8"))
-    compacted = compact_status_heartbeat(previous, candidate)
-
-    if compacted == previous:
-        _restore_status_files()
-        print("Dropped premature source-status-only heartbeat and its public projection.")
+    if should_publish_status_candidate(previous, candidate):
+        print("Status-only candidate is meaningful or its heartbeat is due.")
         return 0
 
-    if compacted != candidate:
-        STATUS_PATH.write_text(
-            json.dumps(compacted, ensure_ascii=False, indent=2) + "\n",
-            encoding="utf-8",
-        )
-        _render_public_status()
-        print("Kept only source heartbeats that reached the publication threshold.")
-    else:
-        print("Source-status heartbeat is due and remains in the candidate.")
+    _restore_status_files()
+    print("Dropped premature source-status heartbeat and its public projection.")
     return 0
 
 
