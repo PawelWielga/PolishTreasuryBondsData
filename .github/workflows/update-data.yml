@@ -32,6 +32,8 @@ jobs:
           python -m pip install --require-hashes --only-binary=:all: -r requirements.txt
       - name: Fetch, cross-check and build candidate from official sources
         run: python scripts/update.py
+      - name: Suppress premature status-only heartbeat
+        run: python scripts/prune_status_heartbeat.py
       - name: Stage exact candidate and verify offline reproducibility
         shell: bash
         run: |
