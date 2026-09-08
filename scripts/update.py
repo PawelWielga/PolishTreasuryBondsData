@@ -23,6 +23,7 @@ from scripts.pipeline import (
     build_publication,
     canonical_json_bytes,
     load_json,
+    load_product_definitions,
     load_series,
     write_json,
 )
@@ -41,6 +42,7 @@ from scripts.sources import (
     parse_nbp_rates,
     parse_series_html,
     sha256_bytes,
+    terms_content_hash,
     utc_now,
     validate_official_cross_check_url,
     validate_official_mf_workbook_url,
@@ -437,11 +439,57 @@ def sync_nbp(session: Any, verified_at: str) -> int:
     return added
 
 
+def _product_definitions_by_id() -> dict[str, dict[str, Any]]:
+    return {item["id"]: item for item in load_product_definitions()}
+
+
+def _current_series_by_code(series: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    current: dict[str, dict[str, Any]] = {}
+    for item in series:
+        previous = current.get(item["seriesCode"])
+        if previous is None or item["termsRevision"] > previous["termsRevision"]:
+            current[item["seriesCode"]] = item
+    return current
+
+
+def _preserve_existing_product_definitions(
+    parsed: list[dict[str, Any]],
+    existing: list[dict[str, Any]],
+    product_definitions: dict[str, dict[str, Any]],
+) -> list[dict[str, Any]]:
+    current_by_code = _current_series_by_code(existing)
+    for candidate in parsed:
+        current = current_by_code.get(candidate["seriesCode"])
+        if current is None or current["productDefinition"] == candidate["productDefinition"]:
+            continue
+
+        current_definition = product_definitions.get(current["productDefinition"])
+        parsed_definition = product_definitions.get(candidate["productDefinition"])
+        if current_definition is None or parsed_definition is None:
+            raise SourceError(
+                f"{candidate['seriesCode']}: cannot resolve historical/current product definitions"
+            )
+        if current_definition["productType"] != candidate["productType"]:
+            raise SourceError(
+                f"{candidate['seriesCode']}: historical product definition belongs to "
+                f"{current_definition['productType']}, not {candidate['productType']}"
+            )
+        if current_definition["rateModel"] != parsed_definition["rateModel"]:
+            raise SourceError(
+                f"{candidate['seriesCode']}: product rate model changed from "
+                f"{current_definition['rateModel']} to {parsed_definition['rateModel']}; "
+                "the MF importer cannot safely reinterpret an existing series"
+            )
+
+        candidate["productDefinition"] = current["productDefinition"]
+        candidate["contentHash"] = terms_content_hash(candidate)
+    return parsed
+
+
 def _validate_mf_current_offerings(parsed: list[dict[str, Any]], as_of: date) -> None:
     current_month = as_of.strftime("%Y-%m")
-    current_families = {
-        item["productType"] for item in parsed if item["saleFrom"][:7] == current_month
-    }
+    current_offerings = [item for item in parsed if item["saleFrom"][:7] == current_month]
+    current_families = {item["productType"] for item in current_offerings}
     missing_families = sorted(set(PRODUCT_RULES) - current_families)
     if missing_families:
         raise SourceError(
@@ -449,26 +497,31 @@ def _validate_mf_current_offerings(parsed: list[dict[str, Any]], as_of: date) ->
             + ", ".join(missing_families)
         )
 
+    for item in current_offerings:
+        expected_definition = PRODUCT_RULES[item["productType"]].id
+        if item["productDefinition"] != expected_definition:
+            raise SourceError(
+                f"{item['seriesCode']}: current offering still uses historical product definition "
+                f"{item['productDefinition']}; expected {expected_definition}"
+            )
+
 
 def _validated_mf_series(
     parsed: list[dict[str, Any]],
     existing: list[dict[str, Any]],
     as_of: date,
+    product_definitions: dict[str, dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     parsed_codes = [item["seriesCode"] for item in parsed]
     if len(parsed_codes) != len(set(parsed_codes)):
         raise SourceError("MF workbook contains duplicate supported series codes")
 
-    current_by_code: dict[str, dict[str, Any]] = {}
-    for item in existing:
-        previous = current_by_code.get(item["seriesCode"])
-        if previous is None or item["termsRevision"] > previous["termsRevision"]:
-            current_by_code[item["seriesCode"]] = item
-
+    current_by_code = _current_series_by_code(existing)
+    definitions = product_definitions or _product_definitions_by_id()
     required_codes = {
         series_code
         for series_code, item in current_by_code.items()
-        if _can_still_be_outstanding(item, as_of)
+        if _can_still_be_outstanding(item, as_of, definitions)
     }
     missing_codes = sorted(required_codes - set(parsed_codes))
     if missing_codes:
@@ -516,13 +569,18 @@ def sync_mf(
             workbook_url,
             "application/vnd.ms-excel,application/octet-stream",
         )
+
     as_of = date.fromisoformat(verified_date)
+    existing = load_series()
+    product_definitions = _product_definitions_by_id()
+    parsed = parse_mf_workbook(workbook_content, workbook_url, verified_date)
+    parsed = _preserve_existing_product_definitions(parsed, existing, product_definitions)
     parsed = [
         item
-        for item in parse_mf_workbook(workbook_content, workbook_url, verified_date)
-        if _can_still_be_outstanding(item, as_of)
+        for item in parsed
+        if _can_still_be_outstanding(item, as_of, product_definitions)
     ]
-    parsed = _validated_mf_series(parsed, load_series(), as_of)
+    parsed = _validated_mf_series(parsed, existing, as_of, product_definitions)
     _validate_mf_current_offerings(parsed, as_of)
 
     if cross_check:
@@ -553,10 +611,28 @@ def sync_mf(
     return added, corrected
 
 
-def _can_still_be_outstanding(series: dict[str, Any], as_of: date) -> bool:
+def _can_still_be_outstanding(
+    series: dict[str, Any],
+    as_of: date,
+    product_definitions: dict[str, dict[str, Any]] | None = None,
+) -> bool:
     if date.fromisoformat(series["saleFrom"]) > as_of:
         return False
-    months = PRODUCT_RULES[series["productType"]].maturity_months
+
+    definitions = product_definitions or _product_definitions_by_id()
+    definition_id = series.get("productDefinition")
+    definition = definitions.get(definition_id)
+    if definition is None:
+        raise SourceError(
+            f"{series.get('seriesCode', '<unknown>')}: unknown product definition {definition_id!r}"
+        )
+    if definition["productType"] != series["productType"]:
+        raise SourceError(
+            f"{series.get('seriesCode', '<unknown>')}: product definition {definition_id} "
+            f"belongs to {definition['productType']}, not {series['productType']}"
+        )
+
+    months = int(definition["maturityMonths"])
     sold_to = date.fromisoformat(series["saleTo"])
     month_index = sold_to.month - 1 + months
     year = sold_to.year + month_index // 12
