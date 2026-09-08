@@ -205,6 +205,32 @@ class NormalizedIntegrityValidationTests(unittest.TestCase):
                         [], [], {"observations": []}, {"observations": []}
                     )
 
+    def test_offline_gate_rejects_mutating_published_series_provenance(self):
+        previous = {
+            "seriesCode": "ROR0927",
+            "termsRevision": 1,
+            "contentHash": "sha256:financial-terms",
+            "provenance": {
+                "primary": {
+                    "url": "https://www.gov.pl/attachment/original",
+                    "sha256": "a" * 64,
+                }
+            },
+        }
+        current = copy.deepcopy(previous)
+        current["provenance"]["primary"]["url"] = (
+            "https://www.gov.pl/attachment/replacement"
+        )
+
+        with TemporaryDirectory() as temp:
+            publication = Path(temp)
+            self._write_snapshot(publication, series=[previous])
+            with patch.object(pipeline, "PUBLICATION", publication):
+                with self.assertRaisesRegex(ValueError, "Series revision .* mutated in place"):
+                    pipeline._validate_append_only_history(
+                        [], [current], {"observations": []}, {"observations": []}
+                    )
+
     def test_offline_gate_rejects_deleting_published_gus_tail(self):
         previous = {
             "period": "2026-08",
