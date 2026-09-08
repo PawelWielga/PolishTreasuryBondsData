@@ -68,6 +68,13 @@ class SnapshotManifestSchemaSemanticsTests(unittest.TestCase):
         )
         self.assertEqual([], self.validate(migrated))
 
+    def test_schema_does_not_encode_current_reference_endpoints(self) -> None:
+        document = current_manifest()
+        document["provenance"]["gus"]["baseUrl"] = "https://archive.example.test/gus"
+        document["provenance"]["nbp"]["url"] = "https://archive.example.test/nbp.xml"
+
+        self.assertEqual([], self.validate(document))
+
     def test_catalog_coverage_requires_every_supported_family(self) -> None:
         document = current_manifest()
         document["coverage"]["catalog"].pop("OTS")
