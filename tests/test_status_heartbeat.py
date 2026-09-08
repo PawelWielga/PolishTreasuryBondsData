@@ -1,9 +1,9 @@
 import unittest
 
 from scripts.prune_status_heartbeat import (
-    compact_status_heartbeat,
     heartbeat_due,
     is_status_only_candidate,
+    should_publish_status_candidate,
 )
 
 
@@ -45,7 +45,24 @@ class StatusHeartbeatTests(unittest.TestCase):
 
         self.assertTrue(heartbeat_due(previous, candidate))
 
-    def test_compaction_keeps_only_sources_whose_heartbeat_is_due(self):
+    def test_status_candidate_is_dropped_when_no_source_heartbeat_is_due(self):
+        previous = {
+            "sources": {
+                "mf": source_item("2026-09-01T00:00:00Z", 744),
+                "gus": source_item("2026-09-01T00:00:00Z", 744),
+                "nbp": source_item("2026-09-01T00:00:00Z", 168),
+            }
+        }
+        candidate = {
+            "sources": {
+                name: successful_candidate(item, "2026-09-05T00:00:00Z")
+                for name, item in previous["sources"].items()
+            }
+        }
+
+        self.assertFalse(should_publish_status_candidate(previous, candidate))
+
+    def test_due_nbp_heartbeat_publishes_whole_status_candidate(self):
         previous = {
             "sources": {
                 "mf": source_item("2026-09-01T00:00:00Z", 744),
@@ -60,11 +77,7 @@ class StatusHeartbeatTests(unittest.TestCase):
             }
         }
 
-        compacted = compact_status_heartbeat(previous, candidate)
-
-        self.assertEqual(previous["sources"]["mf"], compacted["sources"]["mf"])
-        self.assertEqual(previous["sources"]["gus"], compacted["sources"]["gus"])
-        self.assertEqual(candidate["sources"]["nbp"], compacted["sources"]["nbp"])
+        self.assertTrue(should_publish_status_candidate(previous, candidate))
 
     def test_status_only_candidate_includes_derived_public_status(self):
         self.assertTrue(
@@ -74,7 +87,7 @@ class StatusHeartbeatTests(unittest.TestCase):
         )
         self.assertTrue(is_status_only_candidate({"data/source-status.json"}))
 
-    def test_substantive_managed_change_disables_heartbeat_compaction(self):
+    def test_substantive_managed_change_disables_heartbeat_pruning(self):
         self.assertFalse(
             is_status_only_candidate(
                 {
@@ -92,7 +105,7 @@ class StatusHeartbeatTests(unittest.TestCase):
         changed["staleAfterHours"] = 336
         candidate = {"sources": {"nbp": changed}}
 
-        self.assertEqual(candidate, compact_status_heartbeat(previous, candidate))
+        self.assertTrue(should_publish_status_candidate(previous, candidate))
 
     def test_failed_attempt_is_never_hidden(self):
         previous = {"sources": {"nbp": source_item("2026-09-01T00:00:00Z", 168)}}
@@ -107,7 +120,7 @@ class StatusHeartbeatTests(unittest.TestCase):
         )
         candidate = {"sources": {"nbp": failed}}
 
-        self.assertEqual(candidate, compact_status_heartbeat(previous, candidate))
+        self.assertTrue(should_publish_status_candidate(previous, candidate))
 
 
 if __name__ == "__main__":
