@@ -604,7 +604,7 @@ def _validate_append_only_history(
         current = current_gus.get(identity)
         if current is None:
             raise ValueError(f"GUS observation {identity} was deleted")
-        if current["indexPreviousYear100"] != previous["indexPreviousYear100"]:
+        if current != previous:
             raise ValueError(f"GUS observation {identity} was mutated in place")
 
     current_nbp = {
@@ -616,7 +616,7 @@ def _validate_append_only_history(
         current = current_nbp.get(identity)
         if current is None:
             raise ValueError(f"NBP observation {identity} was deleted")
-        if current["annualRatePercent"] != previous["annualRatePercent"]:
+        if current != previous:
             raise ValueError(f"NBP observation {identity} was mutated in place")
 
 
