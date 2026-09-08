@@ -110,7 +110,7 @@ class NbpXmlSourceTests(unittest.TestCase):
         )
         self.assertEqual("2022-05-06", NBP_HISTORY_START)
 
-    def test_sync_migrates_source_provenance_without_financial_change(self):
+    def test_sync_updates_dataset_provenance_without_rewriting_observation_provenance(self):
         archive_xml = self._archive(
             ("2022-05-06", "5,25"),
             ("2026-03-05", "3,75"),
@@ -153,7 +153,7 @@ class NbpXmlSourceTests(unittest.TestCase):
         self.assertEqual("2026-09-04T00:00:00Z", written["verifiedAt"])
         self.assertEqual(2, len(written["observations"]))
         self.assertTrue(all(item["revision"] == 1 for item in written["observations"]))
-        self.assertTrue(all(item["source"] == NBP_RATES_URL for item in written["observations"]))
+        self.assertTrue(all(item["source"] == legacy_url for item in written["observations"]))
         self.assertEqual(["5.25", "3.75"], [item["annualRatePercent"] for item in written["observations"]])
 
     def _assert_sync_fails_without_write(
