@@ -1,6 +1,10 @@
 import unittest
 
-from scripts.prune_status_heartbeat import compact_status_heartbeat, heartbeat_due
+from scripts.prune_status_heartbeat import (
+    compact_status_heartbeat,
+    heartbeat_due,
+    is_status_only_candidate,
+)
 
 
 def source_item(last_success: str, stale_after_hours: int) -> dict:
@@ -61,6 +65,26 @@ class StatusHeartbeatTests(unittest.TestCase):
         self.assertEqual(previous["sources"]["mf"], compacted["sources"]["mf"])
         self.assertEqual(previous["sources"]["gus"], compacted["sources"]["gus"])
         self.assertEqual(candidate["sources"]["nbp"], compacted["sources"]["nbp"])
+
+    def test_status_only_candidate_includes_derived_public_status(self):
+        self.assertTrue(
+            is_status_only_candidate(
+                {"data/source-status.json", "publication/v1/status.json"}
+            )
+        )
+        self.assertTrue(is_status_only_candidate({"data/source-status.json"}))
+
+    def test_substantive_managed_change_disables_heartbeat_compaction(self):
+        self.assertFalse(
+            is_status_only_candidate(
+                {
+                    "data/source-status.json",
+                    "publication/v1/status.json",
+                    "data/reference/nbp-reference-rates.json",
+                }
+            )
+        )
+        self.assertFalse(is_status_only_candidate({"publication/v1/status.json"}))
 
     def test_policy_change_is_never_hidden_as_a_heartbeat(self):
         previous = {"sources": {"nbp": source_item("2026-09-01T00:00:00Z", 168)}}

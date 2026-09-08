@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
@@ -9,8 +10,13 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 STATUS_RELATIVE_PATH = Path("data/source-status.json")
+PUBLIC_STATUS_RELATIVE_PATH = Path("publication/v1/status.json")
 STATUS_PATH = ROOT / STATUS_RELATIVE_PATH
 MANAGED_PATHS = ("data", "publication")
+HEARTBEAT_MANAGED_PATHS = {
+    STATUS_RELATIVE_PATH.as_posix(),
+    PUBLIC_STATUS_RELATIVE_PATH.as_posix(),
+}
 HEARTBEAT_REFRESH_NUMERATOR = 3
 HEARTBEAT_REFRESH_DENOMINATOR = 4
 HEARTBEAT_FIELDS = {
@@ -96,6 +102,13 @@ def compact_status_heartbeat(
     return compacted
 
 
+def is_status_only_candidate(changed_paths: set[str]) -> bool:
+    return (
+        STATUS_RELATIVE_PATH.as_posix() in changed_paths
+        and changed_paths <= HEARTBEAT_MANAGED_PATHS
+    )
+
+
 def _changed_managed_paths() -> set[str]:
     result = subprocess.run(
         [
@@ -133,9 +146,33 @@ def _load_head_status() -> dict[str, Any]:
     return json.loads(result.stdout)
 
 
+def _restore_status_files() -> None:
+    subprocess.run(
+        [
+            "git",
+            "restore",
+            "--worktree",
+            "--source=HEAD",
+            "--",
+            STATUS_RELATIVE_PATH.as_posix(),
+            PUBLIC_STATUS_RELATIVE_PATH.as_posix(),
+        ],
+        cwd=ROOT,
+        check=True,
+    )
+
+
+def _render_public_status() -> None:
+    subprocess.run(
+        [sys.executable, "scripts/status.py"],
+        cwd=ROOT,
+        check=True,
+    )
+
+
 def main() -> int:
     changed_paths = _changed_managed_paths()
-    if changed_paths != {STATUS_RELATIVE_PATH.as_posix()}:
+    if not is_status_only_candidate(changed_paths):
         print("Heartbeat compaction skipped: candidate contains substantive managed changes.")
         return 0
 
@@ -144,19 +181,8 @@ def main() -> int:
     compacted = compact_status_heartbeat(previous, candidate)
 
     if compacted == previous:
-        subprocess.run(
-            [
-                "git",
-                "restore",
-                "--worktree",
-                "--source=HEAD",
-                "--",
-                STATUS_RELATIVE_PATH.as_posix(),
-            ],
-            cwd=ROOT,
-            check=True,
-        )
-        print("Dropped premature source-status-only heartbeat.")
+        _restore_status_files()
+        print("Dropped premature source-status-only heartbeat and its public projection.")
         return 0
 
     if compacted != candidate:
@@ -164,6 +190,7 @@ def main() -> int:
             json.dumps(compacted, ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8",
         )
+        _render_public_status()
         print("Kept only source heartbeats that reached the publication threshold.")
     else:
         print("Source-status heartbeat is due and remains in the candidate.")
