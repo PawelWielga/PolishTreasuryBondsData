@@ -246,6 +246,31 @@ class NormalizedIntegrityValidationTests(unittest.TestCase):
                         [], [], {"observations": []}, {"observations": []}
                     )
 
+    def test_offline_gate_rejects_mutating_published_gus_metadata(self):
+        previous = {
+            "period": "2026-08",
+            "revision": 1,
+            "indexPreviousYear100": "102.80",
+            "yearOverYearPercent": "2.80",
+            "source": {
+                "publisher": "GUS",
+                "api": "SDP",
+                "year": 2026,
+                "periodId": 254,
+            },
+        }
+        current = copy.deepcopy(previous)
+        current["publishedAt"] = "2026-09-15T00:00:00Z"
+
+        with TemporaryDirectory() as temp:
+            publication = Path(temp)
+            self._write_snapshot(publication, gus=[previous])
+            with patch.object(pipeline, "PUBLICATION", publication):
+                with self.assertRaisesRegex(ValueError, "GUS observation .* mutated in place"):
+                    pipeline._validate_append_only_history(
+                        [], [], {"observations": [current]}, {"observations": []}
+                    )
+
     def test_offline_gate_rejects_deleting_published_nbp_tail(self):
         previous = {
             "effectiveFrom": "2026-03-05",
@@ -261,7 +286,7 @@ class NormalizedIntegrityValidationTests(unittest.TestCase):
                         [], [], {"observations": []}, {"observations": []}
                     )
 
-    def test_offline_gate_allows_provenance_only_nbp_migration(self):
+    def test_offline_gate_rejects_mutating_published_nbp_provenance(self):
         previous = {
             "effectiveFrom": "2026-03-05",
             "revision": 1,
@@ -276,9 +301,10 @@ class NormalizedIntegrityValidationTests(unittest.TestCase):
             publication = Path(temp)
             self._write_snapshot(publication, nbp=[previous])
             with patch.object(pipeline, "PUBLICATION", publication):
-                pipeline._validate_append_only_history(
-                    [], [], {"observations": []}, {"observations": [current]}
-                )
+                with self.assertRaisesRegex(ValueError, "NBP observation .* mutated in place"):
+                    pipeline._validate_append_only_history(
+                        [], [], {"observations": []}, {"observations": [current]}
+                    )
 
     def test_offline_and_live_nbp_boundaries_cannot_drift(self):
         self.assertEqual(update.NBP_HISTORY_START, pipeline.NBP_HISTORY_START)
