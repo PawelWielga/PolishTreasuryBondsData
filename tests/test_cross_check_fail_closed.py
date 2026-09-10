@@ -70,7 +70,11 @@ class CrossCheckCompletenessTests(unittest.TestCase):
             parse_series_html(html)
 
     def test_product_semantic_disagreement_fails_cross_check(self):
-        series = {"seriesCode": "EDO0936", "productType": "EDO"}
+        series = {
+            "seriesCode": "EDO0936",
+            "productType": "EDO",
+            "exchangePriceMinorUnits": 9990,
+        }
         facts = {
             "exchangePriceMinorUnits": 9990,
             "capitalizationRule": "None",
