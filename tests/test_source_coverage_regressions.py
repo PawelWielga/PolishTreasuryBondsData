@@ -144,6 +144,21 @@ class MinistryCoverageRegressionTests(unittest.TestCase):
             "termsRevision": revision,
         }
 
+    @staticmethod
+    def _ror_definitions() -> dict[str, dict]:
+        return {
+            "ROR-rules-1": {
+                "productType": "ROR",
+                "rateModel": "NbpReferencePlusMargin",
+                "maturityMonths": 12,
+            },
+            "ROR-rules-2": {
+                "productType": "ROR",
+                "rateModel": "NbpReferencePlusMargin",
+                "maturityMonths": 24,
+            },
+        }
+
     def test_mf_requires_current_month_offering_for_every_supported_family(self):
         parsed = [
             self._series(f"{family}0927", family, "2027-09-30")
@@ -165,20 +180,13 @@ class MinistryCoverageRegressionTests(unittest.TestCase):
     def test_existing_series_keeps_assigned_product_definition(self):
         existing = [self._series("ROR0927", "ROR", "2026-09-30")]
         parsed = [dict(existing[0], productDefinition="ROR-rules-2", contentHash="stale")]
-        definitions = {
-            "ROR-rules-1": {
-                "productType": "ROR",
-                "rateModel": "NbpReferencePlusMargin",
-                "maturityMonths": 12,
-            },
-            "ROR-rules-2": {
-                "productType": "ROR",
-                "rateModel": "NbpReferencePlusMargin",
-                "maturityMonths": 24,
-            },
-        }
 
-        result = _preserve_existing_product_definitions(parsed, existing, definitions)
+        result = _preserve_existing_product_definitions(
+            parsed,
+            existing,
+            self._ror_definitions(),
+            date(2026, 9, 4),
+        )
 
         self.assertEqual("ROR-rules-1", result[0]["productDefinition"])
         self.assertRegex(result[0]["contentHash"], r"^sha256:[a-f0-9]{64}$")
@@ -186,21 +194,81 @@ class MinistryCoverageRegressionTests(unittest.TestCase):
     def test_existing_series_rate_model_change_fails_closed(self):
         existing = [self._series("ROR0927", "ROR", "2026-09-30")]
         parsed = [dict(existing[0], productDefinition="ROR-rules-2", contentHash="stale")]
-        definitions = {
-            "ROR-rules-1": {
-                "productType": "ROR",
-                "rateModel": "NbpReferencePlusMargin",
-                "maturityMonths": 12,
-            },
-            "ROR-rules-2": {
-                "productType": "ROR",
-                "rateModel": "Fixed",
-                "maturityMonths": 12,
-            },
+        definitions = self._ror_definitions()
+        definitions["ROR-rules-2"] = {
+            "productType": "ROR",
+            "rateModel": "Fixed",
+            "maturityMonths": 12,
         }
 
         with self.assertRaisesRegex(SourceError, "product rate model changed"):
-            _preserve_existing_product_definitions(parsed, existing, definitions)
+            _preserve_existing_product_definitions(
+                parsed,
+                existing,
+                definitions,
+                date(2026, 9, 4),
+            )
+
+    def test_new_historical_series_with_multiple_rule_revisions_fails_closed(self):
+        parsed = [
+            dict(
+                self._series(
+                    "ROR0827",
+                    "ROR",
+                    "2026-08-31",
+                    sale_from="2026-08-01",
+                ),
+                productDefinition="ROR-rules-2",
+            )
+        ]
+
+        with self.assertRaisesRegex(
+            SourceError,
+            "cannot infer product definition for newly discovered historical series",
+        ):
+            _preserve_existing_product_definitions(
+                parsed,
+                [],
+                self._ror_definitions(),
+                date(2026, 9, 4),
+            )
+
+    def test_new_current_month_series_may_use_latest_rule_revision(self):
+        parsed = [
+            dict(
+                self._series("ROR0927", "ROR", "2026-09-30"),
+                productDefinition="ROR-rules-2",
+            )
+        ]
+
+        result = _preserve_existing_product_definitions(
+            parsed,
+            [],
+            self._ror_definitions(),
+            date(2026, 9, 4),
+        )
+
+        self.assertEqual("ROR-rules-2", result[0]["productDefinition"])
+
+    def test_new_historical_series_is_unambiguous_with_one_rule_revision(self):
+        parsed = [
+            self._series(
+                "ROR0827",
+                "ROR",
+                "2026-08-31",
+                sale_from="2026-08-01",
+            )
+        ]
+        definitions = {"ROR-rules-1": self._ror_definitions()["ROR-rules-1"]}
+
+        result = _preserve_existing_product_definitions(
+            parsed,
+            [],
+            definitions,
+            date(2026, 9, 4),
+        )
+
+        self.assertEqual("ROR-rules-1", result[0]["productDefinition"])
 
     def test_outstanding_window_uses_series_product_definition(self):
         series = self._series("ROR0927", "ROR", "2026-09-30")
