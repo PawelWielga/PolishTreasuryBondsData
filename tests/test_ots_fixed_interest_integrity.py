@@ -10,6 +10,8 @@ class OtsFixedMaturityInterestCrossCheckTests(unittest.TestCase):
           <h1>3-miesięczne obligacje OTS</h1>
           <p>Seria: OTS1226</p>
           <p>Oprocentowanie: 2,00%</p>
+          <p>Kapitalizacja odsetek: brak</p>
+          <p>Wypłata odsetek: przy wykupie obligacji</p>
           <p>Sprzedaż: 01.09.2026 - 30.09.2026</p>
           <p>Cena sprzedaży jednej obligacji: 100,00 zł</p>
           <p>Cena zamiany jednej obligacji: 100,00 zł</p>
@@ -27,6 +29,8 @@ class OtsFixedMaturityInterestCrossCheckTests(unittest.TestCase):
           <h1>3-miesięczne obligacje OTS</h1>
           <p>Seria: OTS1226</p>
           <p>Oprocentowanie: 2,00%</p>
+          <p>Kapitalizacja odsetek: brak</p>
+          <p>Wypłata odsetek: przy wykupie obligacji</p>
           <p>Sprzedaż: 01.09.2026 - 30.09.2026</p>
           <p>Cena sprzedaży jednej obligacji: 100,00 zł</p>
           <p>Cena zamiany jednej obligacji: 100,00 zł</p>

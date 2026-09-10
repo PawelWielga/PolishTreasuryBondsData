@@ -69,6 +69,8 @@ class MinistryOfFinanceTests(unittest.TestCase):
         html = """
         <h1>10-letnie obligacje EDO</h1><p>Seria: EDO0936</p><p>Oprocentowanie: 5,35% w pierwszym okresie</p>
         <p>w kolejnych okresach: marża 2,00% + inflacja</p>
+        <p>Kapitalizacja odsetek: roczna</p>
+        <p>Wypłata odsetek: przy wykupie obligacji</p>
         <p>Sprzedaż: 01.09.2026 - 30.09.2026</p>
         <p>Cena sprzedaży jednej obligacji: 100,00 zł</p>
         <p>Cena zamiany jednej obligacji: 99,90 zł</p>

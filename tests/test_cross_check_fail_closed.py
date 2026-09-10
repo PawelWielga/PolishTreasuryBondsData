@@ -2,7 +2,7 @@ import copy
 import unittest
 
 from scripts import pipeline
-from scripts.sources import SourceError, parse_series_html
+from scripts.sources import SourceError, cross_check_series, parse_series_html
 from scripts.update import required_cross_check_fields, validate_cross_check_facts
 
 CROSS_CHECK_URL = "https://www.obligacjeskarbowe.pl/oferta-obligacji/example/"
@@ -34,6 +34,8 @@ class CrossCheckCompletenessTests(unittest.TestCase):
           <p>Seria: EDO0936</p>
           <p>Oprocentowanie: 5,35%</p>
           <p>W kolejnych okresach oprocentowanie uwzględnia inflację i 2,00 punktu procentowego premii.</p>
+          <p>Kapitalizacja odsetek: roczna</p>
+          <p>Wypłata odsetek: przy wykupie obligacji</p>
           <p>Sprzedaż: 01.09.2026 - 30.09.2026</p>
           <p>Cena sprzedaży jednej obligacji: 100,00 zł</p>
         </main>
@@ -49,6 +51,38 @@ class CrossCheckCompletenessTests(unittest.TestCase):
         self.assertIn("EDO0936", message)
         self.assertIn("marginPercent", message)
         self.assertIn(CROSS_CHECK_URL, message)
+
+    def test_parser_wording_drift_for_product_semantics_fails_closed(self):
+        html = """
+        <main>
+          <h1>10-letnie obligacje EDO</h1>
+          <p>Seria: EDO0936</p>
+          <p>Oprocentowanie: 5,35%</p>
+          <p>W kolejnych okresach: marża 2,00% + inflacja</p>
+          <p>Kapitalizacja odsetek: po każdym roku</p>
+          <p>Wypłata odsetek: przy wykupie obligacji</p>
+          <p>Sprzedaż: 01.09.2026 - 30.09.2026</p>
+          <p>Cena sprzedaży jednej obligacji: 100,00 zł</p>
+        </main>
+        """
+
+        with self.assertRaisesRegex(SourceError, "capitalization rule"):
+            parse_series_html(html)
+
+    def test_product_semantic_disagreement_fails_cross_check(self):
+        series = {
+            "seriesCode": "EDO0936",
+            "productType": "EDO",
+            "exchangePriceMinorUnits": 9990,
+        }
+        facts = {
+            "exchangePriceMinorUnits": 9990,
+            "capitalizationRule": "None",
+            "interestPaymentRule": "AtMaturity",
+        }
+
+        with self.assertRaisesRegex(SourceError, "capitalizationRule"):
+            cross_check_series(series, facts)
 
     def test_fixed_rate_product_accepts_missing_irrelevant_margin(self):
         series = {"seriesCode": "TOS0929", "productType": "TOS"}

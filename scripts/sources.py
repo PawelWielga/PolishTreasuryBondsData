@@ -445,6 +445,25 @@ def parse_series_html(html: str) -> dict[str, str | int | None]:
     elif rules.rate_model == "InflationPlusMargin":
         margin_match = re.search(r"marża\s*([0-9]+(?:,[0-9]+)?)%\s*\+\s*inflacja", text, re.I)
     margin = canonical_decimal(Decimal(margin_match.group(1).replace(",", "."))) if margin_match else None
+    capitalization_label = _required(
+        r"Kapitalizacja odsetek:\s*(brak|roczna)\b",
+        text,
+        "capitalization rule",
+    ).lower()
+    capitalization_rule = {
+        "brak": "None",
+        "roczna": "EndOfPeriod",
+    }[capitalization_label]
+    interest_payment_label = _required(
+        r"Wypłata odsetek:\s*(co miesiąc|co roku|przy wykupie obligacji)\b",
+        text,
+        "interest payment rule",
+    ).lower()
+    interest_payment_rule = {
+        "co miesiąc": "AtPeriodEnd",
+        "co roku": "AtPeriodEnd",
+        "przy wykupie obligacji": "AtMaturity",
+    }[interest_payment_label]
     fixed_maturity_interest = None
     if family == "OTS":
         fixed_maturity_interest = money_minor_units(
@@ -466,6 +485,8 @@ def parse_series_html(html: str) -> dict[str, str | int | None]:
         "marginPercent": margin,
         "fixedMaturityInterestMinorUnits": fixed_maturity_interest,
         "maturityMonths": _parse_maturity_months(text[: max(text.find("Seria:"), 0)]),
+        "capitalizationRule": capitalization_rule,
+        "interestPaymentRule": interest_payment_rule,
     }
 
 
@@ -491,6 +512,8 @@ def cross_check_series(workbook_series: dict[str, Any], html_facts: dict[str, An
     product_type = workbook_series["productType"]
     rules = PRODUCT_RULES[product_type]
     comparable["maturityMonths"] = rules.maturity_months
+    comparable["capitalizationRule"] = rules.capitalization_rule
+    comparable["interestPaymentRule"] = rules.interest_payment_rule
     if product_type not in {"ROS", "ROD"} and html_facts.get("exchangePriceMinorUnits") is None:
         raise SourceError(
             f"{workbook_series['seriesCode']}: required cross-check field "
@@ -506,6 +529,8 @@ def cross_check_series(workbook_series: dict[str, Any], html_facts: dict[str, An
         "marginPercent",
         "fixedMaturityInterestMinorUnits",
         "maturityMonths",
+        "capitalizationRule",
+        "interestPaymentRule",
     )
     for field in fields:
         if html_facts.get(field) is None:
