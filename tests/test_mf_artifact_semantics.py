@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import unittest
+from datetime import date
 from pathlib import Path
 
 from scripts import pipeline
@@ -44,6 +45,7 @@ class MinistryArtifactSemanticIntegrityTests(unittest.TestCase):
                     parsed,
                     existing_series,
                     product_definitions,
+                    date.fromisoformat(provenance["verifiedAt"]),
                 )
                 parsed_by_source[cache_key] = {item["seriesCode"]: item for item in parsed}
 
