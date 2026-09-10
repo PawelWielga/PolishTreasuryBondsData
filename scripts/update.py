@@ -451,11 +451,27 @@ def _preserve_existing_product_definitions(
     parsed: list[dict[str, Any]],
     existing: list[dict[str, Any]],
     product_definitions: dict[str, dict[str, Any]],
+    as_of: date,
 ) -> list[dict[str, Any]]:
     current_by_code = _current_series_by_code(existing)
+    current_month = as_of.strftime("%Y-%m")
+    definitions_by_type: dict[str, list[dict[str, Any]]] = {}
+    for definition in product_definitions.values():
+        definitions_by_type.setdefault(definition["productType"], []).append(definition)
+
     for candidate in parsed:
         current = current_by_code.get(candidate["seriesCode"])
-        if current is None or current["productDefinition"] == candidate["productDefinition"]:
+        if current is None:
+            family_definitions = definitions_by_type.get(candidate["productType"], [])
+            if len(family_definitions) > 1 and candidate["saleFrom"][:7] != current_month:
+                raise SourceError(
+                    f"{candidate['seriesCode']}: cannot infer product definition for newly "
+                    f"discovered historical series sold from {candidate['saleFrom']}; "
+                    f"{candidate['productType']} has multiple rules revisions and the backfill "
+                    "requires an explicit reviewed assignment"
+                )
+            continue
+        if current["productDefinition"] == candidate["productDefinition"]:
             continue
 
         current_definition = product_definitions.get(current["productDefinition"])
@@ -569,7 +585,9 @@ def sync_mf(
     existing = load_series()
     product_definitions = _product_definitions_by_id()
     parsed = parse_mf_workbook(workbook_content, workbook_url, verified_date)
-    parsed = _preserve_existing_product_definitions(parsed, existing, product_definitions)
+    parsed = _preserve_existing_product_definitions(
+        parsed, existing, product_definitions, as_of
+    )
     parsed = [
         item
         for item in parsed
