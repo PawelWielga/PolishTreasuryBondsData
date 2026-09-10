@@ -9,6 +9,8 @@ ROR_HTML = """
   <p>Seria: ROR0927</p>
   <p>Oprocentowanie: 4,00%</p>
   <p>W kolejnych miesięcznych okresach odsetkowych: stopa referencyjna NBP+0,00%.</p>
+  <p>Kapitalizacja odsetek: brak</p>
+  <p>Wypłata odsetek: co miesiąc</p>
   <p>Sprzedaż: 01.09.2026 - 30.09.2026</p>
   <p>Cena sprzedaży jednej obligacji: 100,00 zł</p>
   <p>Cena zamiany jednej obligacji: 99,90 zł</p>
