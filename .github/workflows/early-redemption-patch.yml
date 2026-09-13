@@ -29,6 +29,24 @@ jobs:
           python -m pip install --require-hashes --only-binary=:all: -r requirements.txt
       - name: Apply contract integration patch
         run: python scripts/apply_early_redemption_patch.py
+      - name: Preserve append-only validator compatibility
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("scripts/pipeline.py")
+          text = path.read_text(encoding="utf-8")
+          old_signature = """    early_redemption: dict[str, Any],\n) -> None:\n"""
+          new_signature = """    early_redemption: dict[str, Any] | None = None,\n) -> None:\n"""
+          if text.count(old_signature) != 1:
+              raise SystemExit("Expected one append-only validator signature to update")
+          text = text.replace(old_signature, new_signature, 1)
+          old_guard = """    previous_early_redemption = snapshot / \"early-redemption-rules.json\"\n    if previous_early_redemption.is_file():\n"""
+          new_guard = """    previous_early_redemption = snapshot / \"early-redemption-rules.json\"\n    if early_redemption is not None and previous_early_redemption.is_file():\n"""
+          if text.count(old_guard) != 1:
+              raise SystemExit("Expected one early-redemption append-only guard to update")
+          path.write_text(text.replace(old_guard, new_guard, 1), encoding="utf-8")
+          PY
       - name: Build immutable candidate offline
         run: python scripts/update.py --offline
       - name: Remove one-shot patch machinery
