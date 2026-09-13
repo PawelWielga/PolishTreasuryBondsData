@@ -1,0 +1,57 @@
+name: Apply early-redemption contract integration
+
+on:
+  push:
+    branches:
+      - feature/early-redemption-contract-20260913
+    paths:
+      - .github/workflows/early-redemption-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: feature/early-redemption-contract-20260913
+          fetch-depth: 0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: Install hash-locked Python dependencies
+        run: python -m pip install --require-hashes --only-binary=:all: -r requirements.txt
+      - name: Apply contract integration patch
+        run: python scripts/apply_early_redemption_patch.py
+      - name: Build immutable candidate offline
+        run: python scripts/update.py --offline
+      - name: Remove one-shot patch machinery
+        run: rm scripts/apply_early_redemption_patch.py .github/workflows/early-redemption-patch.yml
+      - name: Run full unit suite
+        run: python -m unittest discover -s tests -v
+      - name: Verify immutable snapshot boundary
+        run: python scripts/check_immutable_snapshots.py --base origin/main
+      - name: Verify deterministic publication candidate
+        shell: bash
+        run: |
+          git add -A -- data publication
+          python scripts/update.py --offline
+          python scripts/check_generated_tree.py --against-index
+      - name: Commit integrated contract
+        shell: bash
+        run: |
+          git diff --check
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Publish versioned early-redemption rules"
+          git push origin HEAD:feature/early-redemption-contract-20260913
