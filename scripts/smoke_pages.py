@@ -181,7 +181,7 @@ def fetch_expected_status(
 
 
 def _document_count(document: dict[str, Any]) -> int | None:
-    for key in ("series", "productDefinitions", "observations"):
+    for key in ("series", "productDefinitions", "rules", "observations"):
         value = document.get(key)
         if isinstance(value, list):
             return len(value)

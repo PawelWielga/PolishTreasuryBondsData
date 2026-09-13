@@ -27,6 +27,7 @@ It does not attempt to defend against a repository administrator who can modify 
 | Information | Canonical source |
 | --- | --- |
 | Product rules | `data/products/<TYPE>/rules-vN.json` |
+| Early-redemption rules | `data/early-redemption-rules.json` |
 | Bond series and corrections | `data/series/<TYPE>/<SERIES>/terms-vN.json` |
 | GUS CPI facts | `data/reference/gus-cpi.json` |
 | NBP reference-rate facts | `data/reference/nbp-reference-rates.json` |
@@ -88,6 +89,7 @@ Current endpoint allowlists, redirect rules and transport restrictions live in `
 
 - `catalog.json`;
 - `product-definitions.json`;
+- `early-redemption-rules.json`;
 - `gus-cpi.json`;
 - `nbp-reference-rates.json`;
 - `manifest.json`.
@@ -115,6 +117,7 @@ A correction never edits a published record in place. It appends a new terms/ref
 13. New GUS/NBP source verification captures raw official evidence before the corresponding provenance is published.
 14. Network endpoint policy is enforced by the importer, not encoded as a permanent public schema rule.
 15. Pages deploys only reviewed `main`; consumers can keep and use an already downloaded immutable snapshot without Pages being online.
+16. Early-redemption `(productType, rulesRevision)` facts are append-only and every catalog sale window resolves to exactly one rule.
 
 ## GitHub Actions boundaries
 

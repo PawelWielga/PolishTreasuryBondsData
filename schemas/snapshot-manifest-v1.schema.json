@@ -13,6 +13,7 @@
       "properties": {
         "catalog.json": { "allOf": [{ "$ref": "#/$defs/fileEntry" }, { "properties": { "path": { "const": "catalog.json" } } }] },
         "product-definitions.json": { "allOf": [{ "$ref": "#/$defs/fileEntry" }, { "properties": { "path": { "const": "product-definitions.json" } } }] },
+        "early-redemption-rules.json": { "allOf": [{ "$ref": "#/$defs/fileEntry" }, { "properties": { "path": { "const": "early-redemption-rules.json" } } }] },
         "gus-cpi.json": { "allOf": [{ "$ref": "#/$defs/fileEntry" }, { "properties": { "path": { "const": "gus-cpi.json" } } }] },
         "nbp-reference-rates.json": { "allOf": [{ "$ref": "#/$defs/fileEntry" }, { "properties": { "path": { "const": "nbp-reference-rates.json" } } }] }
       },

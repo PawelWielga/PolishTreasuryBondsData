@@ -14,6 +14,7 @@ Use GitHub Pages:
 /v1/snapshots/<datasetRevision>/manifest.json
 /v1/snapshots/<datasetRevision>/catalog.json
 /v1/snapshots/<datasetRevision>/product-definitions.json
+/v1/snapshots/<datasetRevision>/early-redemption-rules.json
 /v1/snapshots/<datasetRevision>/gus-cpi.json
 /v1/snapshots/<datasetRevision>/nbp-reference-rates.json
 ```
@@ -28,6 +29,7 @@ Use GitHub Pages:
 data/
   products/        canonical product rules
   series/          canonical series terms and corrections
+  early-redemption-rules.json  versioned early-redemption rules
   reference/       canonical GUS and NBP facts
   sources/         content-addressed official evidence
   source-status.json
@@ -52,7 +54,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the trust model, sources of
 The updater accepts data only from the configured official acquisition endpoints:
 
 - Ministry of Finance / gov.pl for the retail-bond XLS workbook;
-- the official Treasury Bond offer pages for an independent current-offer cross-check;
+- official Treasury Bond offer pages and issuance letters for independent cross-checks and early-redemption terms;
 - GUS SDP API for CPI;
 - NBP official XML for the reference-rate timeline.
 
@@ -79,6 +81,7 @@ Historical GUS/NBP evidence is never fabricated retroactively.
 Published canonical facts are append-only:
 
 - changed series terms create the next `termsRevision`;
+- changed early-redemption terms create the next family `rulesRevision`;
 - corrected GUS observations create the next `revision` for that period;
 - corrected NBP observations create the next `revision` for that effective date.
 

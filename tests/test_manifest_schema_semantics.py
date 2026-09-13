@@ -87,6 +87,11 @@ class SnapshotManifestSchemaSemanticsTests(unittest.TestCase):
 
         self.assertTrue(any("is not of type 'integer'" in error.message for error in self.validate(document)))
 
+    def test_legacy_manifest_without_early_redemption_file_remains_schema_valid(self) -> None:
+        document = current_manifest()
+        document["files"].pop("early-redemption-rules.json", None)
+        self.assertEqual([], self.validate(document))
+
     def test_unexpected_top_level_manifest_property_is_rejected(self) -> None:
         document = current_manifest()
         document["unexpected"] = True

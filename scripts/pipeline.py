@@ -4,7 +4,7 @@ import gzip
 import hashlib
 import json
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -73,22 +73,28 @@ def load_reference_source(name: str) -> dict[str, Any]:
     return load_json(DATA / "reference" / f"{name}.json")
 
 
+def load_early_redemption_rules() -> dict[str, Any]:
+    return load_json(DATA / "early-redemption-rules.json")
+
+
 def build_publication() -> str:
     """Validate canonical facts and build the single supported public snapshot tree."""
     products = load_product_definitions()
     series = load_series()
     gus = load_reference_source("gus-cpi")
     nbp = load_reference_source("nbp-reference-rates")
+    early_redemption = load_early_redemption_rules()
     status_source = load_json(DATA / "source-status.json")
 
     _validate_product_definitions(products)
     _validate_series(series, products)
+    _validate_early_redemption_rules(early_redemption, series)
     _validate_gus(gus)
     _validate_nbp(nbp)
     _validate_evidence(series, gus, nbp)
-    _validate_append_only_history(products, series, gus, nbp)
+    _validate_append_only_history(products, series, gus, nbp, early_redemption)
 
-    generated_at = _generated_at(series, gus, nbp)
+    generated_at = _generated_at(series, gus, nbp, early_redemption)
     documents = {
         "catalog.json": {
             "schemaVersion": "2.0",
@@ -99,6 +105,11 @@ def build_publication() -> str:
             "schemaVersion": "2.0",
             "generatedAt": generated_at,
             "productDefinitions": products,
+        },
+        "early-redemption-rules.json": {
+            "schemaVersion": "2.0",
+            "generatedAt": early_redemption["verifiedAt"] + "T00:00:00Z",
+            "rules": early_redemption["rules"],
         },
         "gus-cpi.json": {
             "schemaVersion": "2.0",
@@ -114,6 +125,7 @@ def build_publication() -> str:
     schemas = {
         "catalog.json": "catalog-v2.schema.json",
         "product-definitions.json": "product-definitions-v2.schema.json",
+        "early-redemption-rules.json": "early-redemption-rules-v2.schema.json",
         "gus-cpi.json": "gus-cpi-v2.schema.json",
         "nbp-reference-rates.json": "nbp-reference-rates-v2.schema.json",
     }
@@ -210,7 +222,7 @@ def _write_immutable_snapshot(snapshot: Path, files: dict[str, bytes]) -> None:
 
 
 def _document_count(document: dict[str, Any]) -> int:
-    for key in ("series", "productDefinitions", "observations"):
+    for key in ("series", "productDefinitions", "rules", "observations"):
         if key in document:
             return len(document[key])
     return 0
@@ -342,6 +354,156 @@ def _validate_series(series: list[dict[str, Any]], products: list[dict[str, Any]
         if ordered != expected_revisions:
             raise ValueError(
                 f"{series_code}: terms revisions must be contiguous from 1; got {ordered}"
+            )
+
+
+def _parse_contract_date(value: Any, label: str):
+    if not isinstance(value, str):
+        raise ValueError(f"{label} must be an ISO date")
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except ValueError as exc:
+        raise ValueError(f"{label} must be an ISO date, got {value!r}") from exc
+
+
+def _validate_early_redemption_rules(
+    document: dict[str, Any], series: list[dict[str, Any]]
+) -> None:
+    rules = document.get("rules")
+    if not isinstance(rules, list) or not rules:
+        raise ValueError("Early-redemption rules are empty")
+
+    verified_at = _parse_contract_date(
+        document.get("verifiedAt"), "Early-redemption verifiedAt"
+    )
+    identities = [(item.get("productType"), item.get("rulesRevision")) for item in rules]
+    if identities != sorted(identities) or len(identities) != len(set(identities)):
+        raise ValueError(
+            "Early-redemption rules must be unique by (productType, rulesRevision) "
+            "and canonically ordered"
+        )
+
+    by_family: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for rule in rules:
+        family = rule.get("productType")
+        if family not in SUPPORTED_PRODUCT_TYPES:
+            raise ValueError(f"Unsupported early-redemption product type: {family}")
+        by_family[family].append(rule)
+
+    if set(by_family) != set(SUPPORTED_PRODUCT_TYPES):
+        missing = sorted(set(SUPPORTED_PRODUCT_TYPES) - set(by_family))
+        extra = sorted(set(by_family) - set(SUPPORTED_PRODUCT_TYPES))
+        raise ValueError(
+            "Early-redemption rules must cover exactly supported families; "
+            f"missing={missing}, extra={extra}"
+        )
+
+    current_series_by_code: dict[str, dict[str, Any]] = {}
+    for item in series:
+        code = item["seriesCode"]
+        previous = current_series_by_code.get(code)
+        if previous is None or item["termsRevision"] > previous["termsRevision"]:
+            current_series_by_code[code] = item
+
+    provenance_dates = []
+    for family in sorted(by_family):
+        family_rules = by_family[family]
+        revisions = [int(rule["rulesRevision"]) for rule in family_rules]
+        expected_revisions = list(range(1, revisions[-1] + 1))
+        if revisions != expected_revisions:
+            raise ValueError(
+                f"{family}: early-redemption revisions must be contiguous from 1; got {revisions}"
+            )
+
+        family_series = [item for item in series if item["productType"] == family]
+        first_sale = min(item["saleFrom"] for item in family_series)
+        last_sale = max(item["saleTo"] for item in family_series)
+        if family_rules[0]["purchaseFrom"] != first_sale:
+            raise ValueError(
+                f"{family}: first early-redemption rule must start at catalog coverage "
+                f"{first_sale}, got {family_rules[0]['purchaseFrom']}"
+            )
+
+        previous_end = None
+        for index, rule in enumerate(family_rules):
+            label = f"{family} early-redemption revision {rule['rulesRevision']}"
+            start = _parse_contract_date(rule.get("purchaseFrom"), f"{label} purchaseFrom")
+            through_raw = rule.get("purchaseThrough")
+            end = (
+                None
+                if through_raw is None
+                else _parse_contract_date(through_raw, f"{label} purchaseThrough")
+            )
+            if end is not None and end < start:
+                raise ValueError(f"{label}: purchaseThrough precedes purchaseFrom")
+            if previous_end is not None and start != previous_end + timedelta(days=1):
+                raise ValueError(f"{family}: early-redemption applicability windows must be contiguous")
+            if index > 0 and previous_end is None:
+                raise ValueError(f"{family}: open-ended rule cannot precede another revision")
+            if index < len(family_rules) - 1 and end is None:
+                raise ValueError(f"{family}: only the latest early-redemption rule may be open-ended")
+            previous_end = end
+
+            provenance = rule.get("provenance")
+            if not isinstance(provenance, dict):
+                raise ValueError(f"{label}: provenance is required")
+            _validate_https_uri(provenance.get("url"), f"{label} provenance")
+            source_code = provenance.get("seriesCode")
+            source_series = current_series_by_code.get(source_code)
+            if source_series is None:
+                raise ValueError(f"{label}: provenance series {source_code!r} is not in the catalog")
+            if source_series["productType"] != family:
+                raise ValueError(f"{label}: provenance series belongs to another product family")
+            source_from = _parse_contract_date(source_series["saleFrom"], f"{source_code} saleFrom")
+            source_to = _parse_contract_date(source_series["saleTo"], f"{source_code} saleTo")
+            if source_from < start or (end is not None and source_to > end):
+                raise ValueError(f"{label}: provenance series is outside the rule applicability window")
+            provenance_date = _parse_contract_date(
+                provenance.get("verifiedAt"), f"{label} provenance verifiedAt"
+            )
+            if provenance_date > verified_at:
+                raise ValueError(f"{label}: provenance verification is newer than document verifiedAt")
+            provenance_dates.append(provenance_date)
+
+            if rule.get("minimumHoldingCalendarDays", -1) < 0:
+                raise ValueError(f"{label}: minimum holding days cannot be negative")
+            latest = rule.get("latestInstruction", {})
+            if latest.get("value", 0) <= 0:
+                raise ValueError(f"{label}: latest-instruction offset must be positive")
+            payment = rule.get("paymentTiming", {})
+            if payment.get("value", 0) <= 0:
+                raise ValueError(f"{label}: payment timing must be positive")
+            accrual = rule.get("interestAccrualTiming", {})
+            if accrual.get("kind") == "ThroughBusinessDayAfterInstruction" and accrual.get("value", 0) <= 0:
+                raise ValueError(f"{label}: interest-accrual timing must be positive")
+            if rule.get("chargeApplication") == "NoCharge" and rule.get("chargeMinorUnits") != 0:
+                raise ValueError(f"{label}: NoCharge requires a zero charge")
+
+        if previous_end is not None and previous_end < _parse_contract_date(last_sale, f"{family} lastSaleTo"):
+            raise ValueError(f"{family}: early-redemption rules do not reach current catalog coverage")
+
+    if max(provenance_dates) != verified_at:
+        raise ValueError(
+            "Early-redemption verifiedAt must equal the newest rule provenance verification date"
+        )
+
+    for item in series:
+        sale_from = _parse_contract_date(item["saleFrom"], f"{item['seriesCode']} saleFrom")
+        sale_to = _parse_contract_date(item["saleTo"], f"{item['seriesCode']} saleTo")
+        matches = []
+        for rule in by_family[item["productType"]]:
+            start = _parse_contract_date(rule["purchaseFrom"], "purchaseFrom")
+            end = (
+                None
+                if rule["purchaseThrough"] is None
+                else _parse_contract_date(rule["purchaseThrough"], "purchaseThrough")
+            )
+            if start <= sale_from and (end is None or sale_to <= end):
+                matches.append(rule)
+        if len(matches) != 1:
+            raise ValueError(
+                f"{item['seriesCode']}: expected exactly one early-redemption rule for the "
+                f"full sale window, got {len(matches)}"
             )
 
 
@@ -554,6 +716,7 @@ def _validate_append_only_history(
     series: list[dict[str, Any]],
     gus: dict[str, Any],
     nbp: dict[str, Any],
+    early_redemption: dict[str, Any] | None = None,
 ) -> None:
     """Require current canonical facts to extend the last reviewed public dataset.
 
@@ -619,12 +782,37 @@ def _validate_append_only_history(
         if current != previous:
             raise ValueError(f"NBP observation {identity} was mutated in place")
 
+    previous_early_redemption = snapshot / "early-redemption-rules.json"
+    if early_redemption is not None and previous_early_redemption.is_file():
+        current_rules = {
+            (item["productType"], item["rulesRevision"]): item
+            for item in early_redemption.get("rules", [])
+        }
+        for previous in load_json(previous_early_redemption)["rules"]:
+            identity = (previous["productType"], previous["rulesRevision"])
+            current = current_rules.get(identity)
+            if current is None:
+                raise ValueError(f"Early-redemption rule {identity} was deleted")
+            if current != previous:
+                raise ValueError(f"Early-redemption rule {identity} was mutated in place")
 
-def _generated_at(series: list[dict[str, Any]], gus: dict[str, Any], nbp: dict[str, Any]) -> str:
+
+def _generated_at(
+    series: list[dict[str, Any]],
+    gus: dict[str, Any],
+    nbp: dict[str, Any],
+    early_redemption: dict[str, Any],
+) -> str:
     candidates = [
         item["provenance"]["verifiedAt"] + "T00:00:00Z" for item in series
     ]
-    candidates.extend([gus["verifiedAt"], nbp["verifiedAt"]])
+    candidates.extend(
+        [
+            gus["verifiedAt"],
+            nbp["verifiedAt"],
+            early_redemption["verifiedAt"] + "T00:00:00Z",
+        ]
+    )
     return max(candidates)
 
 
