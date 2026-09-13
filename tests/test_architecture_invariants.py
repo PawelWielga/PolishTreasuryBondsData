@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 ACTIVE_DIST_V2 = (
     "catalog-v2.json",
     "product-definitions-v2.json",
+    "early-redemption-rules-v2.json",
     "gus-cpi-v2.json",
     "nbp-reference-rates-v2.json",
 )

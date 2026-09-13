@@ -1,0 +1,476 @@
+{
+  "verifiedAt": "2026-09-13",
+  "rules": [
+    {
+      "productType": "COI",
+      "rulesRevision": 1,
+      "purchaseFrom": "2022-09-01",
+      "purchaseThrough": "2024-08-31",
+      "minimumHoldingCalendarDays": 7,
+      "latestInstruction": {
+        "unit": "CalendarDaysBeforeMaturity",
+        "value": 20
+      },
+      "paymentTiming": {
+        "unit": "BusinessDaysAfterInstruction",
+        "value": 5
+      },
+      "interestAccrualTiming": {
+        "kind": "ThroughBusinessDayAfterInstruction",
+        "value": 5
+      },
+      "excludedInstructionDates": [
+        "InterestEntitlementDate"
+      ],
+      "chargeMinorUnits": 70,
+      "chargeApplication": "FirstPeriodDeductUpToAccruedInterestThenFullCharge",
+      "provenance": {
+        "publisher": "Ministry of Finance",
+        "documentType": "OfferPage",
+        "seriesCode": "COI0828",
+        "url": "https://www.obligacjeskarbowe.pl/oferta-obligacji/obligacje-4-letnie-coi/coi0828/",
+        "verifiedAt": "2026-09-13"
+      }
+    },
+    {
+      "productType": "COI",
+      "rulesRevision": 2,
+      "purchaseFrom": "2024-09-01",
+      "purchaseThrough": null,
+      "minimumHoldingCalendarDays": 7,
+      "latestInstruction": {
+        "unit": "CalendarDaysBeforeMaturity",
+        "value": 20
+      },
+      "paymentTiming": {
+        "unit": "BusinessDaysAfterInstruction",
+        "value": 5
+      },
+      "interestAccrualTiming": {
+        "kind": "ThroughBusinessDayAfterInstruction",
+        "value": 5
+      },
+      "excludedInstructionDates": [
+        "InterestEntitlementDate"
+      ],
+      "chargeMinorUnits": 200,
+      "chargeApplication": "FirstPeriodDeductUpToAccruedInterestThenFullCharge",
+      "provenance": {
+        "publisher": "Ministry of Finance",
+        "documentType": "OfferPage",
+        "seriesCode": "COI0930",
+        "url": "https://www.obligacjeskarbowe.pl/oferta-obligacji/obligacje-4-letnie-coi/coi0930/",
+        "verifiedAt": "2026-09-13"
+      }
+    },
+    {
+      "productType": "DOR",
+      "rulesRevision": 1,
+      "purchaseFrom": "2024-09-01",
+      "purchaseThrough": null,
+      "minimumHoldingCalendarDays": 7,
+      "latestInstruction": {
+        "unit": "CalendarDaysBeforeMaturity",
+        "value": 20
+      },
+      "paymentTiming": {
+        "unit": "BusinessDaysAfterInstruction",
+        "value": 5
+      },
+      "interestAccrualTiming": {
+        "kind": "ThroughBusinessDayAfterInstruction",
+        "value": 5
+      },
+      "excludedInstructionDates": [
+        "InterestEntitlementDate"
+      ],
+      "chargeMinorUnits": 70,
+      "chargeApplication": "FirstPeriodDeductUpToAccruedInterestThenFullCharge",
+      "provenance": {
+        "publisher": "Ministry of Finance",
+        "documentType": "OfferPage",
+        "seriesCode": "DOR0928",
+        "url": "https://www.obligacjeskarbowe.pl/oferta-obligacji/obligacje-2-letnie-dor/dor0928/",
+        "verifiedAt": "2026-09-13"
+      }
+    },
+    {
+      "productType": "EDO",
+      "rulesRevision": 1,
+      "purchaseFrom": "2016-09-01",
+      "purchaseThrough": "2022-06-30",
+      "minimumHoldingCalendarDays": 7,
+      "latestInstruction": {
+        "unit": "CalendarMonthsBeforeMaturity",
+        "value": 1
+      },
+      "paymentTiming": {
+        "unit": "BusinessDaysAfterInstruction",
+        "value": 5
+      },
+      "interestAccrualTiming": {
+        "kind": "ThroughBusinessDayAfterInstruction",
+        "value": 5
+      },
+      "excludedInstructionDates": [],
+      "chargeMinorUnits": 200,
+      "chargeApplication": "DeductUpToAccruedInterest",
+      "provenance": {
+        "publisher": "Ministry of Finance",
+        "documentType": "IssuanceLetter",
+        "seriesCode": "EDO0926",
+        "url": "https://www.obligacjeskarbowe.pl/listy-emisyjne/?id=edo0926",
+        "verifiedAt": "2026-09-13"
+      }
+    },
+    {
+      "productType": "EDO",
+      "rulesRevision": 2,
+      "purchaseFrom": "2022-07-01",
+      "purchaseThrough": "2024-08-31",
+      "minimumHoldingCalendarDays": 7,
+      "latestInstruction": {
+        "unit": "CalendarDaysBeforeMaturity",
+        "value": 20
+      },
+      "paymentTiming": {
+        "unit": "BusinessDaysAfterInstruction",
+        "value": 5
+      },
+      "interestAccrualTiming": {
+        "kind": "ThroughBusinessDayAfterInstruction",
+        "value": 5
+      },
+      "excludedInstructionDates": [],
+      "chargeMinorUnits": 200,
+      "chargeApplication": "DeductUpToAccruedInterest",
+      "provenance": {
+        "publisher": "Ministry of Finance",
+        "documentType": "IssuanceLetter",
+        "seriesCode": "EDO0732",
+        "url": "https://www.obligacjeskarbowe.pl/listy-emisyjne/?id=edo0732",
+        "verifiedAt": "2026-09-13"
+      }
+    },
+    {
+      "productType": "EDO",
+      "rulesRevision": 3,
+      "purchaseFrom": "2024-09-01",
+      "purchaseThrough": null,
+      "minimumHoldingCalendarDays": 7,
+      "latestInstruction": {
+        "unit": "CalendarDaysBeforeMaturity",
+        "value": 20
+      },
+      "paymentTiming": {
+        "unit": "BusinessDaysAfterInstruction",
+        "value": 5
+      },
+      "interestAccrualTiming": {
+        "kind": "ThroughBusinessDayAfterInstruction",
+        "value": 5
+      },
+      "excludedInstructionDates": [],
+      "chargeMinorUnits": 300,
+      "chargeApplication": "DeductUpToAccruedInterest",
+      "provenance": {
+        "publisher": "Ministry of Finance",
+        "documentType": "OfferPage",
+        "seriesCode": "EDO0936",
+        "url": "https://www.obligacjeskarbowe.pl/oferta-obligacji/obligacje-10-letnie-edo/edo0936/",
+        "verifiedAt": "2026-09-13"
+      }
+    },
+    {
+      "productType": "OTS",
+      "rulesRevision": 1,
+      "purchaseFrom": "2026-06-01",
+      "purchaseThrough": null,
+      "minimumHoldingCalendarDays": 7,
+      "latestInstruction": {
+        "unit": "CalendarDaysBeforeMaturity",
+        "value": 20
+      },
+      "paymentTiming": {
+        "unit": "BusinessDaysAfterInstruction",
+        "value": 5
+      },
+      "interestAccrualTiming": {
+        "kind": "None"
+      },
+      "excludedInstructionDates": [],
+      "chargeMinorUnits": 0,
+      "chargeApplication": "NoCharge",
+      "provenance": {
+        "publisher": "Ministry of Finance",
+        "documentType": "OfferPage",
+        "seriesCode": "OTS1226",
+        "url": "https://www.obligacjeskarbowe.pl/oferta-obligacji/obligacje-3-miesieczne-ots/ots1226/",
+        "verifiedAt": "2026-09-13"
+      }
+    },
+    {
+      "productType": "ROD",
+      "rulesRevision": 1,
+      "purchaseFrom": "2016-10-01",
+      "purchaseThrough": "2022-06-30",
+      "minimumHoldingCalendarDays": 7,
+      "latestInstruction": {
+        "unit": "CalendarMonthsBeforeMaturity",
+        "value": 1
+      },
+      "paymentTiming": {
+        "unit": "BusinessDaysAfterInstruction",
+        "value": 5
+      },
+      "interestAccrualTiming": {
+        "kind": "ThroughBusinessDayAfterInstruction",
+        "value": 5
+      },
+      "excludedInstructionDates": [],
+      "chargeMinorUnits": 200,
+      "chargeApplication": "DeductUpToAccruedInterest",
+      "provenance": {
+        "publisher": "Ministry of Finance",
+        "documentType": "IssuanceLetter",
+        "seriesCode": "ROD1028",
+        "url": "https://www.obligacjeskarbowe.pl/listy-emisyjne/?id=rod1028",
+        "verifiedAt": "2026-09-13"
+      }
+    },
+    {
+      "productType": "ROD",
+      "rulesRevision": 2,
+      "purchaseFrom": "2022-07-01",
+      "purchaseThrough": "2024-08-31",
+      "minimumHoldingCalendarDays": 7,
+      "latestInstruction": {
+        "unit": "CalendarDaysBeforeMaturity",
+        "value": 20
+      },
+      "paymentTiming": {
+        "unit": "BusinessDaysAfterInstruction",
+        "value": 5
+      },
+      "interestAccrualTiming": {
+        "kind": "ThroughBusinessDayAfterInstruction",
+        "value": 5
+      },
+      "excludedInstructionDates": [],
+      "chargeMinorUnits": 200,
+      "chargeApplication": "DeductUpToAccruedInterest",
+      "provenance": {
+        "publisher": "Ministry of Finance",
+        "documentType": "IssuanceLetter",
+        "seriesCode": "ROD0734",
+        "url": "https://www.obligacjeskarbowe.pl/listy-emisyjne/?id=rod0734",
+        "verifiedAt": "2026-09-13"
+      }
+    },
+    {
+      "productType": "ROD",
+      "rulesRevision": 3,
+      "purchaseFrom": "2024-09-01",
+      "purchaseThrough": null,
+      "minimumHoldingCalendarDays": 7,
+      "latestInstruction": {
+        "unit": "CalendarDaysBeforeMaturity",
+        "value": 20
+      },
+      "paymentTiming": {
+        "unit": "BusinessDaysAfterInstruction",
+        "value": 5
+      },
+      "interestAccrualTiming": {
+        "kind": "ThroughBusinessDayAfterInstruction",
+        "value": 5
+      },
+      "excludedInstructionDates": [],
+      "chargeMinorUnits": 300,
+      "chargeApplication": "DeductUpToAccruedInterest",
+      "provenance": {
+        "publisher": "Ministry of Finance",
+        "documentType": "OfferPage",
+        "seriesCode": "ROD0938",
+        "url": "https://www.obligacjeskarbowe.pl/oferta-obligacji/obligacje-12-letnie-rod/rod0938/",
+        "verifiedAt": "2026-09-13"
+      }
+    },
+    {
+      "productType": "ROR",
+      "rulesRevision": 1,
+      "purchaseFrom": "2025-09-01",
+      "purchaseThrough": null,
+      "minimumHoldingCalendarDays": 7,
+      "latestInstruction": {
+        "unit": "CalendarDaysBeforeMaturity",
+        "value": 20
+      },
+      "paymentTiming": {
+        "unit": "BusinessDaysAfterInstruction",
+        "value": 5
+      },
+      "interestAccrualTiming": {
+        "kind": "ThroughBusinessDayAfterInstruction",
+        "value": 5
+      },
+      "excludedInstructionDates": [
+        "InterestEntitlementDate"
+      ],
+      "chargeMinorUnits": 50,
+      "chargeApplication": "FirstPeriodDeductUpToAccruedInterestThenFullCharge",
+      "provenance": {
+        "publisher": "Ministry of Finance",
+        "documentType": "OfferPage",
+        "seriesCode": "ROR0927",
+        "url": "https://www.obligacjeskarbowe.pl/oferta-obligacji/obligacje-roczne-ror/ror0927/",
+        "verifiedAt": "2026-09-13"
+      }
+    },
+    {
+      "productType": "ROS",
+      "rulesRevision": 1,
+      "purchaseFrom": "2020-09-01",
+      "purchaseThrough": "2022-06-30",
+      "minimumHoldingCalendarDays": 7,
+      "latestInstruction": {
+        "unit": "CalendarMonthsBeforeMaturity",
+        "value": 1
+      },
+      "paymentTiming": {
+        "unit": "BusinessDaysAfterInstruction",
+        "value": 5
+      },
+      "interestAccrualTiming": {
+        "kind": "ThroughBusinessDayAfterInstruction",
+        "value": 5
+      },
+      "excludedInstructionDates": [],
+      "chargeMinorUnits": 70,
+      "chargeApplication": "DeductUpToAccruedInterest",
+      "provenance": {
+        "publisher": "Ministry of Finance",
+        "documentType": "IssuanceLetter",
+        "seriesCode": "ROS0926",
+        "url": "https://www.obligacjeskarbowe.pl/listy-emisyjne/?id=ros0926",
+        "verifiedAt": "2026-09-13"
+      }
+    },
+    {
+      "productType": "ROS",
+      "rulesRevision": 2,
+      "purchaseFrom": "2022-07-01",
+      "purchaseThrough": "2024-08-31",
+      "minimumHoldingCalendarDays": 7,
+      "latestInstruction": {
+        "unit": "CalendarDaysBeforeMaturity",
+        "value": 20
+      },
+      "paymentTiming": {
+        "unit": "BusinessDaysAfterInstruction",
+        "value": 5
+      },
+      "interestAccrualTiming": {
+        "kind": "ThroughBusinessDayAfterInstruction",
+        "value": 5
+      },
+      "excludedInstructionDates": [],
+      "chargeMinorUnits": 70,
+      "chargeApplication": "DeductUpToAccruedInterest",
+      "provenance": {
+        "publisher": "Ministry of Finance",
+        "documentType": "IssuanceLetter",
+        "seriesCode": "ROS0728",
+        "url": "https://www.obligacjeskarbowe.pl/listy-emisyjne/?id=ros0728",
+        "verifiedAt": "2026-09-13"
+      }
+    },
+    {
+      "productType": "ROS",
+      "rulesRevision": 3,
+      "purchaseFrom": "2024-09-01",
+      "purchaseThrough": null,
+      "minimumHoldingCalendarDays": 7,
+      "latestInstruction": {
+        "unit": "CalendarDaysBeforeMaturity",
+        "value": 20
+      },
+      "paymentTiming": {
+        "unit": "BusinessDaysAfterInstruction",
+        "value": 5
+      },
+      "interestAccrualTiming": {
+        "kind": "ThroughBusinessDayAfterInstruction",
+        "value": 5
+      },
+      "excludedInstructionDates": [],
+      "chargeMinorUnits": 200,
+      "chargeApplication": "DeductUpToAccruedInterest",
+      "provenance": {
+        "publisher": "Ministry of Finance",
+        "documentType": "OfferPage",
+        "seriesCode": "ROS0932",
+        "url": "https://www.obligacjeskarbowe.pl/oferta-obligacji/obligacje-6-letnie-ros/ros0932/",
+        "verifiedAt": "2026-09-13"
+      }
+    },
+    {
+      "productType": "TOS",
+      "rulesRevision": 1,
+      "purchaseFrom": "2023-09-01",
+      "purchaseThrough": "2024-08-31",
+      "minimumHoldingCalendarDays": 7,
+      "latestInstruction": {
+        "unit": "CalendarDaysBeforeMaturity",
+        "value": 20
+      },
+      "paymentTiming": {
+        "unit": "BusinessDaysAfterInstruction",
+        "value": 5
+      },
+      "interestAccrualTiming": {
+        "kind": "ThroughBusinessDayAfterInstruction",
+        "value": 5
+      },
+      "excludedInstructionDates": [],
+      "chargeMinorUnits": 70,
+      "chargeApplication": "DeductUpToAccruedInterest",
+      "provenance": {
+        "publisher": "Ministry of Finance",
+        "documentType": "OfferPage",
+        "seriesCode": "TOS0926",
+        "url": "https://www.obligacjeskarbowe.pl/oferta-obligacji/obligacje-3-letnie-tos/tos0926/",
+        "verifiedAt": "2026-09-13"
+      }
+    },
+    {
+      "productType": "TOS",
+      "rulesRevision": 2,
+      "purchaseFrom": "2024-09-01",
+      "purchaseThrough": null,
+      "minimumHoldingCalendarDays": 7,
+      "latestInstruction": {
+        "unit": "CalendarDaysBeforeMaturity",
+        "value": 20
+      },
+      "paymentTiming": {
+        "unit": "BusinessDaysAfterInstruction",
+        "value": 5
+      },
+      "interestAccrualTiming": {
+        "kind": "ThroughBusinessDayAfterInstruction",
+        "value": 5
+      },
+      "excludedInstructionDates": [],
+      "chargeMinorUnits": 100,
+      "chargeApplication": "DeductUpToAccruedInterest",
+      "provenance": {
+        "publisher": "Ministry of Finance",
+        "documentType": "OfferPage",
+        "seriesCode": "TOS0929",
+        "url": "https://www.obligacjeskarbowe.pl/oferta-obligacji/obligacje-3-letnie-tos/tos0929/",
+        "verifiedAt": "2026-09-13"
+      }
+    }
+  ]
+}

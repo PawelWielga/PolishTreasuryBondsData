@@ -10,7 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SNAPSHOTS_ROOT = "publication/v1/snapshots"
 LATEST_PATH = "publication/v1/latest.json"
-EXPECTED_DATA_FILES = frozenset(
+LEGACY_DATA_FILES = frozenset(
     {
         "catalog.json",
         "product-definitions.json",
@@ -18,7 +18,9 @@ EXPECTED_DATA_FILES = frozenset(
         "nbp-reference-rates.json",
     }
 )
-EXPECTED_SNAPSHOT_FILES = EXPECTED_DATA_FILES | {"manifest.json"}
+CURRENT_DATA_FILES = LEGACY_DATA_FILES | {"early-redemption-rules.json"}
+LEGACY_SNAPSHOT_FILES = LEGACY_DATA_FILES | {"manifest.json"}
+CURRENT_SNAPSHOT_FILES = CURRENT_DATA_FILES | {"manifest.json"}
 
 
 def _git(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -92,7 +94,7 @@ def _snapshot_dirs_in_revision(revision: str) -> set[str]:
 
 
 def _document_count(document: dict) -> int:
-    for key in ("series", "productDefinitions", "observations"):
+    for key in ("series", "productDefinitions", "rules", "observations"):
         value = document.get(key)
         if isinstance(value, list):
             return len(value)
@@ -105,8 +107,14 @@ def _validate_snapshot_directory(snapshot: Path) -> list[str]:
         return [f"{snapshot.relative_to(ROOT)}: snapshot entry is not a real directory"]
 
     entries = {entry.name: entry for entry in snapshot.iterdir()}
-    missing = sorted(EXPECTED_SNAPSHOT_FILES - set(entries))
-    unexpected = sorted(set(entries) - EXPECTED_SNAPSHOT_FILES)
+    entry_names = set(entries)
+    expected_snapshot_files = (
+        CURRENT_SNAPSHOT_FILES
+        if "early-redemption-rules.json" in entry_names
+        else LEGACY_SNAPSHOT_FILES
+    )
+    missing = sorted(expected_snapshot_files - entry_names)
+    unexpected = sorted(entry_names - expected_snapshot_files)
     if missing:
         violations.append(
             f"{snapshot.relative_to(ROOT)}: missing canonical files: {', '.join(missing)}"
@@ -116,7 +124,7 @@ def _validate_snapshot_directory(snapshot: Path) -> list[str]:
             f"{snapshot.relative_to(ROOT)}: unexpected entries: {', '.join(unexpected)}"
         )
 
-    for name in EXPECTED_SNAPSHOT_FILES & set(entries):
+    for name in expected_snapshot_files & entry_names:
         path = entries[name]
         if path.is_symlink() or not path.is_file():
             violations.append(
@@ -142,14 +150,19 @@ def _validate_snapshot_directory(snapshot: Path) -> list[str]:
     if not isinstance(files, dict):
         violations.append(f"{manifest_path.relative_to(ROOT)}: files must be an object")
         return violations
-    if set(files) != EXPECTED_DATA_FILES:
+    expected_data_files = (
+        CURRENT_DATA_FILES
+        if "early-redemption-rules.json" in files
+        else LEGACY_DATA_FILES
+    )
+    if set(files) != expected_data_files:
         violations.append(
             f"{manifest_path.relative_to(ROOT)}: manifest files must be exactly "
-            f"{sorted(EXPECTED_DATA_FILES)}"
+            f"{sorted(expected_data_files)}"
         )
         return violations
 
-    for name in sorted(EXPECTED_DATA_FILES):
+    for name in sorted(expected_data_files):
         entry = files[name]
         if not isinstance(entry, dict):
             violations.append(f"{manifest_path.relative_to(ROOT)}: {name} entry is invalid")
@@ -270,7 +283,7 @@ def immutable_snapshot_violations(base: str, head: str = "HEAD") -> list[str]:
                 )
                 continue
             relative = _snapshot_relative_path(snapshot, path)
-            if relative is None or relative not in EXPECTED_SNAPSHOT_FILES:
+            if relative is None or relative not in CURRENT_SNAPSHOT_FILES:
                 violations.append(f"{status}\t{path} (unexpected path in new snapshot)")
                 continue
             new_files.setdefault(snapshot, set()).add(relative)
@@ -288,8 +301,8 @@ def immutable_snapshot_violations(base: str, head: str = "HEAD") -> list[str]:
             if _snapshot_directory(path) == head_selected
             if (relative := _snapshot_relative_path(head_selected, path)) is not None
         }
-        missing = sorted(EXPECTED_SNAPSHOT_FILES - selected_paths)
-        unexpected = sorted(selected_paths - EXPECTED_SNAPSHOT_FILES)
+        missing = sorted(CURRENT_SNAPSHOT_FILES - selected_paths)
+        unexpected = sorted(selected_paths - CURRENT_SNAPSHOT_FILES)
         if missing:
             violations.append(
                 "selected new snapshot is incomplete; missing: " + ", ".join(missing)
