@@ -1,0 +1,31 @@
+{
+  "seriesCode": "ROR1027",
+  "productType": "ROR",
+  "productDefinition": "ROR-rules-1",
+  "isin": "PL0000119525",
+  "saleFrom": "2026-10-01",
+  "saleTo": "2026-10-31",
+  "currency": "PLN",
+  "faceValueMinorUnits": 10000,
+  "issuePriceMinorUnits": 10000,
+  "exchangePriceMinorUnits": 9990,
+  "firstPeriodAnnualRatePercent": "4.00",
+  "marginPercent": "0.00",
+  "fixedMaturityInterestMinorUnits": null,
+  "termsRevision": 1,
+  "provenance": {
+    "primary": {
+      "publisher": "Ministry of Finance",
+      "url": "https://www.gov.pl/attachment/3d42a295-18af-43c6-b56d-de975030f64a",
+      "sha256": "dd2d87395b5e9830eca551ead5d59259f3f12d4932ed8e346bb14ec28b41e4c1",
+      "sheet": "ROR",
+      "row": 55
+    },
+    "crossCheck": {
+      "url": "https://www.obligacjeskarbowe.pl/oferta-obligacji/obligacje-roczne-ror/ror1027/",
+      "verifiedAt": "2026-10-17"
+    },
+    "verifiedAt": "2026-10-17"
+  },
+  "contentHash": "sha256:07af41d76a0279d70c306dbceb91ee956b7c04f195cab5960d505d93c1f29798"
+}
