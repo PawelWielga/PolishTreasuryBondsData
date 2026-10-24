@@ -1,28 +1,28 @@
 {
   "schemaVersion": "1.0",
-  "datasetRevision": "20260913T000000Z-3044e9e0e304",
+  "datasetRevision": "20261024T000000Z-8cfa1f8cfe45",
   "sources": {
     "mf": {
       "status": "FRESH",
-      "lastAttemptAt": "2026-09-07T19:32:34Z",
+      "lastAttemptAt": "2026-10-24T08:54:08Z",
       "lastAttemptStatus": "SUCCESS",
-      "lastSuccessAt": "2026-09-07T19:32:34Z",
+      "lastSuccessAt": "2026-10-24T08:54:08Z",
       "staleAfterHours": 744,
-      "message": "Update result: (0, 0)"
+      "message": "Update result: (8, 0)"
     },
     "gus": {
       "status": "FRESH",
-      "lastAttemptAt": "2026-09-07T19:33:13Z",
+      "lastAttemptAt": "2026-10-24T08:55:05Z",
       "lastAttemptStatus": "SUCCESS",
-      "lastSuccessAt": "2026-09-07T19:33:13Z",
+      "lastSuccessAt": "2026-10-24T08:55:05Z",
       "staleAfterHours": 744,
-      "message": "Update result: 0"
+      "message": "Update result: 2"
     },
     "nbp": {
       "status": "FRESH",
-      "lastAttemptAt": "2026-09-07T19:33:14Z",
+      "lastAttemptAt": "2026-10-24T08:55:05Z",
       "lastAttemptStatus": "SUCCESS",
-      "lastSuccessAt": "2026-09-07T19:33:14Z",
+      "lastSuccessAt": "2026-10-24T08:55:05Z",
       "staleAfterHours": 168,
       "message": "Update result: 0"
     }

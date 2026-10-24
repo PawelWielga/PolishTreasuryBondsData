@@ -1,11 +1,11 @@
 {
-  "verifiedAt": "2026-09-07T00:00:00Z",
+  "verifiedAt": "2026-10-24T00:00:00Z",
   "source": {
     "publisher": "GUS",
     "api": "SDP",
     "baseUrl": "https://api-sdp.stat.gov.pl/api/1.1.0",
-    "verifiedAt": "2026-09-07T00:00:00Z",
-    "evidenceBundleSha256": "0c98c0375c6e579d5eca8bb84694a4d60a54dd2585064bd4b02ceb288f498ae1"
+    "verifiedAt": "2026-10-24T00:00:00Z",
+    "evidenceBundleSha256": "80793bab4685ea0490fd0b229eafd4c8c00508ecddd47625c13b77dee997a805"
   },
   "observations": [
     {
@@ -1818,6 +1818,30 @@
         "api": "SDP",
         "year": 2026,
         "periodId": 253
+      }
+    },
+    {
+      "period": "2026-08",
+      "indexPreviousYear100": "103.40",
+      "yearOverYearPercent": "3.40",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2026,
+        "periodId": 254
+      }
+    },
+    {
+      "period": "2026-09",
+      "indexPreviousYear100": "104.10",
+      "yearOverYearPercent": "4.10",
+      "revision": 1,
+      "source": {
+        "publisher": "GUS",
+        "api": "SDP",
+        "year": 2026,
+        "periodId": 255
       }
     }
   ]

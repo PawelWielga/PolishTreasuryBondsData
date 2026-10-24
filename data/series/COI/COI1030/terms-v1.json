@@ -1,0 +1,31 @@
+{
+  "seriesCode": "COI1030",
+  "productType": "COI",
+  "productDefinition": "COI-rules-1",
+  "isin": "PL0000119558",
+  "saleFrom": "2026-10-01",
+  "saleTo": "2026-10-31",
+  "currency": "PLN",
+  "faceValueMinorUnits": 10000,
+  "issuePriceMinorUnits": 10000,
+  "exchangePriceMinorUnits": 9990,
+  "firstPeriodAnnualRatePercent": "4.75",
+  "marginPercent": "1.50",
+  "fixedMaturityInterestMinorUnits": null,
+  "termsRevision": 1,
+  "provenance": {
+    "primary": {
+      "publisher": "Ministry of Finance",
+      "url": "https://www.gov.pl/attachment/3d42a295-18af-43c6-b56d-de975030f64a",
+      "sha256": "dd2d87395b5e9830eca551ead5d59259f3f12d4932ed8e346bb14ec28b41e4c1",
+      "sheet": "COI",
+      "row": 327
+    },
+    "crossCheck": {
+      "url": "https://www.obligacjeskarbowe.pl/oferta-obligacji/obligacje-4-letnie-coi/coi1030/",
+      "verifiedAt": "2026-10-24"
+    },
+    "verifiedAt": "2026-10-24"
+  },
+  "contentHash": "sha256:3995d9fa43d76fc5acbbc3562cba892d589e86978ba3d4ad2c85b0c51063d3af"
+}
