@@ -1,0 +1,31 @@
+{
+  "seriesCode": "OTS0127",
+  "productType": "OTS",
+  "productDefinition": "OTS-rules-1",
+  "isin": "PL0000119517",
+  "saleFrom": "2026-10-01",
+  "saleTo": "2026-10-31",
+  "currency": "PLN",
+  "faceValueMinorUnits": 10000,
+  "issuePriceMinorUnits": 10000,
+  "exchangePriceMinorUnits": 10000,
+  "firstPeriodAnnualRatePercent": "2.00",
+  "marginPercent": "0.00",
+  "fixedMaturityInterestMinorUnits": 50,
+  "termsRevision": 1,
+  "provenance": {
+    "primary": {
+      "publisher": "Ministry of Finance",
+      "url": "https://www.gov.pl/attachment/3d42a295-18af-43c6-b56d-de975030f64a",
+      "sha256": "dd2d87395b5e9830eca551ead5d59259f3f12d4932ed8e346bb14ec28b41e4c1",
+      "sheet": "OTS",
+      "row": 110
+    },
+    "crossCheck": {
+      "url": "https://www.obligacjeskarbowe.pl/oferta-obligacji/obligacje-3-miesieczne-ots/ots0127/",
+      "verifiedAt": "2026-10-24"
+    },
+    "verifiedAt": "2026-10-24"
+  },
+  "contentHash": "sha256:ffc489100c7e8c98cd9fe98e3662dbc65dcace7e052f9c9e5f57c0b356c1bdf0"
+}

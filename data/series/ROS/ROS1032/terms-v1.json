@@ -1,0 +1,31 @@
+{
+  "seriesCode": "ROS1032",
+  "productType": "ROS",
+  "productDefinition": "ROS-rules-1",
+  "isin": "PL0000119574",
+  "saleFrom": "2026-10-01",
+  "saleTo": "2026-10-31",
+  "currency": "PLN",
+  "faceValueMinorUnits": 10000,
+  "issuePriceMinorUnits": 10000,
+  "exchangePriceMinorUnits": null,
+  "firstPeriodAnnualRatePercent": "5.00",
+  "marginPercent": "2.00",
+  "fixedMaturityInterestMinorUnits": null,
+  "termsRevision": 1,
+  "provenance": {
+    "primary": {
+      "publisher": "Ministry of Finance",
+      "url": "https://www.gov.pl/attachment/3d42a295-18af-43c6-b56d-de975030f64a",
+      "sha256": "dd2d87395b5e9830eca551ead5d59259f3f12d4932ed8e346bb14ec28b41e4c1",
+      "sheet": "ROS",
+      "row": 123
+    },
+    "crossCheck": {
+      "url": "https://www.obligacjeskarbowe.pl/oferta-obligacji/obligacje-6-letnie-ros/ros1032/",
+      "verifiedAt": "2026-10-24"
+    },
+    "verifiedAt": "2026-10-24"
+  },
+  "contentHash": "sha256:b490012ea03fbbf6c4bee8708c0a3b8873d7732ba71c631933043bf14d620110"
+}
