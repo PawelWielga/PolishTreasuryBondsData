@@ -1,0 +1,31 @@
+{
+  "seriesCode": "TOS1029",
+  "productType": "TOS",
+  "productDefinition": "TOS-rules-1",
+  "isin": "PL0000119541",
+  "saleFrom": "2026-10-01",
+  "saleTo": "2026-10-31",
+  "currency": "PLN",
+  "faceValueMinorUnits": 10000,
+  "issuePriceMinorUnits": 10000,
+  "exchangePriceMinorUnits": 9990,
+  "firstPeriodAnnualRatePercent": "4.40",
+  "marginPercent": "0.00",
+  "fixedMaturityInterestMinorUnits": null,
+  "termsRevision": 1,
+  "provenance": {
+    "primary": {
+      "publisher": "Ministry of Finance",
+      "url": "https://www.gov.pl/attachment/f5fb73ad-cc95-4e47-a943-5910596ac527",
+      "sha256": "b660e81977e6a82913ee6e69a8a3a0ffc49c3f66e49a4542270fe99345e266f5",
+      "sheet": "TOS",
+      "row": 52
+    },
+    "crossCheck": {
+      "url": "https://www.obligacjeskarbowe.pl/oferta-obligacji/obligacje-3-letnie-tos/tos1029/",
+      "verifiedAt": "2026-10-31"
+    },
+    "verifiedAt": "2026-10-31"
+  },
+  "contentHash": "sha256:11eb8b87e6192b793a22aa789b6c5be6126ebdebc62be608108cb57e987261ac"
+}

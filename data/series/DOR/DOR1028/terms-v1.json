@@ -1,0 +1,31 @@
+{
+  "seriesCode": "DOR1028",
+  "productType": "DOR",
+  "productDefinition": "DOR-rules-1",
+  "isin": "PL0000119533",
+  "saleFrom": "2026-10-01",
+  "saleTo": "2026-10-31",
+  "currency": "PLN",
+  "faceValueMinorUnits": 10000,
+  "issuePriceMinorUnits": 10000,
+  "exchangePriceMinorUnits": 9990,
+  "firstPeriodAnnualRatePercent": "4.15",
+  "marginPercent": "0.15",
+  "fixedMaturityInterestMinorUnits": null,
+  "termsRevision": 1,
+  "provenance": {
+    "primary": {
+      "publisher": "Ministry of Finance",
+      "url": "https://www.gov.pl/attachment/f5fb73ad-cc95-4e47-a943-5910596ac527",
+      "sha256": "b660e81977e6a82913ee6e69a8a3a0ffc49c3f66e49a4542270fe99345e266f5",
+      "sheet": "DOR",
+      "row": 55
+    },
+    "crossCheck": {
+      "url": "https://www.obligacjeskarbowe.pl/oferta-obligacji/obligacje-2-letnie-dor/dor1028/",
+      "verifiedAt": "2026-10-31"
+    },
+    "verifiedAt": "2026-10-31"
+  },
+  "contentHash": "sha256:36301612f031f57415f77970d98caad764152e13fd2dc08c26ad5de659939624"
+}
